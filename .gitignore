@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output / generated
+dist/
+.astro/
+.turbo/
+**/build/
+
+# Environment variables (never commit secrets)
+.env
+.env.*
+!.env.template
+!.env.example
+
+# Editor / local tooling
+.claude/settings.local.json
+.vscode/
+.idea/
+
+# Logs
+*-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

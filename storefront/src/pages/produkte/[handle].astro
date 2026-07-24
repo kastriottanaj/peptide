@@ -1,0 +1,229 @@
+---
+import type { HttpTypes } from "@medusajs/types";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { medusa, getDefaultRegionId } from "../../lib/medusa";
+
+export async function getStaticPaths() {
+	const regionId = await getDefaultRegionId();
+
+	const { products } = await medusa.store.product.list({
+		region_id: regionId,
+		fields:
+			"id,title,handle,description,thumbnail,metadata,*variants,*variants.calculated_price,*variants.options",
+		limit: 1000,
+	});
+
+	return products.map((product) => ({
+		params: { handle: product.handle },
+		props: { product },
+	}));
+}
+
+interface Props {
+	product: HttpTypes.StoreProduct;
+}
+
+const { product } = Astro.props;
+const meta = (product.metadata ?? {}) as Record<string, unknown>;
+const researchCode =
+	typeof meta.research_code === "string" ? meta.research_code : null;
+const purity = typeof meta.purity === "string" ? meta.purity : null;
+const coaStatus =
+	typeof meta.coa_status === "string" ? meta.coa_status : null;
+
+function formatPrice(variant: HttpTypes.StoreProductVariant) {
+	const amount = variant.calculated_price?.calculated_amount;
+	if (typeof amount !== "number") return null;
+	const currency = variant.calculated_price?.currency_code ?? "eur";
+	return new Intl.NumberFormat("de-DE", {
+		style: "currency",
+		currency: currency.toUpperCase(),
+	}).format(amount);
+}
+
+const variants = product.variants ?? [];
+const packSizes = variants.map((v) => v.title).filter(Boolean).join(" / ");
+---
+
+<BaseLayout title={product.title} description={product.description ?? undefined}>
+	<a href="/produkte" class="back">← Zurück zum Sortiment</a>
+
+	<article class="detail">
+		<div class="detail__media">
+			{researchCode && <span class="badge badge--code">{researchCode}</span>}
+			{purity && <span class="badge badge--purity">{purity}</span>}
+			{
+				product.thumbnail ? (
+					<img src={product.thumbnail} alt={product.title} width="440" height="440" />
+				) : (
+					<svg viewBox="0 0 80 100" aria-hidden="true">
+						<rect x="30" y="6" width="20" height="10" rx="2" fill="#c9d3df" />
+						<path d="M28 16h24v70a12 12 0 0 1-24 0V16Z" fill="#d9a441" />
+						<rect x="34" y="24" width="12" height="26" rx="2" fill="#fff" opacity="0.35" />
+					</svg>
+				)
+			}
+		</div>
+
+		<div class="detail__info">
+			<span class="eyebrow">Forschungspeptid</span>
+			<h1>{product.title}</h1>
+			{product.description && <p class="detail__desc">{product.description}</p>}
+
+			<dl class="specs">
+				<div>
+					<dt>Reinheit</dt>
+					<dd>{purity ?? "—"}</dd>
+				</div>
+				<div>
+					<dt>Packgrößen</dt>
+					<dd>{packSizes || "—"}</dd>
+				</div>
+				<div>
+					<dt>COA-Zertifikat</dt>
+					<dd>{coaStatus ?? "—"}</dd>
+				</div>
+			</dl>
+
+			<h2 class="variants__title">Packgröße wählen</h2>
+			<ul class="variants">
+				{
+					variants.map((variant) => (
+						<li>
+							<span>{variant.title}</span>
+							{formatPrice(variant) && <span class="variants__price">{formatPrice(variant)}</span>}
+						</li>
+					))
+				}
+			</ul>
+
+			<button class="btn btn--green" type="button" disabled>
+				In den Warenkorb (bald verfügbar)
+			</button>
+
+			<p class="disclaimer">
+				Ausschließlich für Forschungs-, Analyse- und Laborzwecke. Keine
+				medizinische Beratung, keine Anwendungshinweise.
+			</p>
+		</div>
+	</article>
+
+	<style>
+		.back {
+			display: inline-block;
+			text-decoration: none;
+			color: var(--c-green-dark);
+			font-weight: 600;
+			font-size: 0.9rem;
+			margin-bottom: 1.25rem;
+		}
+		.detail {
+			display: grid;
+			grid-template-columns: minmax(0, 460px) 1fr;
+			gap: 2.5rem;
+			align-items: start;
+		}
+		.detail__media {
+			position: relative;
+			background: linear-gradient(180deg, #f4f6f9, #eef1f5);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius);
+			aspect-ratio: 1 / 1;
+			display: grid;
+			place-items: center;
+			padding: 2rem;
+		}
+		.detail__media img {
+			width: 100%;
+			height: 100%;
+			object-fit: contain;
+			mix-blend-mode: multiply;
+		}
+		.detail__media svg {
+			width: 45%;
+		}
+		.badge {
+			position: absolute;
+			top: 1rem;
+			font-size: 0.72rem;
+			font-weight: 700;
+			padding: 0.3rem 0.6rem;
+			border-radius: 6px;
+		}
+		.badge--code {
+			left: 1rem;
+			background: var(--c-navy);
+			color: #fff;
+		}
+		.badge--purity {
+			right: 1rem;
+			background: var(--c-mint);
+			color: var(--c-green-dark);
+		}
+		.detail__info h1 {
+			font-size: clamp(1.6rem, 3vw, 2.2rem);
+			margin: 0.25rem 0 0.75rem;
+		}
+		.detail__desc {
+			color: var(--c-muted);
+			margin: 0 0 1.5rem;
+		}
+		.specs {
+			display: grid;
+			gap: 0.5rem;
+			margin: 0 0 1.75rem;
+			padding: 1rem 1.2rem;
+			background: var(--c-cream-soft);
+			border: 1px solid #ece3d2;
+			border-radius: var(--radius);
+		}
+		.specs div {
+			display: flex;
+			justify-content: space-between;
+			font-size: 0.9rem;
+		}
+		.specs dt {
+			color: var(--c-muted);
+		}
+		.specs dd {
+			margin: 0;
+			font-weight: 600;
+		}
+		.variants__title {
+			font-size: 1rem;
+			margin: 0 0 0.6rem;
+		}
+		.variants {
+			list-style: none;
+			margin: 0 0 1.5rem;
+			padding: 0;
+		}
+		.variants li {
+			display: flex;
+			justify-content: space-between;
+			padding: 0.7rem 0.9rem;
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			margin-bottom: 0.5rem;
+		}
+		.variants__price {
+			font-weight: 700;
+			color: var(--c-navy);
+		}
+		.btn[disabled] {
+			opacity: 0.55;
+			cursor: not-allowed;
+		}
+		.disclaimer {
+			margin: 1.25rem 0 0;
+			font-size: 0.78rem;
+			color: var(--c-muted);
+		}
+
+		@media (max-width: 820px) {
+			.detail {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</BaseLayout>

@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import { medusa, getDefaultRegionId } from "../../lib/medusa";
+
+const regionId = await getDefaultRegionId();
+
+const { products: fetched, count } = await medusa.store.product.list({
+	region_id: regionId,
+	fields:
+		"id,title,handle,thumbnail,metadata,*variants,*variants.calculated_price",
+	limit: 100,
+});
+
+// Show peptides (products carrying a research_code) first.
+const hasCode = (p: (typeof fetched)[number]) =>
+	typeof (p.metadata as Record<string, unknown> | null)?.research_code ===
+	"string";
+const products = [...fetched].sort(
+	(a, b) => Number(hasCode(b)) - Number(hasCode(a)),
+);
+---
+
+<BaseLayout
+	title="Sortiment"
+	description="Forschungspeptide von Peptide Kaufen Deutschland – Packgrößen, Preis und Zertifikatsstatus."
+>
+	<span class="eyebrow">Shop</span>
+	<h1>Forschungspeptide</h1>
+	<p class="lead">
+		{count} Produkte für Forschungs- und Analysezwecke. Packgrößen, Preis und
+		Zertifikatsstatus auf einen Blick.
+	</p>
+
+	{
+		products.length === 0 ? (
+			<p>Aktuell sind keine Produkte verfügbar.</p>
+		) : (
+			<div class="grid">
+				{products.map((product) => (
+					<ProductCard product={product} />
+				))}
+			</div>
+		)
+	}
+
+	<style>
+		.lead {
+			color: var(--c-muted);
+			margin: 0.25rem 0 2rem;
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+			gap: 1.4rem;
+		}
+	</style>
+</BaseLayout>
