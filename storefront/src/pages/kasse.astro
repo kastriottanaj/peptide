@@ -1,0 +1,497 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+/**
+ * Single-page checkout, mirroring the peptidebestellung.de flow: contact and
+ * address, optional discount code, payment method, mandatory confirmation.
+ * Client-rendered, because the cart only exists in the browser.
+ */
+const countries = [
+	{ code: "de", label: "Deutschland" },
+	{ code: "at", label: "Österreich" },
+	{ code: "ch", label: "Schweiz" },
+	{ code: "fr", label: "Frankreich" },
+	{ code: "it", label: "Italien" },
+	{ code: "es", label: "Spanien" },
+	{ code: "dk", label: "Dänemark" },
+	{ code: "se", label: "Schweden" },
+	{ code: "gb", label: "Vereinigtes Königreich" },
+];
+---
+
+<BaseLayout title="Kasse" description="Bestellung abschließen." noindex>
+	<h1>Kasse</h1>
+
+	<p data-checkout-loading>Warenkorb wird geladen …</p>
+
+	<div data-checkout-empty hidden>
+		<p>Ihr Warenkorb ist leer.</p>
+		<a class="btn btn--green" href="/produkte">Sortiment ansehen</a>
+	</div>
+
+	<form class="checkout" data-checkout-form hidden novalidate>
+		<div class="checkout__main">
+			<section class="card">
+				<h2>Kontakt</h2>
+				<div class="grid2">
+					<label>Vorname *<input name="first_name" required autocomplete="given-name" /></label>
+					<label>Nachname *<input name="last_name" required autocomplete="family-name" /></label>
+				</div>
+				<label>E-Mail *<input name="email" type="email" required autocomplete="email" /></label>
+				<div class="grid2">
+					<label>Telefon<input name="phone" type="tel" autocomplete="tel" /></label>
+					<label>Firma<input name="company" autocomplete="organization" /></label>
+				</div>
+				<label>USt-IdNr.<input name="vat_id" /></label>
+			</section>
+
+			<section class="card">
+				<h2>Rechnungs- und Lieferadresse</h2>
+				<label>Straße und Hausnummer *<input name="address_1" required autocomplete="street-address" /></label>
+				<div class="grid2">
+					<label>PLZ *<input name="postal_code" required autocomplete="postal-code" /></label>
+					<label>Ort *<input name="city" required autocomplete="address-level2" /></label>
+				</div>
+				<label>
+					Land *
+					<select name="country_code" required>
+						{countries.map((c) => <option value={c.code}>{c.label}</option>)}
+					</select>
+				</label>
+			</section>
+
+			<section class="card">
+				<h2>Rabattcode</h2>
+				<div class="promo">
+					<input name="promo_code" placeholder="Code eingeben" aria-label="Rabattcode" />
+					<button class="btn btn--green btn--sm" type="button" data-apply-promo>Einlösen</button>
+				</div>
+				<p class="promo__msg" data-promo-msg role="status" aria-live="polite"></p>
+			</section>
+
+			<section class="card">
+				<h2>Versand</h2>
+				<div data-shipping-options class="shipping"></div>
+			</section>
+
+			<section class="card">
+				<h2>Zahlung per Banküberweisung</h2>
+				<p class="muted">
+					Nach dem Absenden erhalten Sie Bestellnummer, IBAN, Empfänger, Betrag
+					und Verwendungszweck. Die Ware wird nach Zahlungseingang versandt.
+				</p>
+			</section>
+
+			<section class="card">
+				<label class="confirm">
+					<input type="checkbox" name="terms" required />
+					<span>
+						Ich habe die <a href="/agb" target="_blank">AGB</a>, die
+						<a href="/datenschutz" target="_blank">Datenschutzerklärung</a> und die
+						<a href="/widerruf" target="_blank">Widerrufsbelehrung</a> gelesen und
+						akzeptiere sie. *
+					</span>
+				</label>
+				<p class="muted">
+					Bestellung ausschließlich für Forschungs-, Analyse- und Laborzwecke.
+				</p>
+			</section>
+		</div>
+
+		<aside class="checkout__summary card">
+			<h2>Bestellübersicht</h2>
+			<ul class="sum__lines" data-summary-lines></ul>
+
+			<div class="sum__row"><span>Zwischensumme</span><span data-sum-subtotal></span></div>
+			<div class="sum__row" data-sum-discount-row hidden>
+				<span>Rabatt</span><span data-sum-discount></span>
+			</div>
+			<div class="sum__row"><span>Versand</span><span data-sum-shipping>—</span></div>
+			<div class="sum__row sum__row--total"><span>Gesamt</span><span data-sum-total></span></div>
+
+			<p class="checkout__error" data-checkout-error role="alert" hidden></p>
+
+			<button class="btn btn--green checkout__submit" type="submit" data-submit>
+				Zahlungspflichtig bestellen
+			</button>
+			<a class="checkout__back" href="/warenkorb">← Zurück zum Warenkorb</a>
+		</aside>
+	</form>
+
+	<script>
+		import {
+			getCart,
+			setCustomerDetails,
+			applyPromoCode,
+			listShippingOptions,
+			chooseShippingOption,
+			completeOrder,
+		} from "../lib/cart";
+		import { formatEur } from "../lib/pricing";
+
+		const loading = document.querySelector<HTMLElement>("[data-checkout-loading]");
+		const empty = document.querySelector<HTMLElement>("[data-checkout-empty]");
+		const form = document.querySelector<HTMLFormElement>("[data-checkout-form]");
+
+		if (form) {
+			const errorEl = form.querySelector<HTMLElement>("[data-checkout-error]");
+			const submit = form.querySelector<HTMLButtonElement>("[data-submit]");
+			const promoMsg = form.querySelector<HTMLElement>("[data-promo-msg]");
+			const shippingBox = form.querySelector<HTMLElement>("[data-shipping-options]");
+
+			const showError = (message: string) => {
+				if (!errorEl) return;
+				errorEl.textContent = message;
+				errorEl.toggleAttribute("hidden", !message);
+			};
+
+			const paint = (cart: Awaited<ReturnType<typeof getCart>>) => {
+				if (!cart) return;
+				const currency = cart.currency_code ?? "eur";
+
+				const lines = form.querySelector<HTMLElement>("[data-summary-lines]");
+				if (lines) {
+					lines.innerHTML = "";
+					for (const item of cart.items ?? []) {
+						const li = document.createElement("li");
+						li.innerHTML = `<span>${item.quantity}× ${item.product_title ?? ""} <em>${item.variant_title ?? ""}</em></span><span>${formatEur(item.total ?? 0, currency)}</span>`;
+						lines.appendChild(li);
+					}
+				}
+
+				const set = (selector: string, value: string) => {
+					const el = form.querySelector<HTMLElement>(selector);
+					if (el) el.textContent = value;
+				};
+
+				// item_subtotal is merchandise only; `subtotal` folds in shipping
+				// once a shipping method is set.
+				set(
+					"[data-sum-subtotal]",
+					formatEur(cart.item_subtotal ?? cart.subtotal ?? 0, currency),
+				);
+				set("[data-sum-total]", formatEur(cart.total ?? 0, currency));
+
+				const shipping = cart.shipping_total ?? 0;
+				set("[data-sum-shipping]", shipping > 0 ? formatEur(shipping, currency) : "—");
+
+				const discount = cart.discount_total ?? 0;
+				const discountRow = form.querySelector<HTMLElement>("[data-sum-discount-row]");
+				if (discountRow) {
+					discountRow.toggleAttribute("hidden", discount <= 0);
+					set("[data-sum-discount]", `− ${formatEur(discount, currency)}`);
+				}
+			};
+
+			const loadShipping = async (cartId: string) => {
+				if (!shippingBox) return;
+				const options = await listShippingOptions(cartId);
+
+				if (!options.length) {
+					shippingBox.innerHTML =
+						'<p class="muted">Für diese Adresse ist derzeit keine Versandart verfügbar.</p>';
+					return;
+				}
+
+				shippingBox.innerHTML = "";
+				options.forEach((option, index) => {
+					const label = document.createElement("label");
+					label.className = "shipping__option";
+					label.innerHTML = `
+						<input type="radio" name="shipping_option" value="${option.id}" ${index === 0 ? "checked" : ""} />
+						<span>${option.name}</span>
+						<span class="shipping__price">${formatEur(option.amount ?? 0)}</span>
+					`;
+					label
+						.querySelector<HTMLInputElement>("input")
+						?.addEventListener("change", async (event) => {
+							const id = (event.target as HTMLInputElement).value;
+							try {
+								paint(await chooseShippingOption(id));
+							} catch (error) {
+								console.error(error);
+								showError("Die Versandart konnte nicht gesetzt werden.");
+							}
+						});
+					shippingBox.appendChild(label);
+				});
+			};
+
+			form
+				.querySelector<HTMLButtonElement>("[data-apply-promo]")
+				?.addEventListener("click", async () => {
+					const input = form.querySelector<HTMLInputElement>('input[name="promo_code"]');
+					const code = input?.value.trim();
+					if (!code || !promoMsg) return;
+
+					promoMsg.textContent = "Wird geprüft …";
+					try {
+						const cart = await applyPromoCode(code);
+						const applied = (cart.promotions ?? []).some(
+							(promotion) => promotion.code?.toLowerCase() === code.toLowerCase(),
+						);
+						promoMsg.textContent = applied
+							? `Code „${code}" wurde angewendet.`
+							: `Code „${code}" ist ungültig oder nicht anwendbar.`;
+						paint(cart);
+					} catch {
+						promoMsg.textContent = `Code „${code}" ist ungültig oder nicht anwendbar.`;
+					}
+				});
+
+			form.addEventListener("submit", async (event) => {
+				event.preventDefault();
+				showError("");
+
+				if (!form.reportValidity()) return;
+
+				const data = new FormData(form);
+				const value = (name: string) => String(data.get(name) ?? "").trim();
+
+				if (!data.get("terms")) {
+					showError("Bitte bestätigen Sie AGB, Datenschutz und Widerruf.");
+					return;
+				}
+
+				const shippingOption = value("shipping_option");
+				if (!shippingOption) {
+					showError("Bitte wählen Sie eine Versandart.");
+					return;
+				}
+
+				submit!.disabled = true;
+				const original = submit!.textContent;
+				submit!.textContent = "Bestellung wird angelegt …";
+
+				try {
+					await setCustomerDetails(value("email"), {
+						first_name: value("first_name"),
+						last_name: value("last_name"),
+						company: value("company"),
+						address_1: value("address_1"),
+						postal_code: value("postal_code"),
+						city: value("city"),
+						country_code: value("country_code"),
+						phone: value("phone"),
+					});
+
+					await chooseShippingOption(shippingOption);
+					const order = await completeOrder();
+
+					// Hand the order to the confirmation page so it renders instantly
+					// and does not depend on guest-order read access.
+					try {
+						sessionStorage.setItem(`order:${order.id}`, JSON.stringify(order));
+					} catch {
+						/* non-fatal */
+					}
+
+					window.location.href = `/bestellung?id=${encodeURIComponent(order.id)}`;
+				} catch (error) {
+					console.error(error);
+					submit!.disabled = false;
+					submit!.textContent = original;
+					showError(
+						error instanceof Error && error.message
+							? error.message
+							: "Die Bestellung konnte nicht abgeschlossen werden. Bitte erneut versuchen.",
+					);
+				}
+			});
+
+			getCart()
+				.then(async (cart) => {
+					loading?.setAttribute("hidden", "");
+					if (!cart || (cart.items ?? []).length === 0) {
+						empty?.removeAttribute("hidden");
+						return;
+					}
+					form.removeAttribute("hidden");
+					paint(cart);
+					await loadShipping(cart.id);
+				})
+				.catch((error) => {
+					console.error(error);
+					if (loading) {
+						loading.textContent =
+							"Die Kasse konnte nicht geladen werden. Bitte Seite neu laden.";
+					}
+				});
+		}
+	</script>
+
+	<style>
+		.checkout {
+			display: grid;
+			grid-template-columns: 1fr minmax(0, 340px);
+			gap: 2rem;
+			align-items: start;
+		}
+		.checkout__main {
+			display: grid;
+			gap: 1.25rem;
+		}
+		.card {
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius);
+			padding: 1.25rem 1.4rem;
+			background: var(--c-white);
+		}
+		.card h2 {
+			font-size: 1rem;
+			margin: 0 0 1rem;
+		}
+		label {
+			display: block;
+			font-size: 0.85rem;
+			font-weight: 600;
+			color: var(--c-muted);
+			margin-bottom: 0.85rem;
+		}
+		input:not([type="checkbox"]):not([type="radio"]),
+		select {
+			display: block;
+			width: 100%;
+			margin-top: 0.3rem;
+			padding: 0.6rem 0.75rem;
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			font-family: inherit;
+			font-size: 0.95rem;
+			color: var(--c-ink);
+			background: var(--c-white);
+		}
+		input:focus-visible,
+		select:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 1px;
+		}
+		.grid2 {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 0 1rem;
+		}
+		.promo {
+			display: flex;
+			gap: 0.6rem;
+			align-items: flex-start;
+		}
+		.promo input {
+			margin-top: 0;
+		}
+		.promo__msg {
+			margin: 0.6rem 0 0;
+			font-size: 0.82rem;
+			color: var(--c-green-dark);
+			min-height: 1.2em;
+		}
+		.shipping {
+			display: grid;
+			gap: 0.5rem;
+		}
+		.shipping__option {
+			display: flex;
+			align-items: center;
+			gap: 0.6rem;
+			margin: 0;
+			padding: 0.7rem 0.9rem;
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			cursor: pointer;
+			font-weight: 600;
+			color: var(--c-ink);
+		}
+		.shipping__option:has(input:checked) {
+			border-color: var(--c-green);
+			background: var(--c-mint);
+		}
+		.shipping__price {
+			margin-left: auto;
+			font-weight: 700;
+		}
+		.confirm {
+			display: flex;
+			gap: 0.6rem;
+			align-items: flex-start;
+			font-weight: 500;
+			color: var(--c-ink);
+			font-size: 0.88rem;
+		}
+		.confirm input {
+			margin-top: 0.2rem;
+			accent-color: var(--c-green);
+		}
+		.muted {
+			font-size: 0.8rem;
+			color: var(--c-muted);
+			margin: 0.5rem 0 0;
+		}
+		.checkout__summary {
+			position: sticky;
+			top: 5rem;
+			background: var(--c-cream-soft);
+		}
+		.sum__lines {
+			list-style: none;
+			margin: 0 0 1rem;
+			padding: 0 0 1rem;
+			border-bottom: 1px solid var(--c-border);
+			font-size: 0.85rem;
+		}
+		.sum__lines li {
+			display: flex;
+			justify-content: space-between;
+			gap: 1rem;
+			padding: 0.25rem 0;
+		}
+		.sum__lines em {
+			color: var(--c-muted);
+			font-style: normal;
+		}
+		.sum__row {
+			display: flex;
+			justify-content: space-between;
+			font-size: 0.9rem;
+			padding: 0.3rem 0;
+		}
+		.sum__row--total {
+			border-top: 1px solid var(--c-border);
+			margin-top: 0.5rem;
+			padding-top: 0.7rem;
+			font-size: 1.05rem;
+			font-weight: 800;
+			color: var(--c-navy);
+		}
+		.checkout__error {
+			margin: 0.9rem 0 0;
+			padding: 0.6rem 0.75rem;
+			border-radius: var(--radius-sm);
+			background: #f7e7e2;
+			color: #8e3b2b;
+			font-size: 0.85rem;
+			font-weight: 600;
+		}
+		.checkout__submit {
+			width: 100%;
+			justify-content: center;
+			margin-top: 1rem;
+		}
+		.checkout__back {
+			display: block;
+			text-align: center;
+			margin-top: 0.75rem;
+			font-size: 0.85rem;
+			color: var(--c-muted);
+			text-decoration: none;
+		}
+
+		@media (max-width: 900px) {
+			.checkout {
+				grid-template-columns: 1fr;
+			}
+			.checkout__summary {
+				position: static;
+			}
+		}
+	</style>
+</BaseLayout>

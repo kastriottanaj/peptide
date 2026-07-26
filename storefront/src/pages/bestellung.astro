@@ -1,0 +1,264 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { BANK_DETAILS, bankDetailsArePlaceholder } from "../lib/bank";
+
+const placeholderBank = bankDetailsArePlaceholder();
+---
+
+<BaseLayout
+	title="Bestellung eingegangen"
+	description="Ihre Bestellung bei Peptide Einkaufen."
+	noindex
+>
+	<div data-order-root>
+		<p data-order-loading>Bestellung wird geladen …</p>
+
+		<div data-order-missing hidden>
+			<h1>Bestellung nicht gefunden</h1>
+			<p>
+				Zu diesem Link liegt keine Bestellung vor. Bitte prüfen Sie die
+				Bestätigungs-E-Mail oder kontaktieren Sie den Support.
+			</p>
+			<a class="btn btn--green" href="/contact">Support kontaktieren</a>
+		</div>
+
+		<div data-order-view hidden>
+			<span class="eyebrow">Bestellung eingegangen</span>
+			<h1>Vielen Dank für Ihre Bestellung</h1>
+			<p class="lead">
+				Bestellnummer <strong data-order-number></strong>. Eine Bestätigung geht
+				an <strong data-order-email></strong>.
+			</p>
+
+			<section class="pay">
+				<h2>Jetzt überweisen</h2>
+
+				{
+					placeholderBank && (
+						<p class="pay__warning">
+							<strong>Hinweis:</strong> Das Geschäftskonto wird derzeit eröffnet.
+							Die unten gezeigten Bankdaten sind Platzhalter — bitte noch nicht
+							überweisen. Wir melden uns mit den finalen Daten per E-Mail.
+						</p>
+					)
+				}
+
+				<dl class="pay__grid">
+					<div><dt>Empfänger</dt><dd>{BANK_DETAILS.accountHolder}</dd></div>
+					<div><dt>IBAN</dt><dd>{BANK_DETAILS.iban}</dd></div>
+					<div><dt>BIC</dt><dd>{BANK_DETAILS.bic}</dd></div>
+					<div><dt>Bank</dt><dd>{BANK_DETAILS.bankName}</dd></div>
+					<div><dt>Betrag</dt><dd data-order-total></dd></div>
+					<div class="pay__reference">
+						<dt>Verwendungszweck</dt>
+						<dd data-order-reference></dd>
+					</div>
+				</dl>
+
+				<p class="pay__note">
+					Bitte geben Sie den Verwendungszweck exakt an — daran ordnen wir Ihre
+					Zahlung zu. Der Versand erfolgt nach Zahlungseingang.
+				</p>
+			</section>
+
+			<section class="items">
+				<h2>Ihre Artikel</h2>
+				<ul data-order-lines></ul>
+				<div class="items__row"><span>Zwischensumme</span><span data-order-subtotal></span></div>
+				<div class="items__row"><span>Versand</span><span data-order-shipping></span></div>
+				<div class="items__row items__row--total"><span>Gesamt</span><span data-order-total-2></span></div>
+			</section>
+
+			<a class="btn btn--green" href="/produkte">Weiter einkaufen</a>
+		</div>
+	</div>
+
+	<script>
+		import { medusa } from "../lib/medusa";
+		import { formatEur } from "../lib/pricing";
+		import { paymentReference } from "../lib/bank";
+
+		const root = document.querySelector<HTMLElement>("[data-order-root]");
+		if (root) {
+			const loading = root.querySelector<HTMLElement>("[data-order-loading]");
+			const missing = root.querySelector<HTMLElement>("[data-order-missing]");
+			const view = root.querySelector<HTMLElement>("[data-order-view]");
+
+			const orderId = new URLSearchParams(window.location.search).get("id");
+
+			const set = (selector: string, value: string) => {
+				const el = root.querySelector<HTMLElement>(selector);
+				if (el) el.textContent = value;
+			};
+
+			const render = (order: any) => {
+				loading?.setAttribute("hidden", "");
+				view?.removeAttribute("hidden");
+
+				const currency = order.currency_code ?? "eur";
+
+				set("[data-order-number]", String(order.display_id ?? order.id));
+				set("[data-order-email]", order.email ?? "");
+				set("[data-order-reference]", paymentReference(order));
+				set("[data-order-total]", formatEur(order.total ?? 0, currency));
+				set("[data-order-total-2]", formatEur(order.total ?? 0, currency));
+				// `subtotal` on an order includes shipping; `item_subtotal` is
+				// merchandise only, which is what "Zwischensumme" means here.
+				set(
+					"[data-order-subtotal]",
+					formatEur(order.item_subtotal ?? order.subtotal ?? 0, currency),
+				);
+				set("[data-order-shipping]", formatEur(order.shipping_total ?? 0, currency));
+
+				const lines = root.querySelector<HTMLElement>("[data-order-lines]");
+				if (lines) {
+					lines.innerHTML = "";
+					for (const item of order.items ?? []) {
+						const li = document.createElement("li");
+						li.innerHTML = `<span>${item.quantity}× ${item.product_title ?? item.title ?? ""} <em>${item.variant_title ?? ""}</em></span><span>${formatEur(item.total ?? 0, currency)}</span>`;
+						lines.appendChild(li);
+					}
+				}
+			};
+
+			const showMissing = () => {
+				loading?.setAttribute("hidden", "");
+				missing?.removeAttribute("hidden");
+			};
+
+			if (!orderId) {
+				showMissing();
+			} else {
+				// Render the stashed order first so the page is instant, then
+				// reconcile against the server. The payment reference is written by
+				// an `order.placed` subscriber *after* the cart is completed, so the
+				// stashed copy never has it — without the refetch the customer would
+				// transfer money quoting a reference we cannot match.
+				let cached: string | null = null;
+				try {
+					cached = sessionStorage.getItem(`order:${orderId}`);
+				} catch {
+					/* storage unavailable */
+				}
+
+				let rendered = false;
+				if (cached) {
+					try {
+						render(JSON.parse(cached));
+						rendered = true;
+					} catch {
+						/* fall through to the fetch */
+					}
+				}
+
+				// `+metadata` is required: the order endpoint omits metadata otherwise.
+				medusa.store.order
+					.retrieve(orderId, { fields: "+metadata" })
+					.then(({ order }) => {
+						render(order);
+						try {
+							sessionStorage.setItem(`order:${orderId}`, JSON.stringify(order));
+						} catch {
+							/* non-fatal */
+						}
+					})
+					.catch(() => {
+						if (!rendered) showMissing();
+					});
+			}
+		}
+	</script>
+
+	<style>
+		.lead {
+			color: var(--c-muted);
+			margin: 0.25rem 0 2rem;
+		}
+		.pay,
+		.items {
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius);
+			padding: 1.4rem 1.5rem;
+			margin-bottom: 1.5rem;
+		}
+		.pay {
+			background: var(--c-cream-soft);
+		}
+		.pay h2,
+		.items h2 {
+			font-size: 1rem;
+			margin: 0 0 1rem;
+		}
+		.pay__warning {
+			background: #f7f1e5;
+			color: #765627;
+			border-radius: var(--radius-sm);
+			padding: 0.7rem 0.9rem;
+			font-size: 0.85rem;
+			margin: 0 0 1rem;
+		}
+		.pay__grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 0.75rem 1.5rem;
+			margin: 0;
+		}
+		.pay__grid dt {
+			font-size: 0.78rem;
+			color: var(--c-muted);
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+		}
+		.pay__grid dd {
+			margin: 0.15rem 0 0;
+			font-weight: 700;
+			font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+		}
+		.pay__reference dd {
+			color: var(--c-green-dark);
+			font-size: 1.1rem;
+		}
+		.pay__note {
+			margin: 1rem 0 0;
+			font-size: 0.82rem;
+			color: var(--c-muted);
+		}
+		.items ul {
+			list-style: none;
+			margin: 0 0 1rem;
+			padding: 0 0 1rem;
+			border-bottom: 1px solid var(--c-border);
+			font-size: 0.9rem;
+		}
+		.items li {
+			display: flex;
+			justify-content: space-between;
+			gap: 1rem;
+			padding: 0.3rem 0;
+		}
+		.items em {
+			color: var(--c-muted);
+			font-style: normal;
+		}
+		.items__row {
+			display: flex;
+			justify-content: space-between;
+			font-size: 0.9rem;
+			padding: 0.25rem 0;
+		}
+		.items__row--total {
+			border-top: 1px solid var(--c-border);
+			margin-top: 0.5rem;
+			padding-top: 0.7rem;
+			font-weight: 800;
+			font-size: 1.05rem;
+			color: var(--c-navy);
+		}
+
+		@media (max-width: 640px) {
+			.pay__grid {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</BaseLayout>

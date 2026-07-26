@@ -40,8 +40,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 				</div>
 
 				<p class="cart__note">
-					Versandkosten und Rabatte werden im nächsten Schritt verbindlich
-					berechnet.
+					Mengenrabatte sind bereits enthalten. Versandkosten werden an der
+					Kasse berechnet.
 				</p>
 
 				<a class="btn btn--green cart__checkout" href="/kasse">Zur Kasse</a>
@@ -121,7 +121,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 					}
 				}
 
-				const subtotal = cart.subtotal ?? 0;
+				// Merchandise only: `subtotal` folds in shipping once a shipping
+				// method exists, which would wrongly trip the free-shipping hint.
+				const subtotal = cart.item_subtotal ?? cart.subtotal ?? 0;
 				if (subtotalEl) subtotalEl.textContent = formatEur(subtotal, currency);
 				if (totalEl) totalEl.textContent = formatEur(cart.total ?? subtotal, currency);
 

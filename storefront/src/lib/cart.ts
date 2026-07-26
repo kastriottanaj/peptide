@@ -120,3 +120,100 @@ export async function refresh(): Promise<Cart | null> {
 	announce(cart);
 	return cart;
 }
+
+// --- Checkout ------------------------------------------------------------
+
+export type CheckoutAddress = {
+	first_name: string;
+	last_name: string;
+	company?: string;
+	address_1: string;
+	postal_code: string;
+	city: string;
+	country_code: string;
+	phone?: string;
+};
+
+/** Store contact details and address. Billing mirrors shipping, as in the template. */
+export async function setCustomerDetails(
+	email: string,
+	address: CheckoutAddress,
+): Promise<Cart> {
+	const current = await getOrCreateCart();
+	const { cart } = await medusa.store.cart.update(
+		current.id,
+		{ email, shipping_address: address, billing_address: address },
+		{ fields: CART_FIELDS },
+	);
+	announce(cart);
+	return cart;
+}
+
+/** Apply a promotion code; Medusa decides whether it is valid. */
+export async function applyPromoCode(code: string): Promise<Cart> {
+	const current = await getOrCreateCart();
+	const { cart } = await medusa.store.cart.update(
+		current.id,
+		{ promo_codes: [code] },
+		{ fields: CART_FIELDS },
+	);
+	announce(cart);
+	return cart;
+}
+
+export async function clearPromoCodes(): Promise<Cart> {
+	const current = await getOrCreateCart();
+	const { cart } = await medusa.store.cart.update(
+		current.id,
+		{ promo_codes: [] },
+		{ fields: CART_FIELDS },
+	);
+	announce(cart);
+	return cart;
+}
+
+export async function listShippingOptions(cartId: string) {
+	const { shipping_options } = await medusa.store.fulfillment.listCartOptions({
+		cart_id: cartId,
+	});
+	return shipping_options;
+}
+
+export async function chooseShippingOption(optionId: string): Promise<Cart> {
+	const current = await getOrCreateCart();
+	const { cart } = await medusa.store.cart.addShippingMethod(
+		current.id,
+		{ option_id: optionId },
+		{ fields: CART_FIELDS },
+	);
+	announce(cart);
+	return cart;
+}
+
+/**
+ * Complete the order: payment session with the manual provider (bank transfer),
+ * then convert the cart into an order. Returns the created order.
+ *
+ * The cart id is only cleared once Medusa confirms the order, so a failure
+ * mid-way leaves the customer's cart intact.
+ */
+export async function completeOrder(): Promise<HttpTypes.StoreOrder> {
+	const cart = await getOrCreateCart();
+
+	await medusa.store.payment.initiatePaymentSession(cart, {
+		provider_id: "pp_system_default",
+	});
+
+	const result = await medusa.store.cart.complete(cart.id);
+
+	if (result.type !== "order") {
+		const message =
+			("error" in result && (result.error as { message?: string })?.message) ||
+			"Die Bestellung konnte nicht abgeschlossen werden.";
+		throw new Error(message);
+	}
+
+	clearCartId();
+	announce(null);
+	return result.order;
+}
