@@ -7,7 +7,11 @@ Monorepo for the peptides project.
 > `storefront/.env` (`PUBLIC_BANK_ACCOUNT_HOLDER`, `PUBLIC_BANK_IBAN`,
 > `PUBLIC_BANK_BIC`, `PUBLIC_BANK_NAME`). Until then every confirmation page
 > shows placeholders and tells the customer not to transfer.
-> See [docs/checkout.md](docs/checkout.md) for this and the other go-live gaps.
+>
+> That is one of four hard blockers — bank details, real company data on the
+> legal pages, the B2B/B2C decision, and the order confirmation email.
+> **[docs/go-live-checklist.md](docs/go-live-checklist.md) is the canonical list;
+> read it before any deployment.**
 
 | Folder        | Stack                          | Description              |
 | ------------- | ------------------------------ | ------------------------ |

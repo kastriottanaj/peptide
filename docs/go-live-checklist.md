@@ -11,6 +11,11 @@ change, not development work.
 This file is the single place to look for "what are we still waiting on".
 Update it as items land.
 
+**Hard blockers before any live deployment:** real bank details (§1), real
+company data on the legal pages (§2), the B2B/B2C decision (§3), and the order
+confirmation email (§6). None of them are optional — the shop either cannot take
+money or cannot lawfully trade without them.
+
 ---
 
 ## 1. Bank account — blocks all payments
@@ -102,16 +107,45 @@ lab-verified analytical data before anything is sold.
 - [ ] COA documents available
 - [ ] `demo` flags removed
 
-## 6. Technical items not blocked on the business
+## 6. Order confirmation email — MUST be done before deploying live
+
+**Deferred on 2026-07-27 by decision. Do not launch without it.**
+
+No email is sent after an order. Today that is survivable only because nobody
+real is ordering.
+
+Why it is a launch blocker rather than a nice-to-have: payment is bank transfer,
+and the payment reference exists **only on the confirmation page**. A customer
+who closes that tab — or pays later from their banking app, which is the normal
+way people pay an invoice — has no record of the reference, the IBAN, or the
+amount. They either cannot pay, or they pay without a usable reference and the
+transfer cannot be matched to their order. Both end in a support conversation
+and possibly a refund.
+
+What it needs:
+
+- [ ] A sending domain and mailbox on `peptideeinkaufen.de` (depends on DNS,
+      so effectively on the deployment)
+- [ ] SMTP or Resend credentials in the backend `.env`
+- [ ] A Medusa notification provider configured
+- [ ] An `order.placed` subscriber that sends the confirmation, containing at
+      minimum: order number, itemised lines, total, IBAN/BIC/holder, and the
+      payment reference
+- [ ] SPF, DKIM and DMARC records, or the mail lands in spam — which for this
+      email is the same as not sending it
+- [ ] Verified end to end: place a test order, receive the mail, confirm the
+      reference in it matches `metadata->>'bank_reference'` on the order
+
+Note this must come **after** the bank details in section 1, since the email
+carries them.
+
+## 7. Technical items not blocked on the business
 
 These can be done at any time:
 
 - [x] ~~Shipping rules~~ — done 2026-07-26. €10 Germany, €20 rest of Europe,
       free from €100 merchandise after discount, verified across seven cart
       scenarios including the €99.80 boundary.
-- [ ] Order confirmation email — nothing is sent today. Matters here because
-      the payment reference exists only on the confirmation page; a customer who
-      closes the tab cannot pay correctly.
 - [ ] Consent banner and analytics — only once analytics actually exists, and
       the Datenschutz page needs a matching section added at the same time.
 - [ ] Deployment — no production deploy exists for this repo yet.

@@ -136,10 +136,12 @@ The threshold rule uses `item_total` (merchandise after discount). Not
 ## Known gaps before go-live
 
 1. **Bank details** — the blocker above.
-2. **No confirmation email.** Nothing is sent after an order. For a bank-transfer
-   shop this matters more than usual — the payment reference only exists on the
-   confirmation page, so a customer who closes the tab has no way back to it.
-   Needs a notification provider plus an `order.placed` subscriber.
+2. **No confirmation email — deferred 2026-07-27, required before launch.**
+   Nothing is sent after an order. For a bank-transfer shop this matters more
+   than usual: the payment reference exists only on the confirmation page, so a
+   customer who closes the tab cannot pay correctly and the transfer cannot be
+   matched. Needs a notification provider plus an `order.placed` subscriber.
+   Full requirements in [go-live-checklist.md](go-live-checklist.md#6-order-confirmation-email--must-be-done-before-deploying-live).
 3. **Legal pages need real company data.** `/impressum`, `/datenschutz`, `/agb`
    and `/widerruf` exist and are linked from the mandatory consent checkbox, but
    render company details as visible placeholders and stay `noindex` until
