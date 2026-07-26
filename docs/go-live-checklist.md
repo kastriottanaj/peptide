@@ -106,9 +106,9 @@ lab-verified analytical data before anything is sold.
 
 These can be done at any time:
 
-- [ ] Shipping rules — still the Medusa starter's flat €10. The €20
-      non-Germany rate and free-from-€100 threshold are not configured, so the
-      cart's „Versandkostenfrei ✓" hint can over-promise.
+- [x] ~~Shipping rules~~ — done 2026-07-26. €10 Germany, €20 rest of Europe,
+      free from €100 merchandise after discount, verified across seven cart
+      scenarios including the €99.80 boundary.
 - [ ] Order confirmation email — nothing is sent today. Matters here because
       the payment reference exists only on the confirmation page; a customer who
       closes the tab cannot pay correctly.

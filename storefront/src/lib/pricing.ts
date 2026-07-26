@@ -3,10 +3,17 @@
  *
  * IMPORTANT: these values exist here for DISPLAY only — showing the customer the
  * discount they have earned and how far they are from free shipping while they
- * are still in the cart. Medusa remains authoritative for what is actually
- * charged, via a quantity promotion and shipping options that must mirror these
- * numbers. If you change a tier here, change it in Medusa too or the cart will
- * promise something the order does not honour.
+ * are still in the cart. Medusa is authoritative for what is actually charged.
+ *
+ * The matching backend rules live in:
+ *   - seed-commerce-rules.ts  (quantity tiers MENGE3…MENGE10)
+ *   - seed-shipping.ts        (10/20 EUR zones, VERSANDFREI100)
+ *
+ * Change a number here and you must change it there too, or the cart will
+ * promise something the order does not honour. Note the free-shipping
+ * threshold is measured on merchandise AFTER discount (`cart.item_total`),
+ * which is what the promotion uses — not `item_subtotal`, and definitely not
+ * `subtotal`, which includes shipping.
  *
  * See docs/specs/2026-07-26-checkout-workflow.md.
  */

@@ -81,6 +81,7 @@ pieces are plain `<script>` islands.
 |---|---|
 | `src/subscribers/order-bank-reference.ts` | Assigns the `PE-` reference on `order.placed` |
 | `src/scripts/seed-commerce-rules.ts` | Creates the quantity-discount promotions |
+| `src/scripts/seed-shipping.ts` | Shipping zones, rates and the free-shipping promotion |
 
 Order completion runs: save address → attach shipping method → open a payment
 session on `pp_system_default` (the manual provider that represents bank
@@ -115,27 +116,37 @@ It is derived bijectively from the order's `display_id`, so two orders can never
 collide, and consecutive orders produce unrelated-looking codes rather than
 advertising order volume.
 
-**Shipping** — intended: €10 within Germany, €20 outside, free from €100
-merchandise value after discount. See the gap below.
+**Shipping** — €10 within Germany, €20 elsewhere in Europe, free from €100
+merchandise value **after** discount.
+
+Two service zones carry the rates; the free-shipping threshold is a separate
+automatic promotion (`VERSANDFREI100`) targeting shipping methods, because
+free-over-threshold cannot be expressed as a shipping-option price. Configure
+with:
+
+```bash
+cd backend/apps/backend
+npx medusa exec ./src/scripts/seed-shipping.ts
+```
+
+The threshold rule uses `item_total` (merchandise after discount). Not
+`subtotal` — on a cart that includes shipping, so a €99.80 order would clear a
+€100 threshold on the strength of its own €10 shipping fee and then zero it out.
 
 ## Known gaps before go-live
 
 1. **Bank details** — the blocker above.
-2. **Shipping rules are not configured.** Both options are still the Medusa
-   starter's flat €10. The €20 non-Germany rate and the free-from-€100 threshold
-   do not exist, so the cart's „Versandkostenfrei ✓" hint can promise something
-   the order will not honour. Fix in the admin under *Settings → Locations &
-   Shipping*, or the hint should be removed.
-3. **No confirmation email.** Nothing is sent after an order. For a bank-transfer
+2. **No confirmation email.** Nothing is sent after an order. For a bank-transfer
    shop this matters more than usual — the payment reference only exists on the
    confirmation page, so a customer who closes the tab has no way back to it.
    Needs a notification provider plus an `order.placed` subscriber.
-4. **Legal pages are missing.** `/kasse` links to `/agb`, `/datenschutz` and
-   `/widerruf` in the mandatory confirmation checkbox. **All three 404 today.**
-   Required for a German shop.
-5. **Prices and product data are placeholder.** Every purity value, COA status
+3. **Legal pages need real company data.** `/impressum`, `/datenschutz`, `/agb`
+   and `/widerruf` exist and are linked from the mandatory consent checkbox, but
+   render company details as visible placeholders and stay `noindex` until
+   finalised. See [go-live-checklist.md](go-live-checklist.md).
+4. **Prices and product data are placeholder.** Every purity value, COA status
    and price is fabricated and must be replaced with real analytical data.
-6. **`pricing.ts` can drift from Medusa.** The tiers and thresholds exist in both
+5. **`pricing.ts` can drift from Medusa.** The tiers and thresholds exist in both
    the storefront (for display) and the backend (for what is charged). Change one,
    change the other.
 
@@ -155,6 +166,9 @@ Manually, against a running dev server:
 - Subtotal on cart, checkout and confirmation must be merchandise only; shipping
   is a separate line. (Medusa's `subtotal` on an order *includes* shipping —
   use `item_subtotal`.)
+- A German cart is quoted €10 and a French one €20. A cart whose merchandise
+  after discount is €99.80 is still charged shipping; at €100 it goes free. Test
+  that boundary specifically — it is the one that hides a mistake.
 - Submitting `/kasse` without the legal checkbox must be refused.
 - The reference on the confirmation page must equal
   `metadata->>'bank_reference'` on the order in Postgres. It is written by a

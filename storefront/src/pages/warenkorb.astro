@@ -31,6 +31,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 					<span data-cart-subtotal></span>
 				</div>
 
+				<div class="cart__row cart__row--discount" data-cart-discount-row hidden>
+					<span>Mengenrabatt</span>
+					<span data-cart-discount></span>
+				</div>
+
 				<p class="cart__hint" data-cart-discount-hint hidden></p>
 				<p class="cart__hint" data-cart-shipping-hint hidden></p>
 
@@ -121,11 +126,22 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 					}
 				}
 
-				// Merchandise only: `subtotal` folds in shipping once a shipping
-				// method exists, which would wrongly trip the free-shipping hint.
+				// Merchandise before discount, for display.
 				const subtotal = cart.item_subtotal ?? cart.subtotal ?? 0;
+				// Merchandise AFTER discount — the exact basis the free-shipping
+				// promotion uses in Medusa. Using item_subtotal here would let the
+				// hint promise free shipping the order then charges for.
+				const merchandiseAfterDiscount = cart.item_total ?? subtotal;
+				const discountTotal = cart.discount_total ?? 0;
 				if (subtotalEl) subtotalEl.textContent = formatEur(subtotal, currency);
 				if (totalEl) totalEl.textContent = formatEur(cart.total ?? subtotal, currency);
+
+				const discountRow = root.querySelector<HTMLElement>("[data-cart-discount-row]");
+				const discountEl = root.querySelector<HTMLElement>("[data-cart-discount]");
+				if (discountRow && discountEl) {
+					discountRow.toggleAttribute("hidden", discountTotal <= 0);
+					discountEl.textContent = `− ${formatEur(discountTotal, currency)}`;
+				}
 
 				// Display-only nudges; Medusa stays authoritative for what is charged.
 				const units = cartItemCount(cart);
@@ -145,7 +161,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 				}
 
 				if (shippingHint) {
-					const missing = FREE_SHIPPING_THRESHOLD_EUR - subtotal;
+					const missing = FREE_SHIPPING_THRESHOLD_EUR - merchandiseAfterDiscount;
 					if (missing > 0) {
 						shippingHint.textContent = `Noch ${formatEur(missing, currency)} bis zum kostenlosen Versand.`;
 					} else {
@@ -244,6 +260,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 			justify-content: space-between;
 			font-size: 0.92rem;
 			padding: 0.35rem 0;
+		}
+		.cart__row--discount {
+			color: var(--c-green-dark);
+			font-weight: 600;
 		}
 		.cart__row--total {
 			border-top: 1px solid var(--c-border);
