@@ -1,0 +1,140 @@
+---
+import LegalLayout from "../layouts/LegalLayout.astro";
+
+// Diese Seite gibt bewusst die VERBRAUCHER-Variante wieder (gesetzliches
+// Muster nach Anlage 1 zu Art. 246a § 1 Abs. 2 S. 2 EGBGB).
+//
+// Begründung: Solange nicht entschieden ist, ob ausschließlich an Unternehmer
+// und Forschungseinrichtungen verkauft wird, ist dies die sichere Richtung.
+// Fehlt gegenüber einem Verbraucher eine ordnungsgemäße Belehrung, verlängert
+// sich die Widerrufsfrist auf bis zu zwölf Monate und 14 Tage (§ 356 Abs. 3
+// BGB). Eine überflüssige Belehrung schadet dagegen nicht.
+//
+// TODO: Steht fest, dass ausschließlich B2B verkauft wird, wird diese Seite
+// durch einen kurzen Hinweis ersetzt, dass ein Widerrufsrecht nur Verbrauchern
+// zusteht und daher nicht besteht. Siehe docs/go-live-checklist.md.
+---
+
+<LegalLayout
+	title="Widerrufsbelehrung"
+	description="Widerrufsrecht und Muster-Widerrufsformular."
+	draft
+>
+	<p>
+		<strong>Hinweis:</strong> Ein Widerrufsrecht steht nur Verbrauchern im Sinne
+		des § 13 BGB zu. Bestellungen von Unternehmen, Forschungseinrichtungen und
+		Behörden im Rahmen ihrer gewerblichen oder selbständigen beruflichen
+		Tätigkeit sind davon nicht erfasst.
+	</p>
+
+	<h2>Widerrufsrecht</h2>
+	<p>
+		Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen
+		Vertrag zu widerrufen.
+	</p>
+	<p>
+		Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag, an dem Sie oder ein von
+		Ihnen benannter Dritter, der nicht der Beförderer ist, die Waren in Besitz
+		genommen haben bzw. hat.
+	</p>
+	<p>
+		Um Ihr Widerrufsrecht auszuüben, müssen Sie uns
+	</p>
+	<dl>
+		<dt>Anbieter</dt>
+		<dd><span class="todo">[Firmierung]</span></dd>
+		<dt>Anschrift</dt>
+		<dd><span class="todo">[Anschrift wie im Impressum]</span></dd>
+		<dt>E-Mail</dt>
+		<dd><span class="todo">[E-Mail-Adresse]</span></dd>
+		<dt>Telefon</dt>
+		<dd><span class="todo">[Telefonnummer]</span></dd>
+	</dl>
+	<p>
+		mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief
+		oder eine E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen,
+		informieren. Sie können dafür das beigefügte Muster-Widerrufsformular
+		verwenden, das jedoch nicht vorgeschrieben ist.
+	</p>
+	<p>
+		Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über
+		die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absenden.
+	</p>
+
+	<h2>Folgen des Widerrufs</h2>
+	<p>
+		Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir
+		von Ihnen erhalten haben, einschließlich der Lieferkosten (mit Ausnahme der
+		zusätzlichen Kosten, die sich daraus ergeben, dass Sie eine andere Art der
+		Lieferung als die von uns angebotene, günstigste Standardlieferung gewählt
+		haben), unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag
+		zurückzuzahlen, an dem die Mitteilung über Ihren Widerruf dieses Vertrags bei
+		uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe
+		Zahlungsmittel, das Sie bei der ursprünglichen Transaktion eingesetzt haben,
+		es sei denn, mit Ihnen wurde ausdrücklich etwas anderes vereinbart; in keinem
+		Fall werden Ihnen wegen dieser Rückzahlung Entgelte berechnet.
+	</p>
+	<p>
+		Wir können die Rückzahlung verweigern, bis wir die Waren wieder
+		zurückerhalten haben oder bis Sie den Nachweis erbracht haben, dass Sie die
+		Waren zurückgesandt haben, je nachdem, welches der frühere Zeitpunkt ist.
+	</p>
+	<p>
+		Sie haben die Waren unverzüglich und in jedem Fall spätestens binnen vierzehn
+		Tagen ab dem Tag, an dem Sie uns über den Widerruf dieses Vertrags
+		unterrichten, an uns zurückzusenden oder zu übergeben. Die Frist ist
+		gewahrt, wenn Sie die Waren vor Ablauf der Frist von vierzehn Tagen absenden.
+	</p>
+	<p>
+		<span class="todo"
+			>[Festlegen: „Sie tragen die unmittelbaren Kosten der Rücksendung der
+			Waren." oder eine Übernahme durch den Anbieter. Die gewählte Variante muss
+			hier stehen.]</span
+		>
+	</p>
+	<p>
+		Sie müssen für einen etwaigen Wertverlust der Waren nur aufkommen, wenn
+		dieser Wertverlust auf einen zur Prüfung der Beschaffenheit, Eigenschaften
+		und Funktionsweise der Waren nicht notwendigen Umgang mit ihnen
+		zurückzuführen ist.
+	</p>
+
+	<h2>Ausschluss und vorzeitiges Erlöschen</h2>
+	<p>
+		Das Widerrufsrecht besteht nicht bzw. erlischt vorzeitig bei Verträgen zur
+		Lieferung versiegelter Waren, die aus Gründen des Gesundheitsschutzes oder
+		der Hygiene nicht zur Rückgabe geeignet sind, wenn ihre Versiegelung nach der
+		Lieferung entfernt wurde (§ 312g Abs. 2 Nr. 3 BGB).
+	</p>
+	<p class="todo">
+		[Prüfen lassen, ob und für welche Artikel dieser Ausschluss greift — bei
+		versiegelten Vials ist das regelmäßig der Fall, muss aber vor Inbetriebnahme
+		konkret bewertet und gegenüber dem Kunden klar gekennzeichnet werden.]
+	</p>
+
+	<h2>Muster-Widerrufsformular</h2>
+	<p>
+		(Wenn Sie den Vertrag widerrufen wollen, füllen Sie bitte dieses Formular aus
+		und senden Sie es zurück.)
+	</p>
+	<div class="muster">
+		<p>
+			An <span class="todo">[Firmierung, Anschrift, E-Mail-Adresse]</span>:
+		</p>
+		<p>
+			Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen
+			Vertrag über den Kauf der folgenden Waren (*)/die Erbringung der folgenden
+			Dienstleistung (*)
+		</p>
+		<ul>
+			<li>Bestellt am (*)/erhalten am (*)</li>
+			<li>Name des/der Verbraucher(s)</li>
+			<li>Anschrift des/der Verbraucher(s)</li>
+			<li>
+				Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier)
+			</li>
+			<li>Datum</li>
+		</ul>
+		<p>(*) Unzutreffendes streichen.</p>
+	</div>
+</LegalLayout>

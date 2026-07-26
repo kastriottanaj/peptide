@@ -1,0 +1,149 @@
+---
+import LegalLayout from "../layouts/LegalLayout.astro";
+
+// TODO (anwaltlich prüfen lassen):
+// - Zielgruppe festlegen. § 2 unten geht davon aus, dass ausschließlich an
+//   Unternehmer, Forschungseinrichtungen und Behörden verkauft wird. Wird auch
+//   an Verbraucher verkauft, ändern sich Widerrufsrecht, Gewährleistung
+//   (§ 476 BGB) und die Pflichtinformationen erheblich.
+// - Versandkosten in § 4 an die tatsächlich konfigurierten Werte anpassen.
+---
+
+<LegalLayout
+	title="Allgemeine Geschäftsbedingungen"
+	description="AGB für Bestellungen bei Peptide Einkaufen."
+	draft
+>
+	<h2>§ 1 Geltungsbereich</h2>
+	<p>
+		Diese Allgemeinen Geschäftsbedingungen gelten für alle Bestellungen, die über
+		diesen Online-Shop bei <span class="todo">[Firmierung]</span> (nachfolgend
+		„Anbieter") aufgegeben werden. Abweichende Bedingungen des Bestellers werden
+		nicht Vertragsbestandteil, es sei denn, der Anbieter stimmt ihrer Geltung
+		ausdrücklich schriftlich zu.
+	</p>
+
+	<h2>§ 2 Kundenkreis und Verwendungszweck</h2>
+	<p>
+		Die angebotenen Produkte sind <strong
+			>ausschließlich für Forschungs-, Analyse- und Laborzwecke</strong
+		> bestimmt. Sie sind keine Arzneimittel, Lebensmittel, Nahrungsergänzungs-
+		oder Kosmetikprodukte und weder für die Anwendung am noch im menschlichen
+		oder tierischen Körper zugelassen oder geeignet.
+	</p>
+	<p>
+		Mit der Bestellung sichert der Besteller zu, dass er die Produkte
+		ausschließlich zu den vorgenannten Zwecken verwendet, über die zur sachgerechten
+		und sicheren Handhabung erforderliche Sachkunde und Ausstattung verfügt und
+		die einschlägigen rechtlichen Vorgaben einhält.
+	</p>
+	<p class="todo">
+		[Sofern ausschließlich an Unternehmer, Forschungseinrichtungen und Behörden
+		geliefert wird, hier ausdrücklich aufnehmen: „Ein Verkauf an Verbraucher im
+		Sinne des § 13 BGB findet nicht statt." Diese Entscheidung muss vor
+		Inbetriebnahme getroffen werden — sie bestimmt § 7 und die
+		Widerrufsbelehrung.]
+	</p>
+
+	<h2>§ 3 Vertragsschluss</h2>
+	<p>
+		Die Darstellung der Produkte im Shop stellt kein rechtlich bindendes Angebot,
+		sondern eine Aufforderung zur Bestellung dar. Mit dem Absenden der Bestellung
+		über die Schaltfläche „Zahlungspflichtig bestellen" gibt der Besteller ein
+		verbindliches Angebot ab.
+	</p>
+	<p>
+		Der Zugang der Bestellung wird unverzüglich elektronisch bestätigt. Diese
+		Bestätigung stellt noch keine Annahme dar. Der Vertrag kommt zustande, wenn
+		der Anbieter die Bestellung ausdrücklich annimmt oder die Ware versendet.
+	</p>
+
+	<h2>§ 4 Preise und Versandkosten</h2>
+	<p>
+		Alle Preise verstehen sich in Euro
+		<span class="todo">[inkl. / zzgl. gesetzlicher Umsatzsteuer — je nach
+		Kleinunternehmerregelung und Zielgruppe festlegen]</span>.
+	</p>
+	<p>
+		Zusätzlich zu den Produktpreisen fallen Versandkosten an. Die für Ihre
+		Bestellung geltenden Versandkosten werden vor Absenden der Bestellung im
+		Bestellformular ausgewiesen.
+		<span class="todo"
+			>[Konkrete Staffel ergänzen, sobald die Versandregeln im Backend
+			konfiguriert sind.]</span
+		>
+	</p>
+	<p>
+		Mengenrabatte werden automatisch anhand der bestellten Stückzahl je Position
+		berechnet und im Warenkorb ausgewiesen.
+	</p>
+
+	<h2>§ 5 Zahlung</h2>
+	<p>
+		Die Zahlung erfolgt ausschließlich per <strong>Vorkasse</strong> durch
+		Banküberweisung. Nach Absenden der Bestellung erhalten Sie die Bankverbindung
+		sowie einen Verwendungszweck. Bitte geben Sie den Verwendungszweck bei der
+		Überweisung vollständig und unverändert an, damit die Zahlung Ihrer
+		Bestellung zugeordnet werden kann.
+	</p>
+	<p>
+		Der Rechnungsbetrag ist ohne Abzug innerhalb von
+		<span class="todo">[Anzahl]</span> Tagen ab Bestellbestätigung auf dem
+		angegebenen Konto gutzuschreiben. Geht die Zahlung nicht fristgerecht ein,
+		kann der Anbieter vom Vertrag zurücktreten.
+	</p>
+
+	<h2>§ 6 Lieferung und Eigentumsvorbehalt</h2>
+	<p>
+		Der Versand erfolgt erst nach vollständigem Zahlungseingang. Die
+		Lieferzeit beträgt, sofern nicht anders angegeben,
+		<span class="todo">[Anzahl]</span> Werktage ab Zahlungseingang.
+	</p>
+	<p>
+		Die gelieferte Ware bleibt bis zur vollständigen Bezahlung Eigentum des
+		Anbieters.
+	</p>
+	<p class="todo">
+		[Liefergebiete festlegen und hier benennen; Ausfuhrbeschränkungen für die
+		betroffenen Stoffe je Zielland prüfen.]
+	</p>
+
+	<h2>§ 7 Gewährleistung</h2>
+	<p>
+		Es gelten die gesetzlichen Bestimmungen über die Mängelhaftung. Die
+		Beschaffenheit der Ware ergibt sich aus der jeweiligen Produktbeschreibung
+		und, soweit vorhanden, dem zugehörigen Analysezertifikat.
+	</p>
+	<p>
+		Offensichtliche Mängel und Transportschäden sind unverzüglich, spätestens
+		innerhalb von <span class="todo">[Anzahl]</span> Tagen nach Erhalt, in
+		Textform anzuzeigen.
+	</p>
+
+	<h2>§ 8 Haftung</h2>
+	<p>
+		Der Anbieter haftet unbeschränkt für Schäden aus der Verletzung des Lebens,
+		des Körpers oder der Gesundheit sowie für Vorsatz und grobe Fahrlässigkeit.
+		Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten ist die
+		Haftung auf den vertragstypischen, vorhersehbaren Schaden begrenzt. Im
+		Übrigen ist die Haftung ausgeschlossen.
+	</p>
+	<p>
+		Für Schäden, die aus einer bestimmungswidrigen Verwendung der Produkte
+		entstehen, insbesondere aus einer Anwendung am Menschen oder am Tier, haftet
+		der Anbieter nicht.
+	</p>
+
+	<h2>§ 9 Schlussbestimmungen</h2>
+	<p>
+		Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des
+		UN-Kaufrechts.
+		<span class="todo"
+			>[Gerichtsstandsklausel ergänzen — nur zulässig gegenüber Kaufleuten.]</span
+		>
+	</p>
+	<p>
+		Sollten einzelne Bestimmungen dieser AGB unwirksam sein, bleibt die Wirksamkeit
+		der übrigen Bestimmungen unberührt.
+	</p>
+</LegalLayout>

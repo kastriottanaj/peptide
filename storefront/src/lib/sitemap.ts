@@ -40,6 +40,10 @@ export const staticRoutes: Array<{
 	{ path: "/produkte", changeFrequency: "daily", priority: 0.95 },
 	{ path: "/about", changeFrequency: "monthly", priority: 0.5 },
 	{ path: "/contact", changeFrequency: "monthly", priority: 0.45 },
+	// The legal pages (/impressum, /datenschutz, /agb, /widerruf) are
+	// deliberately absent: they still carry the `draft` flag and therefore
+	// `noindex`, and listing a noindex URL in a sitemap is a contradictory
+	// signal. Add them here at priority 0.2 once they are final.
 ];
 
 function escapeXml(value: string): string {

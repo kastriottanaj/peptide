@@ -1,0 +1,108 @@
+---
+/**
+ * Shared shell for the legal pages (Impressum, Datenschutz, AGB, Widerruf):
+ * narrow measure, consistent heading rhythm, and a visible banner while the
+ * page still contains placeholders.
+ */
+import BaseLayout from "./BaseLayout.astro";
+
+export interface Props {
+	title: string;
+	description: string;
+	/** Last substantive update, shown to the reader. */
+	updated?: string;
+	/**
+	 * True while the page still contains placeholders or has not had legal
+	 * review. Renders a visible warning so it cannot be mistaken for final text.
+	 */
+	draft?: boolean;
+}
+
+const { title, description, updated, draft = false } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} noindex={draft}>
+	<article class="legal">
+		<h1>{title}</h1>
+		{updated && <p class="legal__updated">Stand: {updated}</p>}
+
+		{
+			draft && (
+				<aside class="legal__draft">
+					<strong>Noch nicht rechtsverbindlich.</strong> Diese Seite enthält
+					Platzhalter und wurde nicht juristisch geprüft. Vor Inbetriebnahme des
+					Shops müssen die markierten Angaben ergänzt und der Text anwaltlich
+					geprüft werden.
+				</aside>
+			)
+		}
+
+		<slot />
+	</article>
+
+	<style>
+		.legal {
+			max-width: 68ch;
+		}
+		.legal__updated {
+			margin: -0.25rem 0 1.5rem;
+			font-size: 0.85rem;
+			color: var(--c-muted);
+		}
+		.legal__draft {
+			background: #f7f1e5;
+			color: #765627;
+			border-radius: var(--radius-sm);
+			padding: 0.85rem 1rem;
+			font-size: 0.88rem;
+			margin-bottom: 2rem;
+		}
+		.legal :global(h2) {
+			font-size: 1.15rem;
+			margin-top: 2.25rem;
+		}
+		.legal :global(h3) {
+			font-size: 1rem;
+			margin-top: 1.5rem;
+		}
+		.legal :global(p),
+		.legal :global(li) {
+			font-size: 0.95rem;
+		}
+		.legal :global(ul),
+		.legal :global(ol) {
+			padding-left: 1.25rem;
+		}
+		.legal :global(li) {
+			margin-bottom: 0.35rem;
+		}
+		.legal :global(dl) {
+			margin: 0.5rem 0 1rem;
+		}
+		.legal :global(dt) {
+			font-weight: 700;
+			font-size: 0.9rem;
+			margin-top: 0.75rem;
+		}
+		.legal :global(dd) {
+			margin: 0.1rem 0 0;
+			font-size: 0.95rem;
+		}
+		/* Inline markers for data that still has to be supplied. */
+		.legal :global(.todo) {
+			background: #f7e7e2;
+			color: #8e3b2b;
+			padding: 0.05rem 0.35rem;
+			border-radius: 4px;
+			font-size: 0.88rem;
+			font-weight: 600;
+		}
+		.legal :global(.muster) {
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.2rem;
+			background: var(--c-cream-soft);
+			font-size: 0.9rem;
+		}
+	</style>
+</BaseLayout>
