@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "typecheck": "astro check",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"
@@ -14,5 +15,10 @@
   "dependencies": {
     "@medusajs/js-sdk": "^2.18.0",
     "astro": "^7.1.3"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@medusajs/types": "^2.18.0",
+    "typescript": "^6.0.3"
   }
 }
