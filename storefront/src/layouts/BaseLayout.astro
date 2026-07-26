@@ -179,6 +179,33 @@ const {
 				--c-muted: #5b6b7d;
 				--c-border: #e4e8ee;
 				--c-white: #ffffff;
+
+				/* Neutral surfaces (product media, input fields) */
+				--c-surface: #f4f6f9;
+				--c-surface-2: #eef1f5;
+				--c-field: #f2f4f7;
+				--c-cream-border: #ece3d2;
+
+				/* Text on the navy backgrounds, lightest to dimmest. Six steps
+				   because the footer and hero use distinct values; kept separate
+				   so folding them into tokens changes nothing visually. */
+				--c-on-navy-100: #d9e4f0;
+				--c-on-navy-200: #c8d2df;
+				--c-on-navy-300: #b9c6d6;
+				--c-on-navy-400: #9fb0c4;
+				--c-on-navy-500: #93a2b5;
+				--c-on-navy-600: #7e8ea3;
+
+				/* Text on the gold announcement bar */
+				--c-gold-ink: #3a2f15;
+				--c-gold-ink-soft: #5a4d33;
+
+				/* Status tones */
+				--c-warn-bg: #f7f1e5;
+				--c-warn-ink: #765627;
+				--c-crit-bg: #f7e7e2;
+				--c-crit-ink: #8e3b2b;
+
 				--radius: 14px;
 				--radius-sm: 10px;
 				--container: 1120px;
@@ -250,14 +277,14 @@ const {
 			}
 			.btn--green {
 				background: var(--c-green);
-				color: #fff;
+				color: var(--c-white);
 			}
 			.btn--green:hover {
 				background: var(--c-green-dark);
 			}
 			.btn--ghost {
 				background: transparent;
-				color: #fff;
+				color: var(--c-white);
 				box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.35);
 			}
 			.btn--ghost:hover {
@@ -286,7 +313,7 @@ const {
 			/* Announcement bar */
 			.announce {
 				background: var(--c-gold);
-				color: #3a2f15;
+				color: var(--c-gold-ink);
 				font-size: 0.8rem;
 				font-weight: 600;
 			}
@@ -341,7 +368,7 @@ const {
 				color: var(--c-green);
 			}
 			.brand--light {
-				color: #fff;
+				color: var(--c-white);
 			}
 
 			.search {
@@ -349,7 +376,7 @@ const {
 				display: flex;
 				align-items: center;
 				gap: 0.5rem;
-				background: #f2f4f7;
+				background: var(--c-field);
 				border: 1px solid var(--c-border);
 				border-radius: 999px;
 				padding: 0.5rem 1rem;
@@ -389,7 +416,7 @@ const {
 				height: 38px;
 				border-radius: 999px;
 				background: var(--c-navy);
-				color: #fff !important;
+				color: var(--c-white) !important;
 			}
 			.nav__cart-count {
 				position: absolute;
@@ -400,7 +427,7 @@ const {
 				padding: 0 4px;
 				border-radius: 999px;
 				background: var(--c-green);
-				color: #fff;
+				color: var(--c-white);
 				font-size: 0.68rem;
 				font-weight: 700;
 				display: grid;
@@ -420,7 +447,7 @@ const {
 			/* Footer */
 			.footer {
 				background: var(--c-navy-deep);
-				color: #c8d2df;
+				color: var(--c-on-navy-200);
 				margin-top: 4rem;
 			}
 			.footer__inner {
@@ -434,25 +461,25 @@ const {
 			.footer__brand p {
 				font-size: 0.875rem;
 				max-width: 30ch;
-				color: #93a2b5;
+				color: var(--c-on-navy-500);
 				margin-top: 0.75rem;
 			}
 			.footer__col h3 {
 				font-size: 0.8rem;
 				text-transform: uppercase;
 				letter-spacing: 0.06em;
-				color: #fff;
+				color: var(--c-white);
 				margin-bottom: 0.9rem;
 			}
 			.footer__col a {
 				display: block;
 				text-decoration: none;
 				font-size: 0.875rem;
-				color: #93a2b5;
+				color: var(--c-on-navy-500);
 				padding: 0.25rem 0;
 			}
 			.footer__col a:hover {
-				color: #fff;
+				color: var(--c-white);
 			}
 			.footer__legal {
 				max-width: var(--container);
@@ -464,7 +491,7 @@ const {
 				flex-wrap: wrap;
 				gap: 0.5rem;
 				font-size: 0.78rem;
-				color: #7e8ea3;
+				color: var(--c-on-navy-600);
 			}
 			.footer__legal p {
 				margin: 0;

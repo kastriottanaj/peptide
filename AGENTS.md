@@ -120,10 +120,15 @@ consumed by an Astro page), gate both.
 - **Design tokens, no raw hex.** Colors, radii, container width and the font stack are
   CSS custom properties (`--c-navy`, `--c-green`, `--c-border`, `--radius`, …) defined in
   the `<style is:global>` block of `src/layouts/BaseLayout.astro`. Component styles use
-  `var(--c-*)` and live in that component's scoped `<style>`. There are currently ~52 raw
-  hex literals across `BaseLayout.astro`, `index.astro`, `ProductCard.astro` and
-  `produkte/[handle].astro`; do not add more, and fold them into tokens when touching
-  those files. Decorative inline SVG fills are the one accepted exception.
+  `var(--c-*)` and live in that component's scoped `<style>`. **No raw hex in CSS** —
+  the codebase is clean as of 2026-07-27, so a new literal is a regression. If a colour
+  genuinely has no token, add one to `:root` rather than inlining it. Decorative inline
+  SVG `fill`/`stroke` attributes are the one accepted exception (the product vial
+  illustration). Verify with:
+
+  ```bash
+  grep -rnE '#[0-9a-fA-F]{3,8}\b' --include='*.astro' src | grep -vE '\-\-c-[a-z0-9-]+:\s*#|fill=|stroke='
+  ```
 - Prices are formatted with `Intl.NumberFormat("de-DE", { style: "currency" })` from the
   variant's `calculated_price` — never hand-built strings.
 - Product data can be missing fields (the catalog is partly demo data). Degrade

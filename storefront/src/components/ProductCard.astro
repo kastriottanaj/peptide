@@ -88,7 +88,7 @@ const available = variants.length > 0;
 
 <style>
 	.pcard {
-		background: #fff;
+		background: var(--c-white);
 		border: 1px solid var(--c-border);
 		border-radius: var(--radius);
 		overflow: hidden;
@@ -106,7 +106,7 @@ const available = variants.length > 0;
 	.pcard__media {
 		position: relative;
 		aspect-ratio: 1 / 1;
-		background: linear-gradient(180deg, #f4f6f9, #eef1f5);
+		background: linear-gradient(180deg, var(--c-surface), var(--c-surface-2));
 		display: grid;
 		place-items: center;
 		padding: 1rem;
@@ -126,7 +126,7 @@ const available = variants.length > 0;
 		top: 0.7rem;
 		left: 0.7rem;
 		background: var(--c-navy);
-		color: #fff;
+		color: var(--c-white);
 		font-size: 0.66rem;
 		font-weight: 700;
 		letter-spacing: 0.04em;

@@ -50,8 +50,8 @@ const { title, description, updated, draft = false } = Astro.props;
 			color: var(--c-muted);
 		}
 		.legal__draft {
-			background: #f7f1e5;
-			color: #765627;
+			background: var(--c-warn-bg);
+			color: var(--c-warn-ink);
 			border-radius: var(--radius-sm);
 			padding: 0.85rem 1rem;
 			font-size: 0.88rem;
@@ -90,8 +90,8 @@ const { title, description, updated, draft = false } = Astro.props;
 		}
 		/* Inline markers for data that still has to be supplied. */
 		.legal :global(.todo) {
-			background: #f7e7e2;
-			color: #8e3b2b;
+			background: var(--c-crit-bg);
+			color: var(--c-crit-ink);
 			padding: 0.05rem 0.35rem;
 			border-radius: 4px;
 			font-size: 0.88rem;
