@@ -17,6 +17,7 @@ dist/
 .claude/settings.local.json
 .vscode/
 .idea/
+.playwright-mcp/
 
 # Logs
 *-debug.log*

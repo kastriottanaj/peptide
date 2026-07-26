@@ -1,0 +1,280 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+// The cart is client-side (static output), so this page renders a shell and the
+// script below fills it in. Not indexable — it is per-visitor state.
+---
+
+<BaseLayout
+	title="Warenkorb"
+	description="Ihr Warenkorb bei Peptide Einkaufen."
+	noindex
+>
+	<h1>Warenkorb</h1>
+
+	<div data-cart-root>
+		<p data-cart-loading>Warenkorb wird geladen …</p>
+
+		<div data-cart-empty hidden>
+			<p>Ihr Warenkorb ist leer.</p>
+			<a class="btn btn--green" href="/produkte">Sortiment ansehen</a>
+		</div>
+
+		<div class="cart" data-cart-filled hidden>
+			<ul class="cart__lines" data-cart-lines></ul>
+
+			<aside class="cart__summary">
+				<h2>Zusammenfassung</h2>
+
+				<div class="cart__row">
+					<span>Zwischensumme</span>
+					<span data-cart-subtotal></span>
+				</div>
+
+				<p class="cart__hint" data-cart-discount-hint hidden></p>
+				<p class="cart__hint" data-cart-shipping-hint hidden></p>
+
+				<div class="cart__row cart__row--total">
+					<span>Gesamt</span>
+					<span data-cart-total></span>
+				</div>
+
+				<p class="cart__note">
+					Versandkosten und Rabatte werden im nächsten Schritt verbindlich
+					berechnet.
+				</p>
+
+				<a class="btn btn--green cart__checkout" href="/kasse">Zur Kasse</a>
+			</aside>
+		</div>
+	</div>
+
+	<script>
+		import { getCart, updateLine, removeLine, cartItemCount } from "../lib/cart";
+		import {
+			formatEur,
+			quantityDiscountRate,
+			nextQuantityTier,
+			FREE_SHIPPING_THRESHOLD_EUR,
+		} from "../lib/pricing";
+
+		const root = document.querySelector<HTMLElement>("[data-cart-root]");
+		if (root) {
+			const loading = root.querySelector<HTMLElement>("[data-cart-loading]");
+			const empty = root.querySelector<HTMLElement>("[data-cart-empty]");
+			const filled = root.querySelector<HTMLElement>("[data-cart-filled]");
+			const lines = root.querySelector<HTMLElement>("[data-cart-lines]");
+			const subtotalEl = root.querySelector<HTMLElement>("[data-cart-subtotal]");
+			const totalEl = root.querySelector<HTMLElement>("[data-cart-total]");
+			const discountHint = root.querySelector<HTMLElement>("[data-cart-discount-hint]");
+			const shippingHint = root.querySelector<HTMLElement>("[data-cart-shipping-hint]");
+
+			const render = (cart: Awaited<ReturnType<typeof getCart>>) => {
+				loading?.setAttribute("hidden", "");
+
+				const items = cart?.items ?? [];
+				if (!cart || items.length === 0) {
+					empty?.removeAttribute("hidden");
+					filled?.setAttribute("hidden", "");
+					return;
+				}
+
+				empty?.setAttribute("hidden", "");
+				filled?.removeAttribute("hidden");
+
+				const currency = cart.currency_code ?? "eur";
+
+				if (lines) {
+					lines.innerHTML = "";
+					for (const item of items) {
+						const li = document.createElement("li");
+						li.className = "cart__line";
+						li.innerHTML = `
+							<div class="cart__line-info">
+								<p class="cart__line-title">${item.product_title ?? item.title ?? ""}</p>
+								<p class="cart__line-variant">${item.variant_title ?? ""}</p>
+							</div>
+							<div class="cart__qty">
+								<button type="button" data-step="-1" aria-label="Menge verringern">−</button>
+								<span>${item.quantity}</span>
+								<button type="button" data-step="1" aria-label="Menge erhöhen">+</button>
+							</div>
+							<p class="cart__line-total">${formatEur(item.total ?? 0, currency)}</p>
+							<button class="cart__remove" type="button" data-remove aria-label="Artikel entfernen">Entfernen</button>
+						`;
+
+						li.querySelectorAll<HTMLButtonElement>("[data-step]").forEach((button) => {
+							button.addEventListener("click", async () => {
+								const step = Number(button.dataset.step ?? 0);
+								render(await updateLine(item.id, (item.quantity ?? 1) + step));
+							});
+						});
+
+						li.querySelector<HTMLButtonElement>("[data-remove]")?.addEventListener(
+							"click",
+							async () => {
+								render(await removeLine(item.id));
+							},
+						);
+
+						lines.appendChild(li);
+					}
+				}
+
+				const subtotal = cart.subtotal ?? 0;
+				if (subtotalEl) subtotalEl.textContent = formatEur(subtotal, currency);
+				if (totalEl) totalEl.textContent = formatEur(cart.total ?? subtotal, currency);
+
+				// Display-only nudges; Medusa stays authoritative for what is charged.
+				const units = cartItemCount(cart);
+				const rate = quantityDiscountRate(units);
+				const next = nextQuantityTier(units);
+
+				if (discountHint) {
+					if (rate > 0) {
+						discountHint.textContent = `Mengenrabatt: ${Math.round(rate * 100)} % ab ${units} Stück.`;
+						discountHint.removeAttribute("hidden");
+					} else if (next) {
+						discountHint.textContent = `Noch ${next.missing} Stück bis ${Math.round(next.rate * 100)} % Mengenrabatt.`;
+						discountHint.removeAttribute("hidden");
+					} else {
+						discountHint.setAttribute("hidden", "");
+					}
+				}
+
+				if (shippingHint) {
+					const missing = FREE_SHIPPING_THRESHOLD_EUR - subtotal;
+					if (missing > 0) {
+						shippingHint.textContent = `Noch ${formatEur(missing, currency)} bis zum kostenlosen Versand.`;
+					} else {
+						shippingHint.textContent = "Versandkostenfrei ✓";
+					}
+					shippingHint.removeAttribute("hidden");
+				}
+			};
+
+			getCart()
+				.then(render)
+				.catch((error) => {
+					console.error(error);
+					if (loading) {
+						loading.textContent =
+							"Der Warenkorb konnte nicht geladen werden. Bitte Seite neu laden.";
+					}
+				});
+		}
+	</script>
+
+	<style>
+		.cart {
+			display: grid;
+			grid-template-columns: 1fr minmax(0, 320px);
+			gap: 2.5rem;
+			align-items: start;
+		}
+		.cart__lines {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+		.cart__line {
+			display: grid;
+			grid-template-columns: 1fr auto auto auto;
+			align-items: center;
+			gap: 1rem;
+			padding: 1rem 0;
+			border-bottom: 1px solid var(--c-border);
+		}
+		.cart__line-title {
+			margin: 0;
+			font-weight: 700;
+		}
+		.cart__line-variant {
+			margin: 0.15rem 0 0;
+			font-size: 0.85rem;
+			color: var(--c-muted);
+		}
+		.cart__qty {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			border: 1px solid var(--c-border);
+			border-radius: 999px;
+			padding: 0.25rem 0.6rem;
+		}
+		.cart__qty button {
+			border: none;
+			background: transparent;
+			cursor: pointer;
+			font-size: 1rem;
+			font-weight: 700;
+			color: var(--c-navy);
+		}
+		.cart__line-total {
+			margin: 0;
+			font-weight: 700;
+			min-width: 5.5rem;
+			text-align: right;
+		}
+		.cart__remove {
+			border: none;
+			background: transparent;
+			color: var(--c-muted);
+			font-size: 0.82rem;
+			cursor: pointer;
+			text-decoration: underline;
+		}
+		.cart__remove:hover {
+			color: var(--c-navy);
+		}
+		.cart__summary {
+			background: var(--c-cream-soft);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius);
+			padding: 1.25rem 1.4rem;
+		}
+		.cart__summary h2 {
+			font-size: 1rem;
+			margin: 0 0 1rem;
+		}
+		.cart__row {
+			display: flex;
+			justify-content: space-between;
+			font-size: 0.92rem;
+			padding: 0.35rem 0;
+		}
+		.cart__row--total {
+			border-top: 1px solid var(--c-border);
+			margin-top: 0.6rem;
+			padding-top: 0.8rem;
+			font-size: 1.05rem;
+			font-weight: 800;
+			color: var(--c-navy);
+		}
+		.cart__hint {
+			margin: 0.35rem 0;
+			font-size: 0.82rem;
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.cart__note {
+			margin: 0.9rem 0 1rem;
+			font-size: 0.78rem;
+			color: var(--c-muted);
+		}
+		.cart__checkout {
+			width: 100%;
+			justify-content: center;
+		}
+
+		@media (max-width: 820px) {
+			.cart {
+				grid-template-columns: 1fr;
+			}
+			.cart__line {
+				grid-template-columns: 1fr auto;
+				row-gap: 0.5rem;
+			}
+		}
+	</style>
+</BaseLayout>

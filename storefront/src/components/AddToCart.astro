@@ -1,0 +1,228 @@
+---
+/**
+ * Pack-size picker + quantity + add-to-cart. A plain <script> island: Astro
+ * bundles and defers it, so this ships a few hundred bytes instead of a
+ * framework runtime.
+ */
+import type { HttpTypes } from "@medusajs/types";
+import { formatEur } from "../lib/pricing";
+
+export interface Props {
+	variants: HttpTypes.StoreProductVariant[];
+}
+
+const { variants } = Astro.props;
+
+const options = variants
+	.map((variant) => {
+		const amount = variant.calculated_price?.calculated_amount;
+		const currency = variant.calculated_price?.currency_code ?? "eur";
+		return {
+			id: variant.id,
+			title: variant.title ?? "—",
+			price: typeof amount === "number" ? formatEur(amount, currency) : null,
+		};
+	})
+	.filter((option) => option.id);
+---
+
+<div class="atc" data-add-to-cart>
+	{
+		options.length > 1 && (
+			<div class="atc__sizes" role="radiogroup" aria-label="Packgröße wählen">
+				{options.map((option, index) => (
+					<label class="atc__size">
+						<input
+							type="radio"
+							name="variant"
+							value={option.id}
+							checked={index === 0}
+						/>
+						<span class="atc__size-title">{option.title}</span>
+						{option.price && <span class="atc__size-price">{option.price}</span>}
+					</label>
+				))}
+			</div>
+		)
+	}
+	{
+		options.length === 1 && (
+			<input type="hidden" name="variant" value={options[0].id} checked />
+		)
+	}
+
+	<div class="atc__row">
+		<div class="atc__qty">
+			<button type="button" data-qty-step="-1" aria-label="Menge verringern">−</button>
+			<input
+				type="number"
+				name="quantity"
+				value="1"
+				min="1"
+				max="99"
+				aria-label="Menge"
+			/>
+			<button type="button" data-qty-step="1" aria-label="Menge erhöhen">+</button>
+		</div>
+
+		<button class="btn btn--green atc__submit" type="button" data-add>
+			In den Warenkorb
+		</button>
+	</div>
+
+	<p class="atc__status" data-status role="status" aria-live="polite"></p>
+</div>
+
+<script>
+	import { addLine } from "../lib/cart";
+
+	document.querySelectorAll<HTMLElement>("[data-add-to-cart]").forEach((root) => {
+		const qtyInput = root.querySelector<HTMLInputElement>('input[name="quantity"]');
+		const submit = root.querySelector<HTMLButtonElement>("[data-add]");
+		const status = root.querySelector<HTMLElement>("[data-status]");
+
+		const clampQty = (value: number) => Math.min(99, Math.max(1, value || 1));
+
+		root.querySelectorAll<HTMLButtonElement>("[data-qty-step]").forEach((button) => {
+			button.addEventListener("click", () => {
+				if (!qtyInput) return;
+				const step = Number(button.dataset.qtyStep ?? 0);
+				qtyInput.value = String(clampQty(Number(qtyInput.value) + step));
+			});
+		});
+
+		qtyInput?.addEventListener("change", () => {
+			qtyInput.value = String(clampQty(Number(qtyInput.value)));
+		});
+
+		submit?.addEventListener("click", async () => {
+			const selected =
+				root.querySelector<HTMLInputElement>('input[name="variant"]:checked') ??
+				root.querySelector<HTMLInputElement>('input[name="variant"]');
+			const variantId = selected?.value;
+
+			if (!variantId) {
+				if (status) status.textContent = "Bitte eine Packgröße wählen.";
+				return;
+			}
+
+			submit.disabled = true;
+			const original = submit.textContent;
+			submit.textContent = "Wird hinzugefügt …";
+			if (status) status.textContent = "";
+
+			try {
+				await addLine(variantId, clampQty(Number(qtyInput?.value ?? 1)));
+				submit.textContent = "Zum Warenkorb hinzugefügt ✓";
+				if (status) {
+					status.innerHTML = '<a href="/warenkorb">Warenkorb ansehen →</a>';
+				}
+				window.setTimeout(() => {
+					submit.textContent = original;
+					submit.disabled = false;
+				}, 2000);
+			} catch (error) {
+				submit.textContent = original;
+				submit.disabled = false;
+				if (status) {
+					status.textContent =
+						"Der Artikel konnte nicht hinzugefügt werden. Bitte erneut versuchen.";
+				}
+				console.error(error);
+			}
+		});
+	});
+</script>
+
+<style>
+	.atc {
+		margin: 0 0 1.25rem;
+	}
+	.atc__sizes {
+		display: grid;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+	}
+	.atc__size {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.7rem 0.9rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		transition: border-color 0.15s ease, background-color 0.15s ease;
+	}
+	.atc__size:hover {
+		border-color: var(--c-green);
+	}
+	.atc__size:has(input:checked) {
+		border-color: var(--c-green);
+		background: var(--c-mint);
+	}
+	.atc__size input {
+		accent-color: var(--c-green);
+	}
+	.atc__size-title {
+		font-weight: 600;
+	}
+	.atc__size-price {
+		margin-left: auto;
+		font-weight: 700;
+		color: var(--c-navy);
+	}
+	.atc__row {
+		display: flex;
+		gap: 0.75rem;
+		align-items: stretch;
+	}
+	.atc__qty {
+		display: flex;
+		align-items: center;
+		border: 1px solid var(--c-border);
+		border-radius: 999px;
+		overflow: hidden;
+	}
+	.atc__qty button {
+		border: none;
+		background: transparent;
+		font-size: 1.1rem;
+		font-weight: 700;
+		width: 2.2rem;
+		cursor: pointer;
+		color: var(--c-navy);
+	}
+	.atc__qty button:hover {
+		background: var(--c-blue-tint);
+	}
+	.atc__qty input {
+		width: 2.6rem;
+		border: none;
+		text-align: center;
+		font-family: inherit;
+		font-size: 0.95rem;
+		font-weight: 600;
+		outline: none;
+		-moz-appearance: textfield;
+		appearance: textfield;
+	}
+	.atc__qty input::-webkit-outer-spin-button,
+	.atc__qty input::-webkit-inner-spin-button {
+		-webkit-appearance: none;
+		margin: 0;
+	}
+	.atc__submit {
+		flex: 1;
+		justify-content: center;
+	}
+	.atc__status {
+		margin: 0.6rem 0 0;
+		font-size: 0.85rem;
+		color: var(--c-green-dark);
+		min-height: 1.2em;
+	}
+	.atc__status :global(a) {
+		color: var(--c-green-dark);
+		font-weight: 600;
+	}
+</style>

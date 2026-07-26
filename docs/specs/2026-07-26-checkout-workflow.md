@@ -84,13 +84,20 @@ die Wahl des Zahlungsanbieters steht laut `TECH_STACK.md` noch aus.
 - B2B-Verifizierung, Backorders, Verzugs-Kompensation, Sendungs-Import
 - Eigenes Admin-Backend
 
-## Offene Punkte (Nutzerentscheidung)
+## Entscheidungen (2026-07-26)
 
-1. **Bankverbindung** — IBAN, BIC, Kontoinhaber fehlen. Ohne sie kann die
-   Bestätigungsseite keine echten Daten zeigen.
-2. **Präfix** — `PB-` stand für *Peptidebestellung*. Hier vermutlich `PE-`.
-3. **Mengenrabatt** — Staffel unverändert übernehmen oder anpassen?
-4. **Versandkosten** — 10 €/20 €/frei ab 100 € unverändert übernehmen?
+1. **Mengenrabatt** — Staffel der Vorlage unverändert übernehmen (3 Stk 3 % … ab
+   10 Stk 15 %).
+2. **Versandkosten** — unverändert: 10 € DE, 20 € außerhalb DE, frei ab 100 €
+   Warenwert nach Rabatt.
+3. **Präfix** — `PE-` statt `PB-`, passend zur Marke *Peptide Einkaufen* und zum
+   Artikelpräfix `PEK-`.
+4. **Bankverbindung** — Konto ist noch in Beantragung. IBAN, BIC und Kontoinhaber
+   kommen deshalb aus `src/lib/bank.ts`, gespeist aus `PUBLIC_BANK_*`-Umgebungs-
+   variablen mit sichtbaren Platzhaltern. Die Bestätigungsseite zeigt einen
+   deutlichen Hinweis, solange die Werte Platzhalter sind. Bankdaten gehören
+   ohnehin in die Konfiguration, nie in den Quellcode — das Fehlen des Kontos
+   blockiert die Umsetzung also nicht.
 
 ## Verifikation
 

@@ -1,6 +1,7 @@
 ---
 import type { HttpTypes } from "@medusajs/types";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import AddToCart from "../../components/AddToCart.astro";
 import { medusa, getDefaultRegionId } from "../../lib/medusa";
 import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
 
@@ -31,16 +32,6 @@ const researchCode =
 const purity = typeof meta.purity === "string" ? meta.purity : null;
 const coaStatus =
 	typeof meta.coa_status === "string" ? meta.coa_status : null;
-
-function formatPrice(variant: HttpTypes.StoreProductVariant) {
-	const amount = variant.calculated_price?.calculated_amount;
-	if (typeof amount !== "number") return null;
-	const currency = variant.calculated_price?.currency_code ?? "eur";
-	return new Intl.NumberFormat("de-DE", {
-		style: "currency",
-		currency: currency.toUpperCase(),
-	}).format(amount);
-}
 
 const variants = product.variants ?? [];
 const packSizes = variants.map((v) => v.title).filter(Boolean).join(" / ");
@@ -151,20 +142,7 @@ const jsonLd = [
 			</dl>
 
 			<h2 class="variants__title">Packgröße wählen</h2>
-			<ul class="variants">
-				{
-					variants.map((variant) => (
-						<li>
-							<span>{variant.title}</span>
-							{formatPrice(variant) && <span class="variants__price">{formatPrice(variant)}</span>}
-						</li>
-					))
-				}
-			</ul>
-
-			<button class="btn btn--green" type="button" disabled>
-				In den Warenkorb (bald verfügbar)
-			</button>
+			<AddToCart variants={variants} />
 
 			<p class="disclaimer">
 				Ausschließlich für Forschungs-, Analyse- und Laborzwecke. Keine
