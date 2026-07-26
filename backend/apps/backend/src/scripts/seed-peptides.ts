@@ -117,7 +117,7 @@ export default async function seedPeptides({
     {
       title: "Retatrutide",
       handle: "retatrutide",
-      code: "PKD-RETA",
+      code: "PEK-RETA",
       category: "Stoffwechsel-Forschung",
       description:
         "Lyophilisiertes Forschungspeptid für metabolische Modellforschung. " +
@@ -131,7 +131,7 @@ export default async function seedPeptides({
     {
       title: "BPC-157",
       handle: "bpc-157",
-      code: "PKD-BPC157",
+      code: "PEK-BPC157",
       category: "Regenerationsforschung",
       description:
         "Lyophilisiertes Forschungspeptid für regenerationsbezogene Zellmodelle. " +
@@ -144,7 +144,7 @@ export default async function seedPeptides({
     {
       title: "GHK-Cu",
       handle: "ghk-cu",
-      code: "PKD-GHKCU",
+      code: "PEK-GHKCU",
       category: "Regenerationsforschung",
       description:
         "Kupfer-Peptid-Komplex für Forschungs- und Analysezwecke. " + demoNotice,
@@ -156,7 +156,7 @@ export default async function seedPeptides({
     {
       title: "MOTS-c",
       handle: "mots-c",
-      code: "PKD-MOTSC",
+      code: "PEK-MOTSC",
       category: "Stoffwechsel-Forschung",
       description:
         "Mitochondrial abgeleitetes Forschungspeptid für metabolische Studienmodelle. " +
@@ -166,7 +166,7 @@ export default async function seedPeptides({
     {
       title: "TB-500",
       handle: "tb-500",
-      code: "PKD-TB500",
+      code: "PEK-TB500",
       category: "Signal- & Fragmentpeptide",
       description:
         "Fragmentpeptid für regenerations- und signalbezogene Forschungsmodelle. " +
@@ -179,7 +179,7 @@ export default async function seedPeptides({
     {
       title: "Semax",
       handle: "semax",
-      code: "PKD-SEMAX",
+      code: "PEK-SEMAX",
       category: "Neuropeptid-Forschung",
       description:
         "Neuropeptid für Forschung zu neuronalen Signalwegen. " + demoNotice,

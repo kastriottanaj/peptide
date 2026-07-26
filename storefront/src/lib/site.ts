@@ -15,7 +15,7 @@ export const SITE_URL = (
 	import.meta.env.PUBLIC_SITE_URL ?? "https://peptideeinkaufen.de"
 ).replace(/\/+$/, "");
 
-export const SITE_NAME = "Peptide Kaufen Deutschland";
+export const SITE_NAME = "Peptide Einkaufen";
 export const SITE_LOCALE = "de_DE";
 
 /** Stable @id for the Organization node, referenced as seller/publisher. */
