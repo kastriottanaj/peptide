@@ -2,6 +2,11 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
 import { medusa, getDefaultRegionId } from "../../lib/medusa";
+import {
+	absoluteUrl,
+	breadcrumbNode,
+	ORGANIZATION_ID,
+} from "../../lib/site";
 
 const regionId = await getDefaultRegionId();
 
@@ -19,11 +24,39 @@ const hasCode = (p: (typeof fetched)[number]) =>
 const products = [...fetched].sort(
 	(a, b) => Number(hasCode(b)) - Number(hasCode(a)),
 );
+
+// --- SEO ---------------------------------------------------------------
+// The CollectionPage graph is emitted only here, on the clean canonical
+// listing URL — never on filtered/sorted variants.
+const jsonLd = [
+	{
+		"@type": "CollectionPage",
+		"@id": `${absoluteUrl("/produkte")}#collection`,
+		name: "Forschungspeptide",
+		url: absoluteUrl("/produkte"),
+		publisher: { "@id": ORGANIZATION_ID },
+		mainEntity: {
+			"@type": "ItemList",
+			numberOfItems: products.length,
+			itemListElement: products.map((product, index) => ({
+				"@type": "ListItem",
+				position: index + 1,
+				name: product.title,
+				url: absoluteUrl(`/produkte/${product.handle}`),
+			})),
+		},
+	},
+	breadcrumbNode([
+		["Start", "/"],
+		["Produkte", "/produkte"],
+	]),
+];
 ---
 
 <BaseLayout
-	title="Sortiment"
-	description="Forschungspeptide von Peptide Kaufen Deutschland – Packgrößen, Preis und Zertifikatsstatus."
+	title="Forschungspeptide kaufen – Sortiment"
+	description="Forschungspeptide von Peptide Kaufen Deutschland – Packgrößen, Preis und Zertifikatsstatus auf einen Blick."
+	jsonLd={jsonLd}
 >
 	<span class="eyebrow">Shop</span>
 	<h1>Forschungspeptide</h1>

@@ -1,15 +1,29 @@
 ---
+import Seo from "../components/Seo.astro";
+
 export interface Props {
 	title: string;
 	description?: string;
 	/** When true, the page renders full-bleed sections (homepage). Otherwise content sits in a centered container. */
 	wide?: boolean;
+	/** Omit the brand suffix from <title> (the homepage carries it already). */
+	rawTitle?: boolean;
+	ogType?: "website" | "article" | "product";
+	image?: { url: string; alt: string; width?: number; height?: number };
+	noindex?: boolean;
+	/** Extra JSON-LD nodes merged into the page @graph. */
+	jsonLd?: Record<string, unknown>[];
 }
 
 const {
 	title,
 	description = "Peptide Kaufen Deutschland – Forschungspeptide für wissenschaftliche und laborinterne Zwecke.",
 	wide = false,
+	rawTitle = false,
+	ogType = "website",
+	image,
+	noindex = false,
+	jsonLd = [],
 } = Astro.props;
 ---
 
@@ -20,8 +34,15 @@ const {
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="generator" content={Astro.generator} />
-		<meta name="description" content={description} />
-		<title>{title} | Peptide Kaufen Deutschland</title>
+		<Seo
+			title={title}
+			description={description}
+			rawTitle={rawTitle}
+			ogType={ogType}
+			image={image}
+			noindex={noindex}
+			jsonLd={jsonLd}
+		/>
 	</head>
 	<body>
 		<!-- Announcement bar -->

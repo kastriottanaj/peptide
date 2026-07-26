@@ -1,0 +1,76 @@
+---
+/**
+ * Per-page metadata: title, description, canonical, OpenGraph, Twitter and the
+ * JSON-LD @graph. Rendered from BaseLayout so no page hand-rolls head tags.
+ */
+import {
+	SITE_NAME,
+	SITE_LOCALE,
+	canonicalFrom,
+	organizationNode,
+} from "../lib/site";
+
+export interface Props {
+	/** Page title without the brand suffix. */
+	title: string;
+	description: string;
+	/** Omit the brand suffix (used on the homepage, which carries it already). */
+	rawTitle?: boolean;
+	ogType?: "website" | "article" | "product";
+	image?: { url: string; alt: string; width?: number; height?: number };
+	noindex?: boolean;
+	/** Extra JSON-LD nodes; the Organization node is always included. */
+	jsonLd?: Record<string, unknown>[];
+}
+
+const {
+	title,
+	description,
+	rawTitle = false,
+	ogType = "website",
+	image,
+	noindex = false,
+	jsonLd = [],
+} = Astro.props;
+
+const fullTitle = rawTitle ? title : `${title} | ${SITE_NAME}`;
+const canonical = canonicalFrom(Astro.url);
+
+const graph = {
+	"@context": "https://schema.org",
+	"@graph": [organizationNode(), ...jsonLd],
+};
+---
+
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+
+<meta property="og:type" content={ogType} />
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:site_name" content={SITE_NAME} />
+<meta property="og:locale" content={SITE_LOCALE} />
+{
+	image && (
+		<>
+			<meta property="og:image" content={image.url} />
+			<meta property="og:image:alt" content={image.alt} />
+			{image.width && <meta property="og:image:width" content={String(image.width)} />}
+			{image.height && <meta property="og:image:height" content={String(image.height)} />}
+		</>
+	)
+}
+
+<meta name="twitter:card" content={image ? "summary_large_image" : "summary"} />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+{image && <meta name="twitter:image" content={image.url} />}
+
+<script
+	type="application/ld+json"
+	is:inline
+	set:html={JSON.stringify(graph)}
+/>

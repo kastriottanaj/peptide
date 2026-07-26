@@ -139,9 +139,10 @@ consumed by an Astro page), gate both.
 ## SEO baseline
 
 Organic search is the main acquisition channel in this niche, so every indexable page
-ships with SEO in place rather than as a follow-up. `BaseLayout.astro` currently accepts
-only `title` and `description` and emits no canonical, OpenGraph or structured data —
-extend it (or add a dedicated `<Seo>` component) rather than hand-rolling tags per page:
+ships with SEO in place rather than as a follow-up. `src/components/Seo.astro` owns all
+head metadata and is rendered by `BaseLayout.astro` — pass props through the layout
+(`title`, `description`, `ogType`, `image`, `noindex`, `jsonLd`) rather than hand-rolling
+head tags in a page:
 
 - Unique `<title>`, `description` and self-referencing canonical per page. No page may
   inherit the homepage title.
@@ -169,10 +170,12 @@ extend it (or add a dedicated `<Seo>` component) rather than hand-rolling tags p
 
 ### Sitemaps and discovery
 
-- Set `site` in `astro.config.mjs` first — it is currently unset, so `Astro.site` is
-  undefined and neither canonical URLs nor sitemaps can be generated correctly.
-- Derive every absolute URL from one origin constant with trailing slashes stripped, via
-  a single `absoluteUrl()` helper. Never hand-build absolute URLs at call sites.
+- The origin comes from `PUBLIC_SITE_URL` in `storefront/.env`, read by both
+  `astro.config.mjs` (`site`) and `src/lib/site.ts` (`SITE_URL`) so the two cannot
+  drift. It falls back to `http://localhost:4321`; set the real domain before launch or
+  every canonical, sitemap and JSON-LD URL will point at localhost.
+- Derive every absolute URL from `absoluteUrl()` in `src/lib/site.ts`. Never hand-build
+  absolute URLs at call sites.
 - Split the sitemap by content type behind a sitemap index (products / pages / content)
   rather than one flat file, with `changefreq` and `priority` per type and a real
   `lastmod` from content dates. Rough priorities that worked there: home 1.0, catalog

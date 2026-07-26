@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductCard from "../components/ProductCard.astro";
 import { medusa, getDefaultRegionId } from "../lib/medusa";
+import { ORGANIZATION_ID, SITE_NAME, SITE_URL } from "../lib/site";
 
 const regionId = await getDefaultRegionId();
 
@@ -108,12 +109,37 @@ const faqs = [
 		a: "Für Laborbestellungen größerer Mengen kontaktieren Sie bitte den Support.",
 	},
 ];
+
+// --- SEO ---------------------------------------------------------------
+// WebSite + FAQPage, built from the FAQ rendered further down so the markup
+// and the structured data can never drift apart.
+const homeJsonLd = [
+	{
+		"@type": "WebSite",
+		"@id": `${SITE_URL}/#website`,
+		url: SITE_URL,
+		name: SITE_NAME,
+		publisher: { "@id": ORGANIZATION_ID },
+		inLanguage: "de-DE",
+	},
+	{
+		"@type": "FAQPage",
+		"@id": `${SITE_URL}/#faq`,
+		mainEntity: faqs.map((faq) => ({
+			"@type": "Question",
+			name: faq.q,
+			acceptedAnswer: { "@type": "Answer", text: faq.a },
+		})),
+	},
+];
 ---
 
 <BaseLayout
-	title="Startseite"
-	description="Peptide Kaufen Deutschland – Forschungspeptide für wissenschaftliche und laborinterne Zwecke."
+	title="Peptide kaufen – Forschungspeptide für Labor und Wissenschaft"
+	description="Forschungspeptide mit dokumentierter Reinheit und Packgrößen für wissenschaftliche und laborinterne Zwecke. Ausschließlich für Forschungszwecke."
+	rawTitle
 	wide
+	jsonLd={homeJsonLd}
 >
 	<!-- HERO -->
 	<section class="hero">

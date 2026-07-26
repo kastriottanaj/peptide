@@ -2,6 +2,7 @@
 import type { HttpTypes } from "@medusajs/types";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { medusa, getDefaultRegionId } from "../../lib/medusa";
+import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
 
 export async function getStaticPaths() {
 	const regionId = await getDefaultRegionId();
@@ -43,9 +44,73 @@ function formatPrice(variant: HttpTypes.StoreProductVariant) {
 
 const variants = product.variants ?? [];
 const packSizes = variants.map((v) => v.title).filter(Boolean).join(" / ");
+
+// --- SEO ---------------------------------------------------------------
+const metaDescription =
+	product.description?.trim() ||
+	`${product.title} kaufen${purity ? ` – Reinheit ${purity}` : ""}${
+		packSizes ? `, Packgrößen ${packSizes}` : ""
+	}. Ausschließlich für Forschungs- und Laborzwecke.`;
+
+const prices = variants
+	.map((v) => v.calculated_price?.calculated_amount)
+	.filter((a): a is number => typeof a === "number");
+
+const currency = (
+	variants.find((v) => v.calculated_price?.currency_code)?.calculated_price
+		?.currency_code ?? "eur"
+).toUpperCase();
+
+const productNode: Record<string, unknown> = {
+	"@type": "Product",
+	"@id": `${absoluteUrl(`/produkte/${product.handle}`)}#product`,
+	name: product.title,
+	url: absoluteUrl(`/produkte/${product.handle}`),
+	description: metaDescription,
+	...(product.thumbnail ? { image: absoluteUrl(product.thumbnail) } : {}),
+	...(researchCode ? { sku: researchCode } : {}),
+	brand: { "@id": ORGANIZATION_ID },
+	...(purity
+		? {
+				additionalProperty: [
+					{ "@type": "PropertyValue", name: "Reinheit", value: purity },
+				],
+			}
+		: {}),
+	...(prices.length
+		? {
+				offers: {
+					"@type": "AggregateOffer",
+					priceCurrency: currency,
+					lowPrice: Math.min(...prices),
+					highPrice: Math.max(...prices),
+					offerCount: prices.length,
+					availability: "https://schema.org/InStock",
+					seller: { "@id": ORGANIZATION_ID },
+				},
+			}
+		: {}),
+};
+
+const jsonLd = [
+	productNode,
+	breadcrumbNode([
+		["Start", "/"],
+		["Produkte", "/produkte"],
+		[product.title, `/produkte/${product.handle}`],
+	]),
+];
 ---
 
-<BaseLayout title={product.title} description={product.description ?? undefined}>
+<BaseLayout
+	title={product.title}
+	description={metaDescription}
+	ogType="product"
+	image={product.thumbnail
+		? { url: absoluteUrl(product.thumbnail), alt: product.title }
+		: undefined}
+	jsonLd={jsonLd}
+>
 	<a href="/produkte" class="back">← Zurück zum Sortiment</a>
 
 	<article class="detail">
