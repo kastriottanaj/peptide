@@ -5,12 +5,14 @@
  * sitemaps) is built through `absoluteUrl()` so there is exactly one place that
  * knows the origin. Never hand-build absolute URLs at call sites.
  *
- * `PUBLIC_SITE_URL` must be set to the real domain in `.env` before launch; the
- * localhost fallback keeps canonicals coherent during local development.
+ * The fallback is the production domain on purpose: if `PUBLIC_SITE_URL` is ever
+ * missing in a real build, emitting production URLs is harmless, whereas
+ * emitting localhost canonicals into a live site is an SEO disaster. Local
+ * development sets `PUBLIC_SITE_URL=http://localhost:4321` in `.env`.
  */
 
 export const SITE_URL = (
-	import.meta.env.PUBLIC_SITE_URL ?? "http://localhost:4321"
+	import.meta.env.PUBLIC_SITE_URL ?? "https://peptideeinkaufen.de"
 ).replace(/\/+$/, "");
 
 export const SITE_NAME = "Peptide Kaufen Deutschland";

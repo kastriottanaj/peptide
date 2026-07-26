@@ -23,11 +23,13 @@ The `.env` files hold secrets and are **git-ignored**, so you must recreate them
 ```dotenv
 PUBLIC_MEDUSA_BACKEND_URL=http://localhost:9000
 PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_...   # from Medusa admin → Settings → Publishable API keys
-PUBLIC_SITE_URL=http://localhost:4321  # public origin; must be the real domain before launch
+PUBLIC_SITE_URL=http://localhost:4321  # local dev only; production is peptideeinkaufen.de
 ```
 
 `PUBLIC_SITE_URL` drives every canonical URL, OpenGraph tag, JSON-LD `@id` and sitemap
-entry. If it is wrong, all of them are wrong.
+entry. If it is wrong, all of them are wrong. It defaults to
+`https://peptideeinkaufen.de`, so set it to `http://localhost:4321` locally to keep dev
+builds off the production origin.
 
 **`backend/apps/backend/.env`** — copy the template and fill in the blanks:
 

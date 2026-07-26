@@ -170,10 +170,11 @@ head tags in a page:
 
 ### Sitemaps and discovery
 
-- The origin comes from `PUBLIC_SITE_URL` in `storefront/.env`, read by both
-  `astro.config.mjs` (`site`) and `src/lib/site.ts` (`SITE_URL`) so the two cannot
-  drift. It falls back to `http://localhost:4321`; set the real domain before launch or
-  every canonical, sitemap and JSON-LD URL will point at localhost.
+- Production domain is `https://peptideeinkaufen.de`. The origin comes from
+  `PUBLIC_SITE_URL` in `storefront/.env`, read by both `astro.config.mjs` (`site`) and
+  `src/lib/site.ts` (`SITE_URL`) so the two cannot drift. It falls back to the
+  production domain deliberately — a missing env var in a real build should not publish
+  localhost canonicals. Local dev sets `PUBLIC_SITE_URL=http://localhost:4321`.
 - Derive every absolute URL from `absoluteUrl()` in `src/lib/site.ts`. Never hand-build
   absolute URLs at call sites.
 - Split the sitemap by content type behind a sitemap index (products / pages / content)

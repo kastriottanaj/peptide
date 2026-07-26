@@ -9,9 +9,9 @@ try {
 	// No .env file — fall back to the default below.
 }
 
-// `site` is required for canonical URLs and sitemaps. Set PUBLIC_SITE_URL to the
-// real domain in .env before launch; localhost keeps canonicals coherent locally.
+// `site` is required for canonical URLs and sitemaps. The fallback is production
+// on purpose — see the note in src/lib/site.ts. Local dev overrides it via .env.
 // https://astro.build/config
 export default defineConfig({
-	site: process.env.PUBLIC_SITE_URL ?? 'http://localhost:4321',
+	site: process.env.PUBLIC_SITE_URL ?? 'https://peptideeinkaufen.de',
 });
