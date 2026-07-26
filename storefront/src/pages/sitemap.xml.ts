@@ -9,6 +9,7 @@ export const GET: APIRoute = () => {
 		renderSitemapIndex([
 			{ loc: absoluteUrl("/sitemap-pages.xml"), lastModified },
 			{ loc: absoluteUrl("/sitemap-products.xml"), lastModified },
+			{ loc: absoluteUrl("/sitemap-wissen.xml"), lastModified },
 		]),
 	);
 };

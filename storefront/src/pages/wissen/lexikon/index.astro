@@ -1,0 +1,150 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import {
+	absoluteUrl,
+	breadcrumbNode,
+	ORGANIZATION_ID,
+} from "../../../lib/site";
+
+const terms = (await getCollection("lexikon", ({ data }) => !data.draft)).sort(
+	(a, b) => a.data.term.localeCompare(b.data.term, "de"),
+);
+
+// Group A–Z by first letter of the term.
+const groups = terms.reduce<Record<string, typeof terms>>((acc, entry) => {
+	const letter = entry.data.term.charAt(0).toUpperCase();
+	(acc[letter] ??= []).push(entry);
+	return acc;
+}, {});
+const letters = Object.keys(groups).sort((a, b) => a.localeCompare(b, "de"));
+
+const jsonLd = [
+	{
+		"@type": "DefinedTermSet",
+		"@id": `${absoluteUrl("/wissen/lexikon")}#termset`,
+		name: "Peptid-Lexikon",
+		url: absoluteUrl("/wissen/lexikon"),
+		publisher: { "@id": ORGANIZATION_ID },
+		inLanguage: "de-DE",
+		hasDefinedTerm: terms.map((entry) => ({
+			"@type": "DefinedTerm",
+			"@id": `${absoluteUrl(`/wissen/lexikon/${entry.id}`)}#term`,
+			name: entry.data.term,
+			description: entry.data.summary,
+			url: absoluteUrl(`/wissen/lexikon/${entry.id}`),
+		})),
+	},
+	breadcrumbNode([
+		["Start", "/"],
+		["Wissen", "/wissen"],
+		["Lexikon", "/wissen/lexikon"],
+	]),
+];
+---
+
+<BaseLayout
+	title="Peptid-Lexikon – Begriffe von A bis Z"
+	description="Kurzdefinitionen der wichtigsten Begriffe rund um Forschungspeptide, Analytik und Laborpraxis."
+	jsonLd={jsonLd}
+>
+	<span class="eyebrow">Lexikon</span>
+	<h1>Begriffe von A bis Z</h1>
+	<p class="lead">
+		Kurzdefinitionen zu Aufbau, Analytik und Handhabung von Forschungspeptiden.
+		{terms.length} Einträge.
+	</p>
+
+	<nav class="alpha" aria-label="Alphabetische Navigation">
+		{letters.map((letter) => <a href={`#${letter}`}>{letter}</a>)}
+	</nav>
+
+	{
+		letters.map((letter) => (
+			<section class="letter">
+				<h2 id={letter}>{letter}</h2>
+				<dl>
+					{groups[letter].map((entry) => (
+						<div class="entry">
+							<dt>
+								<a href={`/wissen/lexikon/${entry.id}`}>{entry.data.term}</a>
+								{entry.data.aliases.length > 0 && (
+									<span class="aliases">{entry.data.aliases.join(", ")}</span>
+								)}
+							</dt>
+							<dd>{entry.data.summary}</dd>
+						</div>
+					))}
+				</dl>
+			</section>
+		))
+	}
+
+	<style>
+		.lead {
+			color: var(--c-muted);
+			margin: 0.25rem 0 1.5rem;
+			max-width: 60ch;
+		}
+		.alpha {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.4rem;
+			margin-bottom: 2rem;
+			padding-bottom: 1.25rem;
+			border-bottom: 1px solid var(--c-border);
+		}
+		.alpha a {
+			display: grid;
+			place-items: center;
+			width: 2rem;
+			height: 2rem;
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			font-weight: 700;
+			font-size: 0.85rem;
+			text-decoration: none;
+			color: var(--c-navy);
+		}
+		.alpha a:hover {
+			border-color: var(--c-green);
+			color: var(--c-green-dark);
+		}
+		.letter {
+			margin-bottom: 2rem;
+		}
+		.letter h2 {
+			font-size: 1.3rem;
+			color: var(--c-green-dark);
+			margin-bottom: 0.75rem;
+			scroll-margin-top: 5rem;
+		}
+		dl {
+			margin: 0;
+			max-width: 70ch;
+		}
+		.entry {
+			padding: 0.75rem 0;
+			border-bottom: 1px solid var(--c-border);
+		}
+		dt a {
+			font-weight: 700;
+			text-decoration: none;
+			color: var(--c-navy);
+		}
+		dt a:hover {
+			color: var(--c-green-dark);
+		}
+		.aliases {
+			margin-left: 0.6rem;
+			font-size: 0.8rem;
+			font-weight: 400;
+			color: var(--c-muted);
+		}
+		dd {
+			margin: 0.2rem 0 0;
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+	</style>
+</BaseLayout>

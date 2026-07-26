@@ -1,0 +1,207 @@
+---
+import { getCollection, render, type CollectionEntry } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { WISSEN_CATEGORY_LABELS } from "../../content.config";
+import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
+
+export async function getStaticPaths() {
+	const articles = await getCollection("wissen", ({ data }) => !data.draft);
+	return articles.map((article) => ({
+		params: { slug: article.id },
+		props: { article },
+	}));
+}
+
+interface Props {
+	article: CollectionEntry<"wissen">;
+}
+
+const { article } = Astro.props;
+const { Content } = await render(article);
+const data = article.data;
+
+const url = absoluteUrl(`/wissen/${article.id}`);
+
+// Terms this article references, resolved so we can link them at the foot.
+const allTerms = await getCollection("lexikon", ({ data }) => !data.draft);
+const relatedTerms = data.relatedTerms
+	.map((slug) => allTerms.find((t) => t.id === slug))
+	.filter((t): t is CollectionEntry<"lexikon"> => Boolean(t));
+
+const jsonLd = [
+	{
+		"@type": "Article",
+		"@id": `${url}#article`,
+		headline: data.title,
+		description: data.metaDescription,
+		url,
+		datePublished: data.datePublished.toISOString(),
+		dateModified: data.dateModified.toISOString(),
+		inLanguage: "de-DE",
+		author: { "@id": ORGANIZATION_ID },
+		publisher: { "@id": ORGANIZATION_ID },
+		isAccessibleForFree: true,
+		mainEntityOfPage: { "@type": "WebPage", "@id": url },
+	},
+	breadcrumbNode([
+		["Start", "/"],
+		["Wissen", "/wissen"],
+		[data.title, `/wissen/${article.id}`],
+	]),
+];
+
+const formatDate = (date: Date) =>
+	new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(date);
+---
+
+<BaseLayout
+	title={data.metaTitle ?? data.title}
+	description={data.metaDescription}
+	ogType="article"
+	jsonLd={jsonLd}
+>
+	<article class="article">
+		<nav class="crumbs" aria-label="Brotkrumen">
+			<a href="/wissen">Wissen</a>
+			<span aria-hidden="true">/</span>
+			<span>{WISSEN_CATEGORY_LABELS[data.category]}</span>
+		</nav>
+
+		<h1>{data.title}</h1>
+		<p class="meta">
+			{data.readingMinutes} Min. Lesezeit · Aktualisiert am {formatDate(data.dateModified)}
+		</p>
+
+		<div class="prose">
+			<Content />
+		</div>
+
+		{
+			relatedTerms.length > 0 && (
+				<aside class="related">
+					<h2>Begriffe aus diesem Text</h2>
+					<ul>
+						{relatedTerms.map((term) => (
+							<li>
+								<a href={`/wissen/lexikon/${term.id}`}>{term.data.term}</a>
+								<span>{term.data.summary}</span>
+							</li>
+						))}
+					</ul>
+				</aside>
+			)
+		}
+
+		<a class="back" href="/wissen">← Alle Beiträge</a>
+	</article>
+
+	<style>
+		.article {
+			max-width: 70ch;
+		}
+		.crumbs {
+			display: flex;
+			gap: 0.5rem;
+			font-size: 0.82rem;
+			color: var(--c-muted);
+			margin-bottom: 0.75rem;
+		}
+		.crumbs a {
+			color: var(--c-green-dark);
+			text-decoration: none;
+			font-weight: 600;
+		}
+		.meta {
+			margin: -0.25rem 0 2rem;
+			font-size: 0.85rem;
+			color: var(--c-muted);
+		}
+		.prose :global(h2) {
+			font-size: 1.2rem;
+			margin-top: 2.25rem;
+		}
+		.prose :global(h3) {
+			font-size: 1.02rem;
+			margin-top: 1.5rem;
+		}
+		.prose :global(p),
+		.prose :global(li) {
+			font-size: 0.97rem;
+		}
+		.prose :global(ul),
+		.prose :global(ol) {
+			padding-left: 1.25rem;
+		}
+		.prose :global(li) {
+			margin-bottom: 0.4rem;
+		}
+		.prose :global(a) {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.prose :global(table) {
+			width: 100%;
+			border-collapse: collapse;
+			margin: 1.25rem 0;
+			font-size: 0.9rem;
+		}
+		.prose :global(th),
+		.prose :global(td) {
+			text-align: left;
+			padding: 0.5rem 0.7rem;
+			border-bottom: 1px solid var(--c-border);
+		}
+		.prose :global(th) {
+			color: var(--c-muted);
+			font-size: 0.8rem;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+		}
+		.prose :global(hr) {
+			border: none;
+			border-top: 1px solid var(--c-border);
+			margin: 2rem 0 1.25rem;
+		}
+		.prose :global(em) {
+			color: var(--c-muted);
+			font-size: 0.88rem;
+		}
+		.related {
+			margin-top: 2.5rem;
+			padding: 1.2rem 1.4rem;
+			background: var(--c-cream-soft);
+			border: 1px solid var(--c-cream-border);
+			border-radius: var(--radius);
+		}
+		.related h2 {
+			font-size: 0.95rem;
+			margin: 0 0 0.75rem;
+		}
+		.related ul {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+		}
+		.related li {
+			padding: 0.35rem 0;
+			font-size: 0.88rem;
+		}
+		.related a {
+			font-weight: 700;
+			color: var(--c-green-dark);
+			text-decoration: none;
+			margin-right: 0.5rem;
+		}
+		.related span {
+			color: var(--c-muted);
+		}
+		.back {
+			display: inline-block;
+			margin-top: 2rem;
+			font-size: 0.9rem;
+			font-weight: 600;
+			color: var(--c-green-dark);
+			text-decoration: none;
+		}
+	</style>
+</BaseLayout>

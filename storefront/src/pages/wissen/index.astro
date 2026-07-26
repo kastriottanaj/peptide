@@ -1,0 +1,181 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { WISSEN_CATEGORY_LABELS } from "../../content.config";
+import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
+
+const articles = (await getCollection("wissen", ({ data }) => !data.draft)).sort(
+	(a, b) => b.data.datePublished.getTime() - a.data.datePublished.getTime(),
+);
+
+const terms = (await getCollection("lexikon", ({ data }) => !data.draft)).sort(
+	(a, b) => a.data.term.localeCompare(b.data.term, "de"),
+);
+
+// Group by category, preserving the order declared in the config.
+const byCategory = (Object.keys(WISSEN_CATEGORY_LABELS) as Array<
+	keyof typeof WISSEN_CATEGORY_LABELS
+>)
+	.map((key) => ({
+		key,
+		label: WISSEN_CATEGORY_LABELS[key],
+		items: articles.filter((a) => a.data.category === key),
+	}))
+	.filter((group) => group.items.length > 0);
+
+const jsonLd = [
+	{
+		"@type": "CollectionPage",
+		"@id": `${absoluteUrl("/wissen")}#collection`,
+		name: "Wissen",
+		url: absoluteUrl("/wissen"),
+		publisher: { "@id": ORGANIZATION_ID },
+		mainEntity: {
+			"@type": "ItemList",
+			numberOfItems: articles.length,
+			itemListElement: articles.map((article, index) => ({
+				"@type": "ListItem",
+				position: index + 1,
+				name: article.data.title,
+				url: absoluteUrl(`/wissen/${article.id}`),
+			})),
+		},
+	},
+	breadcrumbNode([
+		["Start", "/"],
+		["Wissen", "/wissen"],
+	]),
+];
+---
+
+<BaseLayout
+	title="Wissen – Grundlagen zu Forschungspeptiden"
+	description="Fachliche Grundlagen zu Peptiden: Aufbau, Analytik, Reinheit und Laborpraxis. Wissenschaftliche Information für Forschungs- und Laborzwecke."
+	jsonLd={jsonLd}
+>
+	<span class="eyebrow">Wissen</span>
+	<h1>Grundlagen zu Forschungspeptiden</h1>
+	<p class="lead">
+		Fachliche Hintergrundtexte zu Aufbau, Analytik und Handhabung von Peptiden
+		im Laborkontext. Ausschließlich wissenschaftliche Information — keine
+		Anwendungshinweise.
+	</p>
+
+	{
+		byCategory.map((group) => (
+			<section class="group">
+				<h2>{group.label}</h2>
+				<ul class="cards">
+					{group.items.map((article) => (
+						<li>
+							<a href={`/wissen/${article.id}`} class="card">
+								<h3>{article.data.title}</h3>
+								<p>{article.data.excerpt}</p>
+								<span class="card__meta">{article.data.readingMinutes} Min. Lesezeit</span>
+							</a>
+						</li>
+					))}
+				</ul>
+			</section>
+		))
+	}
+
+	<section class="group">
+		<h2>Lexikon</h2>
+		<p class="lead lead--tight">
+			Kurzdefinitionen der wichtigsten Begriffe.
+			<a href="/wissen/lexikon">Alle {terms.length} Einträge ansehen →</a>
+		</p>
+		<ul class="chips">
+			{
+				terms.slice(0, 8).map((entry) => (
+					<li>
+						<a href={`/wissen/lexikon/${entry.id}`}>{entry.data.term}</a>
+					</li>
+				))
+			}
+		</ul>
+	</section>
+
+	<style>
+		.lead {
+			color: var(--c-muted);
+			margin: 0.25rem 0 2.5rem;
+			max-width: 60ch;
+		}
+		.lead--tight {
+			margin-bottom: 1rem;
+		}
+		.lead a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.group {
+			margin-bottom: 2.75rem;
+		}
+		.group h2 {
+			font-size: 1.15rem;
+			margin-bottom: 1rem;
+		}
+		.cards {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+			gap: 1rem;
+		}
+		.card {
+			display: block;
+			height: 100%;
+			padding: 1.1rem 1.2rem;
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius);
+			text-decoration: none;
+			color: inherit;
+			background: var(--c-white);
+			transition: box-shadow 0.15s ease, transform 0.15s ease;
+		}
+		.card:hover {
+			box-shadow: 0 10px 28px rgba(21, 39, 63, 0.1);
+			transform: translateY(-2px);
+		}
+		.card h3 {
+			font-size: 1rem;
+			margin: 0 0 0.4rem;
+		}
+		.card p {
+			margin: 0;
+			font-size: 0.88rem;
+			color: var(--c-muted);
+		}
+		.card__meta {
+			display: block;
+			margin-top: 0.75rem;
+			font-size: 0.76rem;
+			color: var(--c-muted);
+		}
+		.chips {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+		}
+		.chips a {
+			display: inline-block;
+			padding: 0.35rem 0.8rem;
+			border: 1px solid var(--c-border);
+			border-radius: 999px;
+			font-size: 0.85rem;
+			font-weight: 600;
+			text-decoration: none;
+			color: var(--c-navy);
+		}
+		.chips a:hover {
+			border-color: var(--c-green);
+			color: var(--c-green-dark);
+		}
+	</style>
+</BaseLayout>
