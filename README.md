@@ -2,6 +2,13 @@
 
 Monorepo for the peptides project.
 
+> **⚠️ Open before launch: real bank details.** Payment is direct bank transfer,
+> so no real order can be paid until the business account details are set in
+> `storefront/.env` (`PUBLIC_BANK_ACCOUNT_HOLDER`, `PUBLIC_BANK_IBAN`,
+> `PUBLIC_BANK_BIC`, `PUBLIC_BANK_NAME`). Until then every confirmation page
+> shows placeholders and tells the customer not to transfer.
+> See [docs/checkout.md](docs/checkout.md) for this and the other go-live gaps.
+
 | Folder        | Stack                          | Description              |
 | ------------- | ------------------------------ | ------------------------ |
 | `storefront/` | Astro + `@medusajs/js-sdk`     | Customer-facing store    |
