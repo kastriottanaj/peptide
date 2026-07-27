@@ -51,6 +51,7 @@ the amount matches the order total exactly.
 | 3. Checkout | `/kasse` | Contact, address, optional discount code, shipping, mandatory legal confirmation |
 | 4. Confirmation | `/bestellung?id=…` | Order number, bank details, amount, **payment reference** |
 | 5. Transfer | customer's bank | Customer transfers, quoting the reference |
+| — Lost the page? | `/bestellung/suchen` | Order number + email returns the reference and amount |
 | 6. Reconcile | Medusa admin `/app` | Staff match the incoming transfer and mark the order paid |
 
 Step 6 is manual and deliberate — same as the source project. Nothing ships

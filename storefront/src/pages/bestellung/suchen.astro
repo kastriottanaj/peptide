@@ -1,0 +1,295 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { BANK_DETAILS, bankDetailsArePlaceholder } from "../../lib/bank";
+
+const placeholderBank = bankDetailsArePlaceholder();
+---
+
+<BaseLayout
+	title="Bestellung suchen"
+	description="Bestellnummer und E-Mail eingeben, um Bankverbindung und Verwendungszweck erneut anzuzeigen."
+	noindex
+>
+	<div class="lookup">
+		<h1>Bestellung suchen</h1>
+		<p class="lead">
+			Sie haben die Bestätigungsseite geschlossen? Geben Sie Bestellnummer und
+			E-Mail-Adresse ein, um Betrag und Verwendungszweck erneut anzuzeigen.
+		</p>
+
+		<form data-lookup-form>
+			<label>
+				Bestellnummer *
+				<input name="orderNumber" required inputmode="numeric" placeholder="z. B. 5" />
+			</label>
+			<label>
+				E-Mail-Adresse *
+				<input name="email" type="email" required autocomplete="email" />
+			</label>
+			<button class="btn btn--green" type="submit" data-submit>Bestellung anzeigen</button>
+			<p class="error" data-error role="alert" hidden></p>
+		</form>
+
+		<section class="result" data-result hidden>
+			<h2>Bestellung <span data-r-number></span></h2>
+			<p class="status" data-r-date></p>
+
+			<div class="pay">
+				{
+					placeholderBank && (
+						<p class="pay__warning">
+							<strong>Hinweis:</strong> Das Geschäftskonto wird derzeit
+							eingerichtet. Die unten gezeigten Bankdaten sind Platzhalter —
+							bitte noch nicht überweisen.
+						</p>
+					)
+				}
+				<dl>
+					<div><dt>Empfänger</dt><dd>{BANK_DETAILS.accountHolder}</dd></div>
+					<div><dt>IBAN</dt><dd>{BANK_DETAILS.iban}</dd></div>
+					<div><dt>BIC</dt><dd>{BANK_DETAILS.bic}</dd></div>
+					<div><dt>Betrag</dt><dd data-r-total></dd></div>
+					<div class="ref"><dt>Verwendungszweck</dt><dd data-r-reference></dd></div>
+				</dl>
+			</div>
+
+			<h3>Artikel</h3>
+			<ul data-r-items></ul>
+			<div class="row"><span>Zwischensumme</span><span data-r-subtotal></span></div>
+			<div class="row"><span>Versand</span><span data-r-shipping></span></div>
+			<div class="row row--total"><span>Gesamt</span><span data-r-total2></span></div>
+		</section>
+	</div>
+
+	<script>
+		import { medusa } from "../../lib/medusa";
+		import { formatEur } from "../../lib/pricing";
+
+		const form = document.querySelector<HTMLFormElement>("[data-lookup-form]");
+		const result = document.querySelector<HTMLElement>("[data-result]");
+		const errorEl = document.querySelector<HTMLElement>("[data-error]");
+		const submit = form?.querySelector<HTMLButtonElement>("[data-submit]");
+
+		const set = (selector: string, value: string) => {
+			const el = document.querySelector<HTMLElement>(selector);
+			if (el) el.textContent = value;
+		};
+
+		/**
+		 * Wipe the previous result rather than just hiding it. Hiding leaves the
+		 * order number, total and payment reference in the DOM, where a later user
+		 * of a shared machine could read them after a failed lookup.
+		 */
+		const clearResult = () => {
+			result?.setAttribute("hidden", "");
+			for (const selector of [
+				"[data-r-number]",
+				"[data-r-date]",
+				"[data-r-reference]",
+				"[data-r-total]",
+				"[data-r-total2]",
+				"[data-r-subtotal]",
+				"[data-r-shipping]",
+			]) {
+				set(selector, "");
+			}
+			const list = document.querySelector<HTMLElement>("[data-r-items]");
+			if (list) list.innerHTML = "";
+		};
+
+		form?.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			if (!form.reportValidity()) return;
+
+			errorEl?.setAttribute("hidden", "");
+			clearResult();
+			submit!.disabled = true;
+			const original = submit!.textContent;
+			submit!.textContent = "Wird gesucht …";
+
+			const data = new FormData(form);
+
+			try {
+				const response = await medusa.client.fetch<{ order: any }>(
+					"/store/order-lookup",
+					{
+						method: "POST",
+						body: {
+							orderNumber: String(data.get("orderNumber") ?? ""),
+							email: String(data.get("email") ?? ""),
+						},
+					},
+				);
+
+				const order = response.order;
+				const currency = order.currency_code ?? "eur";
+
+				set("[data-r-number]", `#${order.display_id}`);
+				set(
+					"[data-r-date]",
+					`Bestellt am ${new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(new Date(order.created_at))}`,
+				);
+				set("[data-r-reference]", order.bank_reference ?? `PE-${order.display_id}`);
+				set("[data-r-total]", formatEur(order.total ?? 0, currency));
+				set("[data-r-total2]", formatEur(order.total ?? 0, currency));
+				set("[data-r-subtotal]", formatEur(order.item_total ?? 0, currency));
+				set("[data-r-shipping]", formatEur(order.shipping_total ?? 0, currency));
+
+				const list = document.querySelector<HTMLElement>("[data-r-items]");
+				if (list) {
+					list.innerHTML = "";
+					for (const item of order.items ?? []) {
+						const li = document.createElement("li");
+						li.innerHTML = `<span>${item.quantity}× ${item.title ?? ""} <em>${item.variant_title ?? ""}</em></span><span>${formatEur(item.total ?? 0, currency)}</span>`;
+						list.appendChild(li);
+					}
+				}
+
+				result?.removeAttribute("hidden");
+			} catch {
+				// The API returns one generic message for every failure so the
+				// response cannot be used to probe for valid orders.
+				if (errorEl) {
+					errorEl.textContent =
+						"Zu diesen Angaben wurde keine Bestellung gefunden. Bitte prüfen Sie Bestellnummer und E-Mail-Adresse.";
+					errorEl.removeAttribute("hidden");
+				}
+			} finally {
+				submit!.disabled = false;
+				submit!.textContent = original;
+			}
+		});
+	</script>
+
+	<style>
+		.lookup {
+			max-width: 60ch;
+		}
+		.lead {
+			color: var(--c-muted);
+			margin: 0.25rem 0 2rem;
+		}
+		label {
+			display: block;
+			font-size: 0.85rem;
+			font-weight: 600;
+			color: var(--c-muted);
+			margin-bottom: 1rem;
+		}
+		input {
+			display: block;
+			width: 100%;
+			margin-top: 0.3rem;
+			padding: 0.6rem 0.75rem;
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			font-family: inherit;
+			font-size: 0.95rem;
+			color: var(--c-ink);
+		}
+		input:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 1px;
+		}
+		.error {
+			margin: 1rem 0 0;
+			padding: 0.6rem 0.75rem;
+			border-radius: var(--radius-sm);
+			background: var(--c-crit-bg);
+			color: var(--c-crit-ink);
+			font-size: 0.85rem;
+			font-weight: 600;
+		}
+		.result {
+			margin-top: 2.5rem;
+			padding-top: 2rem;
+			border-top: 1px solid var(--c-border);
+		}
+		.result h2 {
+			font-size: 1.2rem;
+			margin-bottom: 0.25rem;
+		}
+		.result h3 {
+			font-size: 0.95rem;
+			margin: 1.75rem 0 0.6rem;
+		}
+		.status {
+			margin: 0 0 1.5rem;
+			font-size: 0.85rem;
+			color: var(--c-muted);
+		}
+		.pay {
+			background: var(--c-cream-soft);
+			border: 1px solid var(--c-cream-border);
+			border-radius: var(--radius);
+			padding: 1.2rem 1.4rem;
+		}
+		.pay__warning {
+			background: var(--c-warn-bg);
+			color: var(--c-warn-ink);
+			border-radius: var(--radius-sm);
+			padding: 0.7rem 0.9rem;
+			font-size: 0.85rem;
+			margin: 0 0 1rem;
+		}
+		.pay dl {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 0.75rem 1.5rem;
+			margin: 0;
+		}
+		.pay dt {
+			font-size: 0.76rem;
+			color: var(--c-muted);
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+		}
+		.pay dd {
+			margin: 0.15rem 0 0;
+			font-weight: 700;
+			font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+			font-size: 0.9rem;
+		}
+		.ref dd {
+			color: var(--c-green-dark);
+			font-size: 1.05rem;
+		}
+		.result ul {
+			list-style: none;
+			margin: 0 0 1rem;
+			padding: 0 0 0.75rem;
+			border-bottom: 1px solid var(--c-border);
+			font-size: 0.9rem;
+		}
+		.result li {
+			display: flex;
+			justify-content: space-between;
+			gap: 1rem;
+			padding: 0.25rem 0;
+		}
+		.result em {
+			color: var(--c-muted);
+			font-style: normal;
+		}
+		.row {
+			display: flex;
+			justify-content: space-between;
+			font-size: 0.9rem;
+			padding: 0.25rem 0;
+		}
+		.row--total {
+			border-top: 1px solid var(--c-border);
+			margin-top: 0.5rem;
+			padding-top: 0.7rem;
+			font-weight: 800;
+			font-size: 1.05rem;
+			color: var(--c-navy);
+		}
+
+		@media (max-width: 560px) {
+			.pay dl {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</BaseLayout>

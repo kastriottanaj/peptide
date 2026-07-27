@@ -139,6 +139,17 @@ What it needs:
 Note this must come **after** the bank details in section 1, since the email
 carries them.
 
+**Partially mitigated since 2026-07-27:** `/bestellung/suchen` lets a customer
+retrieve their order and payment reference with order number + email, so a
+closed tab is no longer a dead end. That reduces the damage but does not remove
+the requirement — a customer who never receives anything in writing has no
+prompt to pay at all, and no record for their own accounts.
+
+- [ ] **Rate-limit `/store/order-lookup` before it is publicly reachable.**
+      It is an unauthenticated endpoint taking an order number and an email.
+      The generic error prevents probing for *which* half was wrong, but nothing
+      stops volume. Put Cloudflare (or equivalent) in front of it at deploy time.
+
 ## 7. Technical items not blocked on the business
 
 These can be done at any time:
