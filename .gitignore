@@ -13,6 +13,10 @@ dist/
 !.env.template
 !.env.example
 
+# Local credential notes — never committed. Git history is permanent, so a
+# password committed once stays retrievable even after it is deleted.
+*.local.md
+
 # Editor / local tooling
 .claude/settings.local.json
 .vscode/
