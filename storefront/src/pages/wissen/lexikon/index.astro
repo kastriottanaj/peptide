@@ -1,11 +1,13 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
+import ContentSearch from "../../../components/ContentSearch.astro";
 import {
 	absoluteUrl,
 	breadcrumbNode,
 	ORGANIZATION_ID,
 } from "../../../lib/site";
+import { foldSearchText } from "../../../lib/search";
 
 const terms = (await getCollection("lexikon", ({ data }) => !data.draft)).sort(
 	(a, b) => a.data.term.localeCompare(b.data.term, "de"),
@@ -18,6 +20,23 @@ const groups = terms.reduce<Record<string, typeof terms>>((acc, entry) => {
 	return acc;
 }, {});
 const letters = Object.keys(groups).sort((a, b) => a.localeCompare(b, "de"));
+
+/**
+ * Searchable text per entry, folded at build time. Aliases matter most here —
+ * a term is far more often looked up by its abbreviation or trade name than by
+ * the headword this index sorts on.
+ */
+const searchIndex = (entry: (typeof terms)[number]) =>
+	foldSearchText(
+		[
+			entry.data.term,
+			...entry.data.aliases,
+			entry.data.summary,
+			entry.data.metaDescription,
+			entry.data.researchArea ?? "",
+			entry.id.replace(/-/g, " "),
+		].join(" "),
+	);
 
 const jsonLd = [
 	{
@@ -51,21 +70,29 @@ const jsonLd = [
 	<span class="eyebrow">Lexikon</span>
 	<h1>Begriffe von A bis Z</h1>
 	<p class="lead">
-		Kurzdefinitionen zu Aufbau, Analytik und Handhabung von Forschungspeptiden.
-		{terms.length} Einträge.
+		Kurzdefinitionen zu Aufbau, Analytik und Handhabung von Forschungspeptiden. {
+			terms.length
+		} Einträge.
 	</p>
 
-	<nav class="alpha" aria-label="Alphabetische Navigation">
+	<ContentSearch
+		label="Peptid-Lexikon durchsuchen"
+		placeholder="Begriff suchen – z. B. Lyophilisat, HPLC…"
+		nounSingular="Eintrag"
+		nounPlural="Einträge"
+	/>
+
+	<nav class="alpha" aria-label="Alphabetische Navigation" data-search-aside>
 		{letters.map((letter) => <a href={`#${letter}`}>{letter}</a>)}
 	</nav>
 
 	{
 		letters.map((letter) => (
-			<section class="letter">
+			<section class="letter" data-search-group>
 				<h2 id={letter}>{letter}</h2>
 				<dl>
 					{groups[letter].map((entry) => (
-						<div class="entry">
+						<div class="entry" data-search-item data-search={searchIndex(entry)}>
 							<dt>
 								<a href={`/wissen/lexikon/${entry.id}`}>{entry.data.term}</a>
 								{entry.data.aliases.length > 0 && (
