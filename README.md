@@ -71,4 +71,24 @@ cd backend && npm run dev
 cd storefront && npm run dev
 ```
 
+### 4. Admin dashboard
+
+Medusa ships its own admin — there is no custom backend to build. With the
+backend running, open:
+
+**http://localhost:9000/app**
+
+It covers orders, products, categories, inventory, customers, promotions, price
+lists and settings.
+
+Create a login:
+
+```bash
+cd backend/apps/backend
+npx medusa user -e you@example.com -p '<strong-password>'
+```
+
+Credentials are never committed. If you lose the password, re-run the command
+with the same email to set a new one.
+
 See `backend/README.md` and `storefront/README.md` for stack-specific details.
