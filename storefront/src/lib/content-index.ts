@@ -25,6 +25,12 @@ export type IndexedEntry = {
 	title: string;
 	/** One line, plain text. Used by llms.txt; ignored by the sitemap. */
 	description?: string;
+	/**
+	 * Extra terms that should match in search but do not belong in the visible
+	 * title or description: aliases, abbreviations, category labels. A glossary
+	 * term is looked up by its abbreviation far more often than by its headword.
+	 */
+	keywords?: string[];
 	lastModified?: Date;
 	changeFrequency: ChangeFrequency;
 	priority: number;
@@ -220,6 +226,10 @@ export async function articleEntries(): Promise<IndexedEntry[]> {
 			path: `/wissen/${article.id}`,
 			title: article.data.title,
 			description: article.data.excerpt,
+			keywords: [
+				WISSEN_CATEGORY_LABELS[article.data.category],
+				article.data.metaDescription,
+			],
 			lastModified: article.data.dateModified,
 			changeFrequency: "monthly" as const,
 			priority: 0.6,
@@ -236,6 +246,11 @@ export async function termEntries(): Promise<IndexedEntry[]> {
 			path: `/wissen/lexikon/${term.id}`,
 			title: term.data.term,
 			description: term.data.summary,
+			keywords: [
+				...term.data.aliases,
+				term.data.researchArea ?? "",
+				term.data.metaDescription,
+			],
 			lastModified: term.data.dateModified,
 			changeFrequency: "monthly" as const,
 			priority: 0.5,

@@ -91,4 +91,41 @@ npx medusa user -e you@example.com -p '<strong-password>'
 Credentials are never committed. If you lose the password, re-run the command
 with the same email to set a new one.
 
+## Agent-facing surfaces
+
+The storefront publishes three files for language models and agentic browsers.
+All are Astro endpoints generated at build time from `src/lib/content-index.ts`,
+so new products and articles appear in them automatically:
+
+| URL               | Contents                                                |
+| ----------------- | ------------------------------------------------------- |
+| `/llms.txt`       | Map of the site plus the registered WebMCP tools         |
+| `/llms-full.txt`  | Full text of every Wissen article and Lexikon entry      |
+| `/api/search.json`| Search index behind the `search_site` tool               |
+
+WebMCP tools (`search_site`, `get_product_details`, `add_to_cart`) are declared
+in `src/lib/webmcp-tools.ts` and registered by `src/components/WebMCPTools.astro`.
+See https://developer.chrome.com/docs/ai/webmcp.
+
+### Required at deploy time: Permissions-Policy
+
+Browsers only expose `navigator.modelContext` to a page that sends:
+
+```http
+Permissions-Policy: tools=(self)
+```
+
+This repo has no production deployment and no host configuration, so the header
+cannot be set here: a static Astro build emits files, not headers. Whoever
+introduces the deploy path must add it, in whichever of these the host uses:
+
+- Cloudflare Pages or Netlify: a `public/_headers` file containing `/*` and the
+  header line beneath it.
+- Vercel: a `headers` entry in `vercel.json`.
+- Nginx or Caddy: an `add_header` / `header` directive on the site block.
+
+Until that header ships, the tools register in code but no browser will call
+them. Everything else (`llms.txt`, `llms-full.txt`, the search index) works
+without it.
+
 See `backend/README.md` and `storefront/README.md` for stack-specific details.

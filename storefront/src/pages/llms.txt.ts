@@ -8,6 +8,7 @@ import {
 	termEntries,
 	type IndexedEntry,
 } from "../lib/content-index";
+import { WEBMCP_TOOL_LIST } from "../lib/webmcp-tools";
 
 /**
  * `/llms.txt` — the llmstxt.org map of the site for language models.
@@ -66,6 +67,19 @@ export const GET: APIRoute = async () => {
 		...section("Wissen", articles),
 		...section("Lexikon", terms),
 		...section("Seiten", allStaticEntries()),
+		// Read from the same descriptors the page registers, so this list cannot
+		// promise a tool that does not exist.
+		"## Agent Tools Available",
+		"",
+		"Diese Seite registriert WebMCP-Werkzeuge (https://developer.chrome.com/docs/ai/webmcp).",
+		"In einem Browser ohne WebMCP-Unterstützung stehen sie nicht zur Verfügung.",
+		"",
+		...WEBMCP_TOOL_LIST.map((tool) => `- \`${tool.name}\`: ${oneLine(tool.description)}`),
+		"",
+		"## Kontakt",
+		"",
+		`- [Kontaktseite](${absoluteUrl("/contact")}): Kontaktwege für Fragen zu Sortiment und Bestellungen.`,
+		"",
 		"## Optional",
 		"",
 		`- [Vollständiger Inhalt als Text](${absoluteUrl("/llms-full.txt")}): alle Wissens- und Lexikonartikel im Volltext.`,
