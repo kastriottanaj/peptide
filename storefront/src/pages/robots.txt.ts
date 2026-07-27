@@ -16,6 +16,11 @@ export const GET: APIRoute = () => {
 		`Sitemap: ${absoluteUrl("/sitemap.xml")}`,
 		`Host: ${SITE_URL}`,
 		"",
+		// A comment, not a directive: there is no standard robots.txt field for
+		// this, and inventing one risks a parser choking on the whole file. The
+		// well-known /llms.txt path is the actual discovery mechanism.
+		`# llms.txt: ${absoluteUrl("/llms.txt")}`,
+		"",
 	].join("\n");
 
 	return new Response(body, {
