@@ -1,33 +1,15 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
-import { medusa, getDefaultRegionId } from "../../lib/medusa";
-import {
-	absoluteUrl,
-	breadcrumbNode,
-	ORGANIZATION_ID,
-} from "../../lib/site";
+import { listProducts, listCategories } from "../../lib/catalog";
+import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
 
-const regionId = await getDefaultRegionId();
-
-const { products: fetched, count } = await medusa.store.product.list({
-	region_id: regionId,
-	fields:
-		"id,title,handle,thumbnail,metadata,*variants,*variants.calculated_price",
-	limit: 100,
-});
-
-// Show peptides (products carrying a research_code) first.
-const hasCode = (p: (typeof fetched)[number]) =>
-	typeof (p.metadata as Record<string, unknown> | null)?.research_code ===
-	"string";
-const products = [...fetched].sort(
-	(a, b) => Number(hasCode(b)) - Number(hasCode(a)),
-);
+const products = await listProducts();
+const categories = await listCategories();
 
 // --- SEO ---------------------------------------------------------------
 // The CollectionPage graph is emitted only here, on the clean canonical
-// listing URL — never on filtered/sorted variants.
+// listing URL — never on a filtered variant.
 const jsonLd = [
 	{
 		"@type": "CollectionPage",
@@ -51,6 +33,20 @@ const jsonLd = [
 		["Produkte", "/produkte"],
 	]),
 ];
+
+/** Searchable text per product, precomputed so the client script stays small. */
+const searchIndex = (product: (typeof products)[number]) => {
+	const meta = (product.metadata ?? {}) as Record<string, unknown>;
+	return [
+		product.title,
+		product.description,
+		typeof meta.research_code === "string" ? meta.research_code : "",
+		...(product.categories ?? []).map((c) => c.name),
+	]
+		.filter(Boolean)
+		.join(" ")
+		.toLowerCase();
+};
 ---
 
 <BaseLayout
@@ -61,31 +57,216 @@ const jsonLd = [
 	<span class="eyebrow">Shop</span>
 	<h1>Forschungspeptide</h1>
 	<p class="lead">
-		{count} Produkte für Forschungs- und Analysezwecke. Packgrößen, Preis und
-		Zertifikatsstatus auf einen Blick.
+		{products.length} Produkte für Forschungs- und Analysezwecke. Packgrößen,
+		Preis und Zertifikatsstatus auf einen Blick.
 	</p>
+
+	{
+		categories.length > 0 && (
+			<nav class="cats" aria-label="Kategorien">
+				{categories.map((category) => (
+					<a href={`/kategorie/${category.handle}`}>{category.name}</a>
+				))}
+			</nav>
+		)
+	}
+
+	<div class="filter">
+		<label class="filter__field">
+			<span class="visually-hidden">Sortiment durchsuchen</span>
+			<input
+				type="search"
+				name="q"
+				placeholder="Nach Name oder Research-Code suchen…"
+				autocomplete="off"
+				data-filter-input
+			/>
+		</label>
+		<button type="button" class="filter__clear" data-filter-clear hidden>
+			Filter zurücksetzen
+		</button>
+	</div>
+
+	<p class="filter__count" data-filter-count role="status" aria-live="polite" hidden></p>
 
 	{
 		products.length === 0 ? (
 			<p>Aktuell sind keine Produkte verfügbar.</p>
 		) : (
-			<div class="grid">
+			<div class="grid" data-product-grid>
 				{products.map((product) => (
-					<ProductCard product={product} />
+					<div data-product data-search={searchIndex(product)}>
+						<ProductCard product={product} />
+					</div>
 				))}
 			</div>
 		)
 	}
 
+	<p class="empty" data-filter-empty hidden>
+		Keine Produkte gefunden. <button type="button" data-filter-clear-inline>Filter zurücksetzen</button>
+	</p>
+
+	<script>
+		// The storefront builds to static HTML, so `?q=` cannot be read at build
+		// time — filtering happens here, over the already-rendered cards.
+		const input = document.querySelector<HTMLInputElement>("[data-filter-input]");
+		const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-product]"));
+		const countEl = document.querySelector<HTMLElement>("[data-filter-count]");
+		const emptyEl = document.querySelector<HTMLElement>("[data-filter-empty]");
+		const clearButtons = Array.from(
+			document.querySelectorAll<HTMLButtonElement>(
+				"[data-filter-clear], [data-filter-clear-inline]",
+			),
+		);
+
+		const apply = (raw: string, updateUrl: boolean) => {
+			const terms = raw.trim().toLowerCase().split(/\s+/).filter(Boolean);
+			let visible = 0;
+
+			for (const card of cards) {
+				const haystack = card.dataset.search ?? "";
+				const match = terms.every((term) => haystack.includes(term));
+				card.toggleAttribute("hidden", !match);
+				if (match) visible++;
+			}
+
+			const filtering = terms.length > 0;
+			countEl?.toggleAttribute("hidden", !filtering);
+			if (countEl && filtering) {
+				countEl.textContent = `${visible} von ${cards.length} Produkten`;
+			}
+			emptyEl?.toggleAttribute("hidden", !(filtering && visible === 0));
+			for (const button of clearButtons) {
+				button.toggleAttribute("hidden", !filtering);
+			}
+
+			if (updateUrl) {
+				const url = new URL(window.location.href);
+				if (filtering) url.searchParams.set("q", raw.trim());
+				else url.searchParams.delete("q");
+				window.history.replaceState({}, "", url);
+			}
+
+			// A filtered listing is a faceted near-duplicate of the clean URL.
+			// Static output cannot vary the meta tag per query string, so set it
+			// here; the canonical already points at the unfiltered /produkte.
+			let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+			if (filtering) {
+				if (!robots) {
+					robots = document.createElement("meta");
+					robots.name = "robots";
+					document.head.appendChild(robots);
+				}
+				robots.content = "noindex, follow";
+			} else {
+				robots?.remove();
+			}
+		};
+
+		// Honour ?q= arriving from the header search form.
+		const initial = new URLSearchParams(window.location.search).get("q") ?? "";
+		if (input) {
+			input.value = initial;
+			input.addEventListener("input", () => apply(input.value, true));
+		}
+		for (const button of clearButtons) {
+			button.addEventListener("click", () => {
+				if (input) input.value = "";
+				apply("", true);
+				input?.focus();
+			});
+		}
+		if (initial) apply(initial, false);
+	</script>
+
 	<style>
 		.lead {
 			color: var(--c-muted);
-			margin: 0.25rem 0 2rem;
+			margin: 0.25rem 0 1.5rem;
+		}
+		.cats {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+			margin-bottom: 1.25rem;
+		}
+		.cats a {
+			display: inline-block;
+			padding: 0.4rem 0.9rem;
+			border: 1px solid var(--c-border);
+			border-radius: 999px;
+			font-size: 0.85rem;
+			font-weight: 600;
+			text-decoration: none;
+			color: var(--c-navy);
+		}
+		.cats a:hover {
+			border-color: var(--c-green);
+			color: var(--c-green-dark);
+		}
+		.filter {
+			display: flex;
+			gap: 0.75rem;
+			align-items: center;
+			margin-bottom: 0.75rem;
+		}
+		.filter__field {
+			flex: 1;
+			max-width: 420px;
+		}
+		.filter__field input {
+			width: 100%;
+			padding: 0.6rem 0.9rem;
+			border: 1px solid var(--c-border);
+			border-radius: 999px;
+			font-family: inherit;
+			font-size: 0.9rem;
+			color: var(--c-ink);
+			background: var(--c-field);
+		}
+		.filter__field input:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 1px;
+		}
+		.filter__clear {
+			border: none;
+			background: transparent;
+			color: var(--c-muted);
+			font-size: 0.85rem;
+			font-weight: 600;
+			cursor: pointer;
+			text-decoration: underline;
+		}
+		.filter__count {
+			margin: 0 0 1rem;
+			font-size: 0.85rem;
+			color: var(--c-muted);
+		}
+		.empty {
+			color: var(--c-muted);
+		}
+		.empty button {
+			border: none;
+			background: transparent;
+			color: var(--c-green-dark);
+			font-weight: 600;
+			cursor: pointer;
+			text-decoration: underline;
+			font-size: inherit;
 		}
 		.grid {
 			display: grid;
 			grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 			gap: 1.4rem;
+		}
+		.visually-hidden {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip: rect(0 0 0 0);
+			white-space: nowrap;
 		}
 	</style>
 </BaseLayout>

@@ -1,0 +1,170 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ProductCard from "../../components/ProductCard.astro";
+import {
+	listCategories,
+	listProducts,
+	type CatalogCategory,
+	type CatalogProduct,
+} from "../../lib/catalog";
+import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
+
+export async function getStaticPaths() {
+	const categories = await listCategories();
+
+	return Promise.all(
+		categories.map(async (category) => ({
+			params: { handle: category.handle },
+			props: {
+				category,
+				products: await listProducts({ categoryId: category.id }),
+				otherCategories: categories.filter((c) => c.id !== category.id),
+			},
+		})),
+	);
+}
+
+interface Props {
+	category: CatalogCategory;
+	products: CatalogProduct[];
+	otherCategories: CatalogCategory[];
+}
+
+const { category, products, otherCategories } = Astro.props;
+const path = `/kategorie/${category.handle}`;
+
+const description =
+	category.description?.trim() ||
+	`${category.name}: ${products.length} Forschungspeptide mit Packgrößen, Preis und Zertifikatsstatus. Ausschließlich für Forschungs- und Laborzwecke.`;
+
+const jsonLd = [
+	{
+		"@type": "CollectionPage",
+		"@id": `${absoluteUrl(path)}#collection`,
+		name: category.name,
+		description,
+		url: absoluteUrl(path),
+		publisher: { "@id": ORGANIZATION_ID },
+		mainEntity: {
+			"@type": "ItemList",
+			numberOfItems: products.length,
+			itemListElement: products.map((product, index) => ({
+				"@type": "ListItem",
+				position: index + 1,
+				name: product.title,
+				url: absoluteUrl(`/produkte/${product.handle}`),
+			})),
+		},
+	},
+	breadcrumbNode([
+		["Start", "/"],
+		["Produkte", "/produkte"],
+		[category.name ?? "", path],
+	]),
+];
+---
+
+<BaseLayout
+	title={`${category.name} kaufen – Forschungspeptide`}
+	description={description}
+	jsonLd={jsonLd}
+>
+	<nav class="crumbs" aria-label="Brotkrumen">
+		<a href="/produkte">Sortiment</a>
+		<span aria-hidden="true">/</span>
+		<span>{category.name}</span>
+	</nav>
+
+	<span class="eyebrow">Kategorie</span>
+	<h1>{category.name}</h1>
+	<p class="lead">
+		{category.description?.trim() ||
+			`${products.length} ${products.length === 1 ? "Produkt" : "Produkte"} in dieser Kategorie.`}
+	</p>
+
+	{
+		products.length === 0 ? (
+			<p>In dieser Kategorie sind aktuell keine Produkte verfügbar.</p>
+		) : (
+			<div class="grid">
+				{products.map((product) => (
+					<ProductCard product={product} />
+				))}
+			</div>
+		)
+	}
+
+	{
+		otherCategories.length > 0 && (
+			<section class="more">
+				<h2>Weitere Kategorien</h2>
+				<nav class="cats">
+					{otherCategories.map((other) => (
+						<a href={`/kategorie/${other.handle}`}>{other.name}</a>
+					))}
+					<a href="/produkte" class="cats__all">
+						Alle Produkte
+					</a>
+				</nav>
+			</section>
+		)
+	}
+
+	<style>
+		.crumbs {
+			display: flex;
+			gap: 0.5rem;
+			font-size: 0.82rem;
+			color: var(--c-muted);
+			margin-bottom: 0.75rem;
+		}
+		.crumbs a {
+			color: var(--c-green-dark);
+			text-decoration: none;
+			font-weight: 600;
+		}
+		.lead {
+			color: var(--c-muted);
+			margin: 0.25rem 0 2rem;
+			max-width: 60ch;
+		}
+		.grid {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+			gap: 1.4rem;
+		}
+		.more {
+			margin-top: 3rem;
+			padding-top: 1.5rem;
+			border-top: 1px solid var(--c-border);
+		}
+		.more h2 {
+			font-size: 1rem;
+			margin-bottom: 0.9rem;
+		}
+		.cats {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.5rem;
+		}
+		.cats a {
+			display: inline-block;
+			padding: 0.4rem 0.9rem;
+			border: 1px solid var(--c-border);
+			border-radius: 999px;
+			font-size: 0.85rem;
+			font-weight: 600;
+			text-decoration: none;
+			color: var(--c-navy);
+		}
+		.cats a:hover {
+			border-color: var(--c-green);
+			color: var(--c-green-dark);
+		}
+		.cats__all {
+			background: var(--c-mint);
+			border-color: var(--c-mint) !important;
+			color: var(--c-green-dark) !important;
+		}
+	</style>
+</BaseLayout>
