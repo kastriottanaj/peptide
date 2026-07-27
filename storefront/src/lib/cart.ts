@@ -138,11 +138,41 @@ export type CheckoutAddress = {
 export async function setCustomerDetails(
 	email: string,
 	address: CheckoutAddress,
+	/** Optional USt-IdNr., carried to the order for invoicing. */
+	vatId?: string,
 ): Promise<Cart> {
 	const current = await getOrCreateCart();
 	const { cart } = await medusa.store.cart.update(
 		current.id,
-		{ email, shipping_address: address, billing_address: address },
+		{
+			email,
+			shipping_address: address,
+			billing_address: address,
+			// Medusa has no first-class VAT-id field on a cart, and the checkout
+			// asks for one, so it rides along in metadata — which carries over to
+			// the order and is visible in the admin. Without this the customer
+			// fills the field in and it is silently discarded.
+			...(vatId ? { metadata: { ...(current.metadata ?? {}), vat_id: vatId } } : {}),
+		},
+		{ fields: CART_FIELDS },
+	);
+	announce(cart);
+	return cart;
+}
+
+/**
+ * Put just the delivery country on the cart.
+ *
+ * Medusa scopes shipping options to the cart's shipping address, so the option
+ * list is only correct once the country is stored. The checkout calls this as
+ * soon as the country changes and re-lists the options; the full address
+ * follows on submit via `setCustomerDetails`.
+ */
+export async function setDeliveryCountry(countryCode: string): Promise<Cart> {
+	const current = await getOrCreateCart();
+	const { cart } = await medusa.store.cart.update(
+		current.id,
+		{ shipping_address: { ...(current.shipping_address ?? {}), country_code: countryCode } },
 		{ fields: CART_FIELDS },
 	);
 	announce(cart);

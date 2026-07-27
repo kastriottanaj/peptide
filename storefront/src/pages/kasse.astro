@@ -1,22 +1,17 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { listDeliveryCountries } from "../lib/medusa";
 
 /**
  * Single-page checkout, mirroring the peptidebestellung.de flow: contact and
  * address, optional discount code, payment method, mandatory confirmation.
  * Client-rendered, because the cart only exists in the browser.
+ *
+ * The country list is resolved from the Medusa region at build time rather than
+ * hard-coded: offering a country the region does not cover makes the order fail
+ * on submit with a raw backend message, after the form is already filled in.
  */
-const countries = [
-	{ code: "de", label: "Deutschland" },
-	{ code: "at", label: "Österreich" },
-	{ code: "ch", label: "Schweiz" },
-	{ code: "fr", label: "Frankreich" },
-	{ code: "it", label: "Italien" },
-	{ code: "es", label: "Spanien" },
-	{ code: "dk", label: "Dänemark" },
-	{ code: "se", label: "Schweden" },
-	{ code: "gb", label: "Vereinigtes Königreich" },
-];
+const countries = await listDeliveryCountries();
 ---
 
 <BaseLayout title="Kasse" description="Bestellung abschließen." noindex>
@@ -122,12 +117,14 @@ const countries = [
 		import {
 			getCart,
 			setCustomerDetails,
+			setDeliveryCountry,
 			applyPromoCode,
 			listShippingOptions,
 			chooseShippingOption,
 			completeOrder,
 		} from "../lib/cart";
 		import { formatEur } from "../lib/pricing";
+		import { el, summaryLine } from "../lib/dom";
 
 		const loading = document.querySelector<HTMLElement>("[data-checkout-loading]");
 		const empty = document.querySelector<HTMLElement>("[data-checkout-empty]");
@@ -151,12 +148,16 @@ const countries = [
 
 				const lines = form.querySelector<HTMLElement>("[data-summary-lines]");
 				if (lines) {
-					lines.innerHTML = "";
-					for (const item of cart.items ?? []) {
-						const li = document.createElement("li");
-						li.innerHTML = `<span>${item.quantity}× ${item.product_title ?? ""} <em>${item.variant_title ?? ""}</em></span><span>${formatEur(item.total ?? 0, currency)}</span>`;
-						lines.appendChild(li);
-					}
+					lines.replaceChildren(
+						...(cart.items ?? []).map((item) =>
+							summaryLine({
+								quantity: item.quantity,
+								title: item.product_title,
+								variantTitle: item.variant_title,
+								price: formatEur(item.total ?? 0, currency),
+							}),
+						),
+					);
 				}
 
 				const set = (selector: string, value: string) => {
@@ -185,37 +186,79 @@ const countries = [
 
 			const loadShipping = async (cartId: string) => {
 				if (!shippingBox) return;
-				const options = await listShippingOptions(cartId);
+				shippingBox.replaceChildren(el("p", "Versandarten werden geladen …", "muted"));
 
-				if (!options.length) {
-					shippingBox.innerHTML =
-						'<p class="muted">Für diese Adresse ist derzeit keine Versandart verfügbar.</p>';
+				let options: Awaited<ReturnType<typeof listShippingOptions>>;
+				try {
+					options = await listShippingOptions(cartId);
+				} catch (error) {
+					console.error(error);
+					shippingBox.replaceChildren(
+						el("p", "Versandarten konnten nicht geladen werden.", "muted"),
+					);
 					return;
 				}
 
-				shippingBox.innerHTML = "";
-				options.forEach((option, index) => {
-					const label = document.createElement("label");
-					label.className = "shipping__option";
-					label.innerHTML = `
-						<input type="radio" name="shipping_option" value="${option.id}" ${index === 0 ? "checked" : ""} />
-						<span>${option.name}</span>
-						<span class="shipping__price">${formatEur(option.amount ?? 0)}</span>
-					`;
-					label
-						.querySelector<HTMLInputElement>("input")
-						?.addEventListener("change", async (event) => {
-							const id = (event.target as HTMLInputElement).value;
+				if (!options.length) {
+					shippingBox.replaceChildren(
+						el("p", "Für diese Adresse ist derzeit keine Versandart verfügbar.", "muted"),
+					);
+					return;
+				}
+
+				shippingBox.replaceChildren(
+					...options.map((option, index) => {
+						const label = el("label", undefined, "shipping__option");
+
+						const radio = document.createElement("input");
+						radio.type = "radio";
+						radio.name = "shipping_option";
+						radio.value = option.id;
+						radio.checked = index === 0;
+						radio.addEventListener("change", async () => {
 							try {
-								paint(await chooseShippingOption(id));
+								paint(await chooseShippingOption(radio.value));
 							} catch (error) {
 								console.error(error);
 								showError("Die Versandart konnte nicht gesetzt werden.");
 							}
 						});
-					shippingBox.appendChild(label);
-				});
+
+						label.append(
+							radio,
+							el("span", option.name ?? ""),
+							el("span", formatEur(option.amount ?? 0), "shipping__price"),
+						);
+						return label;
+					}),
+				);
 			};
+
+			/**
+			 * Shipping options are scoped to the cart's delivery country, so the
+			 * list has to be rebuilt whenever that country changes. Loading it once
+			 * on page load showed every zone's option at once and left the German
+			 * 10 EUR rate pre-selected for, say, a French address — which Medusa
+			 * then rejected at submit with "Shipping Options are invalid for cart".
+			 */
+			const countrySelect = form.querySelector<HTMLSelectElement>(
+				'select[name="country_code"]',
+			);
+
+			const syncDeliveryCountry = async () => {
+				const country = countrySelect?.value;
+				if (!country) return;
+				try {
+					const cart = await setDeliveryCountry(country);
+					paint(cart);
+					await loadShipping(cart.id);
+				} catch (error) {
+					console.error(error);
+					showError("Die Versandarten für dieses Land konnten nicht geladen werden.");
+				}
+			};
+
+			countrySelect?.addEventListener("change", syncDeliveryCountry);
 
 			form
 				.querySelector<HTMLButtonElement>("[data-apply-promo]")
@@ -264,16 +307,20 @@ const countries = [
 				submit!.textContent = "Bestellung wird angelegt …";
 
 				try {
-					await setCustomerDetails(value("email"), {
-						first_name: value("first_name"),
-						last_name: value("last_name"),
-						company: value("company"),
-						address_1: value("address_1"),
-						postal_code: value("postal_code"),
-						city: value("city"),
-						country_code: value("country_code"),
-						phone: value("phone"),
-					});
+					await setCustomerDetails(
+						value("email"),
+						{
+							first_name: value("first_name"),
+							last_name: value("last_name"),
+							company: value("company"),
+							address_1: value("address_1"),
+							postal_code: value("postal_code"),
+							city: value("city"),
+							country_code: value("country_code"),
+							phone: value("phone"),
+						},
+						value("vat_id"),
+					);
 
 					await chooseShippingOption(shippingOption);
 					const order = await completeOrder();
@@ -308,7 +355,10 @@ const countries = [
 					}
 					form.removeAttribute("hidden");
 					paint(cart);
-					await loadShipping(cart.id);
+					// Goes through the country sync rather than straight to
+					// loadShipping, so the options shown match the country the
+					// select actually starts on.
+					await syncDeliveryCountry();
 				})
 				.catch((error) => {
 					console.error(error);

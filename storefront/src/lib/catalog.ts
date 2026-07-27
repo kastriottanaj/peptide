@@ -20,6 +20,28 @@ function isPeptide(product: CatalogProduct): boolean {
 	);
 }
 
+/**
+ * Whether a variant can actually be ordered right now.
+ *
+ * `manage_inventory: false` means Medusa tracks no stock for it, so it is always
+ * purchasable; anything else needs stock on hand or an explicit backorder
+ * allowance. The current catalog has tracking off throughout, so today this
+ * agrees with "the product has variants" — the point is that it stops agreeing
+ * the moment real inventory is switched on, instead of hard-coding InStock into
+ * the product JSON-LD and the "Verfügbar" badge for something unbuyable.
+ */
+export function isVariantAvailable(
+	variant: HttpTypes.StoreProductVariant,
+): boolean {
+	if (variant.manage_inventory === false) return true;
+	if (variant.allow_backorder) return true;
+	return (variant.inventory_quantity ?? 0) > 0;
+}
+
+export function isProductAvailable(product: CatalogProduct): boolean {
+	return (product.variants ?? []).some(isVariantAvailable);
+}
+
 export function sortPeptidesFirst(products: CatalogProduct[]): CatalogProduct[] {
 	return [...products].sort(
 		(a, b) => Number(isPeptide(b)) - Number(isPeptide(a)),

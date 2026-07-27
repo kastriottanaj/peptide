@@ -62,6 +62,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 			nextQuantityTier,
 			FREE_SHIPPING_THRESHOLD_EUR,
 		} from "../lib/pricing";
+		import { el } from "../lib/dom";
 
 		const root = document.querySelector<HTMLElement>("[data-cart-root]");
 		if (root) {
@@ -90,40 +91,49 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 				const currency = cart.currency_code ?? "eur";
 
 				if (lines) {
-					lines.innerHTML = "";
-					for (const item of items) {
-						const li = document.createElement("li");
-						li.className = "cart__line";
-						li.innerHTML = `
-							<div class="cart__line-info">
-								<p class="cart__line-title">${item.product_title ?? item.title ?? ""}</p>
-								<p class="cart__line-variant">${item.variant_title ?? ""}</p>
-							</div>
-							<div class="cart__qty">
-								<button type="button" data-step="-1" aria-label="Menge verringern">−</button>
-								<span>${item.quantity}</span>
-								<button type="button" data-step="1" aria-label="Menge erhöhen">+</button>
-							</div>
-							<p class="cart__line-total">${formatEur(item.total ?? 0, currency)}</p>
-							<button class="cart__remove" type="button" data-remove aria-label="Artikel entfernen">Entfernen</button>
-						`;
+					lines.replaceChildren(
+						...items.map((item) => {
+							const li = el("li", undefined, "cart__line");
 
-						li.querySelectorAll<HTMLButtonElement>("[data-step]").forEach((button) => {
-							button.addEventListener("click", async () => {
-								const step = Number(button.dataset.step ?? 0);
-								render(await updateLine(item.id, (item.quantity ?? 1) + step));
-							});
-						});
+							const info = el("div", undefined, "cart__line-info");
+							info.append(
+								el("p", item.product_title ?? item.title ?? "", "cart__line-title"),
+								el("p", item.variant_title ?? "", "cart__line-variant"),
+							);
 
-						li.querySelector<HTMLButtonElement>("[data-remove]")?.addEventListener(
-							"click",
-							async () => {
+							const stepButton = (step: number, label: string, glyph: string) => {
+								const button = el("button", glyph);
+								button.type = "button";
+								button.setAttribute("aria-label", label);
+								button.addEventListener("click", async () => {
+									render(await updateLine(item.id, (item.quantity ?? 1) + step));
+								});
+								return button;
+							};
+
+							const qty = el("div", undefined, "cart__qty");
+							qty.append(
+								stepButton(-1, "Menge verringern", "−"),
+								el("span", String(item.quantity ?? 0)),
+								stepButton(1, "Menge erhöhen", "+"),
+							);
+
+							const remove = el("button", "Entfernen", "cart__remove");
+							remove.type = "button";
+							remove.setAttribute("aria-label", "Artikel entfernen");
+							remove.addEventListener("click", async () => {
 								render(await removeLine(item.id));
-							},
-						);
+							});
 
-						lines.appendChild(li);
-					}
+							li.append(
+								info,
+								qty,
+								el("p", formatEur(item.total ?? 0, currency), "cart__line-total"),
+								remove,
+							);
+							return li;
+						}),
+					);
 				}
 
 				// Merchandise before discount, for display.

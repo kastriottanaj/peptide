@@ -53,6 +53,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         "created_at",
         "metadata",
         "total",
+        "item_subtotal",
         "item_total",
         "shipping_total",
         "discount_total",
@@ -81,6 +82,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
           typeof metadata.bank_reference === "string"
             ? metadata.bank_reference
             : null,
+        item_subtotal: order.item_subtotal,
         item_total: order.item_total,
         shipping_total: order.shipping_total,
         discount_total: order.discount_total,

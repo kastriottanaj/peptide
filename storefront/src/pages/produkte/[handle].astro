@@ -3,6 +3,7 @@ import type { HttpTypes } from "@medusajs/types";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import AddToCart from "../../components/AddToCart.astro";
 import { medusa, getDefaultRegionId } from "../../lib/medusa";
+import { isProductAvailable } from "../../lib/catalog";
 import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
 
 export async function getStaticPaths() {
@@ -76,7 +77,9 @@ const productNode: Record<string, unknown> = {
 					lowPrice: Math.min(...prices),
 					highPrice: Math.max(...prices),
 					offerCount: prices.length,
-					availability: "https://schema.org/InStock",
+					availability: isProductAvailable(product)
+						? "https://schema.org/InStock"
+						: "https://schema.org/OutOfStock",
 					seller: { "@id": ORGANIZATION_ID },
 				},
 			}

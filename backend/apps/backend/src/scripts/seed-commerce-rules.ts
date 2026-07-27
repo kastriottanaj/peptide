@@ -105,10 +105,10 @@ export default async function seedCommerceRules({
 
   // --- Shipping ---------------------------------------------------------
   //
-  // Medusa's starter ships two flat 10 EUR options. The template's rule is
-  // 10 EUR inside Germany, 20 EUR outside, free from 100 EUR merchandise.
-  // Free-over-threshold is not expressible as a plain shipping-option price, so
-  // it is reported here rather than silently half-applied.
+  // The zoned rates (10 EUR Germany / 20 EUR rest of Europe) and the
+  // free-from-100-EUR promotion live in seed-shipping.ts, which owns them
+  // end to end. Report what is present so a half-seeded store is obvious, and
+  // only warn when that script has not been run.
   const { data: shippingOptions } = await query.graph({
     entity: "shipping_option",
     fields: ["id", "name"],
@@ -119,10 +119,17 @@ export default async function seedCommerceRules({
       .map((option) => option.name)
       .join(", ")}`
   );
-  logger.warn(
-    "Shipping prices still come from the Medusa starter (flat 10 EUR). " +
-      "The 20 EUR non-Germany rate and the free-from-100-EUR threshold are NOT " +
-      "configured yet — set them in the admin under Settings > Locations & Shipping, " +
-      "or the storefront's free-shipping hint will over-promise."
+
+  const zonedNames = ["Standardversand", "Standardversand Europa"];
+  const missing = zonedNames.filter(
+    (name) => !shippingOptions.some((option) => option.name === name)
   );
+
+  if (missing.length) {
+    logger.warn(
+      `Missing shipping option(s): ${missing.join(", ")}. Run ` +
+        "seed-shipping.ts, or the storefront's shipping and free-shipping hints " +
+        "will promise rates the order does not honour."
+    );
+  }
 }

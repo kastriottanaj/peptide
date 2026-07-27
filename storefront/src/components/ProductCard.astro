@@ -1,5 +1,6 @@
 ---
 import type { HttpTypes } from "@medusajs/types";
+import { isProductAvailable } from "../lib/catalog";
 
 interface Props {
 	product: HttpTypes.StoreProduct;
@@ -36,7 +37,7 @@ function lowestPrice() {
 }
 
 const price = lowestPrice();
-const available = variants.length > 0;
+const available = isProductAvailable(product);
 ---
 
 <article class="pcard">

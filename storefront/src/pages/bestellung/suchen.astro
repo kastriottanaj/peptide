@@ -56,6 +56,9 @@ const placeholderBank = bankDetailsArePlaceholder();
 			<h3>Artikel</h3>
 			<ul data-r-items></ul>
 			<div class="row"><span>Zwischensumme</span><span data-r-subtotal></span></div>
+			<div class="row" data-r-discount-row hidden>
+				<span>Rabatt</span><span data-r-discount></span>
+			</div>
 			<div class="row"><span>Versand</span><span data-r-shipping></span></div>
 			<div class="row row--total"><span>Gesamt</span><span data-r-total2></span></div>
 		</section>
@@ -64,6 +67,7 @@ const placeholderBank = bankDetailsArePlaceholder();
 	<script>
 		import { medusa } from "../../lib/medusa";
 		import { formatEur } from "../../lib/pricing";
+		import { summaryLine } from "../../lib/dom";
 
 		const form = document.querySelector<HTMLFormElement>("[data-lookup-form]");
 		const result = document.querySelector<HTMLElement>("[data-result]");
@@ -89,12 +93,15 @@ const placeholderBank = bankDetailsArePlaceholder();
 				"[data-r-total]",
 				"[data-r-total2]",
 				"[data-r-subtotal]",
+				"[data-r-discount]",
 				"[data-r-shipping]",
 			]) {
 				set(selector, "");
 			}
-			const list = document.querySelector<HTMLElement>("[data-r-items]");
-			if (list) list.innerHTML = "";
+			document
+				.querySelector<HTMLElement>("[data-r-discount-row]")
+				?.setAttribute("hidden", "");
+			document.querySelector<HTMLElement>("[data-r-items]")?.replaceChildren();
 		};
 
 		form?.addEventListener("submit", async (event) => {
@@ -132,17 +139,32 @@ const placeholderBank = bankDetailsArePlaceholder();
 				set("[data-r-reference]", order.bank_reference ?? `PE-${order.display_id}`);
 				set("[data-r-total]", formatEur(order.total ?? 0, currency));
 				set("[data-r-total2]", formatEur(order.total ?? 0, currency));
-				set("[data-r-subtotal]", formatEur(order.item_total ?? 0, currency));
+				// Merchandise before discount, matching the confirmation page; the
+				// discount then gets its own row so the column adds up to "Gesamt".
+				set(
+					"[data-r-subtotal]",
+					formatEur(order.item_subtotal ?? order.item_total ?? 0, currency),
+				);
+				const discount = order.discount_total ?? 0;
+				const discountRow = document.querySelector<HTMLElement>("[data-r-discount-row]");
+				if (discountRow) {
+					discountRow.toggleAttribute("hidden", discount <= 0);
+					set("[data-r-discount]", `\u2212 ${formatEur(discount, currency)}`);
+				}
 				set("[data-r-shipping]", formatEur(order.shipping_total ?? 0, currency));
 
 				const list = document.querySelector<HTMLElement>("[data-r-items]");
 				if (list) {
-					list.innerHTML = "";
-					for (const item of order.items ?? []) {
-						const li = document.createElement("li");
-						li.innerHTML = `<span>${item.quantity}× ${item.title ?? ""} <em>${item.variant_title ?? ""}</em></span><span>${formatEur(item.total ?? 0, currency)}</span>`;
-						list.appendChild(li);
-					}
+					list.replaceChildren(
+						...(order.items ?? []).map((item: any) =>
+							summaryLine({
+								quantity: item.quantity,
+								title: item.title,
+								variantTitle: item.variant_title,
+								price: formatEur(item.total ?? 0, currency),
+							}),
+						),
+					);
 				}
 
 				result?.removeAttribute("hidden");
