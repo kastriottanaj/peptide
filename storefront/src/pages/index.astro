@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductCard from "../components/ProductCard.astro";
 import { medusa, getDefaultRegionId } from "../lib/medusa";
 import { ORGANIZATION_ID, SITE_NAME, SITE_URL } from "../lib/site";
+import { listCategories } from "../lib/catalog";
 
 const regionId = await getDefaultRegionId();
 
@@ -58,38 +59,46 @@ const features = [
 	},
 ];
 
-const categories = [
-	{
+/**
+ * Category cards are derived from the categories that actually exist in Medusa,
+ * so a new category appears here automatically and none of these can become a
+ * link to nowhere. Editorial copy is keyed by category name; anything without an
+ * entry falls back to its own description.
+ *
+ * The previous hardcoded list included "Peptid-Stacks" and "Laborbedarf", which
+ * have no products behind them — they are gone until they do.
+ */
+const CATEGORY_COPY: Record<string, { label: string; body: string }> = {
+	Regenerationsforschung: {
 		label: "Forschungsbereich",
-		title: "Regenerationsforschung",
 		body: "Peptide und Fragmente für Zellkommunikations-, Gewebe- und Signalwegmodelle.",
 	},
-	{
+	"Stoffwechsel-Forschung": {
 		label: "Forschungsbereich",
-		title: "Stoffwechsel-Forschung",
 		body: "Forschungskategorien für analytische Laborprojekte zu metabolischen Mechanismen.",
 	},
-	{
+	"Signal- & Fragmentpeptide": {
 		label: "Peptidgruppe",
-		title: "Signal- & Fragmentpeptide",
-		body: "Strukturierte Auswahl an Fragment- und Signalpeptiden mit Produktbezogener Dokumentation.",
+		body: "Strukturierte Auswahl an Fragment- und Signalpeptiden mit produktbezogener Dokumentation.",
 	},
-	{
+	"Neuropeptid-Forschung": {
 		label: "Forschungsbereich",
-		title: "Neuropeptid-Forschung",
 		body: "Forschungsbezogene Projekte zu neuronalen Signalwegen und Modellforschung.",
 	},
-	{
-		label: "Bundles",
-		title: "Peptid-Stacks",
-		body: "Bundles aus einzeln dokumentierten Komponenten mit separater Zertifikatslage.",
-	},
-	{
-		label: "Zubehör",
-		title: "Laborbedarf",
-		body: "Ergänzende Produkte für Lagerung, Handling und Dokumentation im Labor.",
-	},
-];
+};
+
+const categories = (await listCategories()).map((category) => {
+	const copy = CATEGORY_COPY[category.name ?? ""];
+	return {
+		handle: category.handle,
+		title: category.name,
+		label: copy?.label ?? "Kategorie",
+		body:
+			copy?.body ??
+			category.description?.trim() ??
+			`Produkte der Kategorie ${category.name}.`,
+	};
+});
 
 const faqs = [
 	{
@@ -255,12 +264,12 @@ const homeJsonLd = [
 		<span class="eyebrow">Kategorien</span>
 		<h2>Nach Forschungsbereich auswählen</h2>
 		<p class="section__lead">
-			Wähle zwischen Forschungsbereichen, Peptidgruppen und ergänzendem Laborbedarf.
+			Wähle zwischen Forschungsbereichen und Peptidgruppen.
 		</p>
 		<div class="cat-grid">
 			{
 				categories.map((c) => (
-					<a href="/produkte" class="cat">
+					<a href={`/kategorie/${c.handle}`} class="cat">
 						<span class="cat__label">{c.label}</span>
 						<h3>{c.title}</h3>
 						<p>{c.body}</p>
