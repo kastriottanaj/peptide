@@ -131,6 +131,16 @@ fi
 ln -sfn "${RELEASE_DIR}" "${CURRENT_LINK}.tmp"
 mv -Tf "${CURRENT_LINK}.tmp" "${CURRENT_LINK}"
 
+# Reinstall the unit from the deployed commit. provision.sh also does this, but
+# it runs once — without this a change to medusa.service would sit in the repo
+# and never reach systemd, and the discrepancy only shows up as behaviour that
+# does not match the file you are reading.
+install -m 0644 "${REPO_DIR}/deploy/medusa.service" /etc/systemd/system/medusa.service
+systemctl daemon-reload
+
+# Clear any failed state from a previous crash loop, or `restart` refuses once
+# the start limit has been hit.
+systemctl reset-failed medusa 2>/dev/null || true
 systemctl restart medusa
 
 # ---------------------------------------------------------------------------
