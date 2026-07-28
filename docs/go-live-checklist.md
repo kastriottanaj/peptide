@@ -11,6 +11,12 @@ change, not development work.
 This file is the single place to look for "what are we still waiting on".
 Update it as items land.
 
+> For the concrete fields to go and collect — company data, bank details, real
+> purity figures — use the worksheet at
+> [launch-data-needed.md](launch-data-needed.md). It has somewhere to write each
+> value down and how to apply it. This file stays the canonical list of *what
+> blocks launch and why*.
+
 **Hard blockers before any live deployment:** real bank details (§1), real
 company data on the legal pages (§2), the B2B/B2C decision (§3), and the order
 confirmation email (§6). None of them are optional — the shop either cannot take
