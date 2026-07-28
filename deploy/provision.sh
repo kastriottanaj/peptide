@@ -42,7 +42,13 @@ apt-get install -y -qq \
 	ca-certificates curl git gnupg rsync ufw \
 	debian-keyring debian-archive-keyring apt-transport-https \
 	postgresql postgresql-contrib redis-server \
-	unattended-upgrades
+	unattended-upgrades \
+	build-essential python3
+# build-essential and python3 are node-gyp's toolchain. Most of Medusa's native
+# dependencies ship prebuilt binaries, but when one does not match the platform
+# npm falls back to compiling — and without a compiler that surfaces as a
+# confusing `npm ci` failure in the middle of the first deploy rather than as a
+# missing package here.
 
 # ---------------------------------------------------------------------------
 log "Node.js 22"
