@@ -40,6 +40,31 @@ const graph = {
 	"@context": "https://schema.org",
 	"@graph": [organizationNode(), ...jsonLd],
 };
+
+/**
+ * Serialise the graph for a `<script>` body.
+ *
+ * `JSON.stringify` escapes quotes and backslashes but leaves `<`, `>` and `&`
+ * alone, and `set:html` does not escape either — so a value containing
+ * `</script>` closes this tag and everything after it is parsed as markup. The
+ * values here are product titles and descriptions from the Medusa admin plus
+ * markdown frontmatter, i.e. text that is edited, not code: nothing upstream
+ * stops someone pasting a tag into a product description, and it would then
+ * execute on every page that product appears on.
+ *
+ * Escaping them as `\uXXXX` is invisible to JSON parsers (identical value) but
+ * makes the closing sequence unwritable. U+2028/U+2029 are valid in JSON yet
+ * illegal raw in JS string literals, so they are escaped too for any consumer
+ * that evaluates rather than parses.
+ */
+function serializeJsonLd(value: unknown): string {
+	return JSON.stringify(value)
+		.replace(/</g, "\\u003c")
+		.replace(/>/g, "\\u003e")
+		.replace(/&/g, "\\u0026")
+		.replace(/\u2028/g, "\\u2028")
+		.replace(/\u2029/g, "\\u2029");
+}
 ---
 
 <title>{fullTitle}</title>
@@ -72,5 +97,5 @@ const graph = {
 <script
 	type="application/ld+json"
 	is:inline
-	set:html={JSON.stringify(graph)}
+	set:html={serializeJsonLd(graph)}
 />

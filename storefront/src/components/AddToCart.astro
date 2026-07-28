@@ -75,6 +75,7 @@ const options = variants
 
 <script>
 	import { addLine } from "../lib/cart";
+	import { el } from "../lib/dom";
 
 	document.querySelectorAll<HTMLElement>("[data-add-to-cart]").forEach((root) => {
 		const qtyInput = root.querySelector<HTMLInputElement>('input[name="quantity"]');
@@ -115,7 +116,9 @@ const options = variants
 				await addLine(variantId, clampQty(Number(qtyInput?.value ?? 1)));
 				submit.textContent = "Zum Warenkorb hinzugefügt ✓";
 				if (status) {
-					status.innerHTML = '<a href="/warenkorb">Warenkorb ansehen →</a>';
+					const link = el("a", "Warenkorb ansehen →");
+					link.href = "/warenkorb";
+					status.replaceChildren(link);
 				}
 				window.setTimeout(() => {
 					submit.textContent = original;

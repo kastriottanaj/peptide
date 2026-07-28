@@ -48,9 +48,19 @@ builds off the production origin.
 cp backend/apps/backend/.env.template backend/apps/backend/.env
 ```
 
-Then set at least `DATABASE_URL` (Postgres) in that file. `JWT_SECRET` and
-`COOKIE_SECRET` default to `supersecret` for local dev — change them for anything
-non-local.
+Then set at least `DATABASE_URL` (Postgres) in that file.
+
+`JWT_SECRET` and `COOKIE_SECRET` sign admin and customer sessions, and the template
+ships them **blank** on purpose: whoever knows them can mint a valid admin session, so
+a value that lives in the repository is no better than an open door. Local development
+runs fine without them. For anything non-local, generate one per environment:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+```
+
+`medusa-config.ts` refuses to boot with `NODE_ENV=production` unless both are set to
+something other than the old `supersecret` placeholder.
 
 ### 2. Install dependencies
 

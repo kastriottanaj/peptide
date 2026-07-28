@@ -29,8 +29,15 @@ const OFFSET = 12345;
  * adjacent-looking codes that would advertise order volume.
  */
 function referenceFor(displayId: number): string {
-  const scrambled =
-    (Math.max(0, Math.floor(displayId)) * MULTIPLIER + OFFSET) % MODULUS;
+  // BigInt rather than Number: `displayId * MULTIPLIER` crosses 2^53 at around
+  // order 8.2 million, and beyond that float rounding destroys the bijection
+  // the uniqueness claim above rests on — two orders could share a reference,
+  // which for a bank-transfer store means two payments we cannot tell apart.
+  const scrambled = Number(
+    (BigInt(Math.max(0, Math.floor(displayId))) * BigInt(MULTIPLIER) +
+      BigInt(OFFSET)) %
+      BigInt(MODULUS)
+  );
 
   let n = scrambled;
   let suffix = "";

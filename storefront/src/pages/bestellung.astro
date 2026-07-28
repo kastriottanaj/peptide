@@ -68,6 +68,9 @@ const placeholderBank = bankDetailsArePlaceholder();
 				<h2>Ihre Artikel</h2>
 				<ul data-order-lines></ul>
 				<div class="items__row"><span>Zwischensumme</span><span data-order-subtotal></span></div>
+				<div class="items__row" data-order-discount-row hidden>
+					<span>Rabatt</span><span data-order-discount></span>
+				</div>
 				<div class="items__row"><span>Versand</span><span data-order-shipping></span></div>
 				<div class="items__row items__row--total"><span>Gesamt</span><span data-order-total-2></span></div>
 			</section>
@@ -80,6 +83,7 @@ const placeholderBank = bankDetailsArePlaceholder();
 		import { medusa } from "../lib/medusa";
 		import { formatEur } from "../lib/pricing";
 		import { paymentReference } from "../lib/bank";
+		import { summaryLine } from "../lib/dom";
 
 		const root = document.querySelector<HTMLElement>("[data-order-root]");
 		if (root) {
@@ -113,14 +117,28 @@ const placeholderBank = bankDetailsArePlaceholder();
 				);
 				set("[data-order-shipping]", formatEur(order.shipping_total ?? 0, currency));
 
+				// Without this row the column does not add up: "Zwischensumme" is
+				// merchandise before discount but "Gesamt" is charged after it, so
+				// a quantity discount made the page look like it overcharged.
+				const discount = order.discount_total ?? 0;
+				const discountRow = root.querySelector<HTMLElement>("[data-order-discount-row]");
+				if (discountRow) {
+					discountRow.toggleAttribute("hidden", discount <= 0);
+					set("[data-order-discount]", `− ${formatEur(discount, currency)}`);
+				}
+
 				const lines = root.querySelector<HTMLElement>("[data-order-lines]");
 				if (lines) {
-					lines.innerHTML = "";
-					for (const item of order.items ?? []) {
-						const li = document.createElement("li");
-						li.innerHTML = `<span>${item.quantity}× ${item.product_title ?? item.title ?? ""} <em>${item.variant_title ?? ""}</em></span><span>${formatEur(item.total ?? 0, currency)}</span>`;
-						lines.appendChild(li);
-					}
+					lines.replaceChildren(
+						...(order.items ?? []).map((item: any) =>
+							summaryLine({
+								quantity: item.quantity,
+								title: item.product_title ?? item.title,
+								variantTitle: item.variant_title,
+								price: formatEur(item.total ?? 0, currency),
+							}),
+						),
+					);
 				}
 			};
 

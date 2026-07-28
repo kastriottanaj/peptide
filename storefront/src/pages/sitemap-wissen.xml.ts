@@ -11,15 +11,23 @@ export const GET: APIRoute = async () => {
 	const articles = await getCollection("wissen", ({ data }) => !data.draft);
 	const terms = await getCollection("lexikon", ({ data }) => !data.draft);
 
+	// The two index pages change exactly when their newest entry does, so they
+	// carry that date rather than no `lastmod` at all — an entry without one is
+	// the weakest possible crawl signal.
+	const newest = (dates: Date[]) =>
+		dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : undefined;
+
 	return xmlResponse(
 		renderUrlset([
 			{
 				loc: absoluteUrl("/wissen"),
+				lastModified: newest(articles.map((a) => a.data.dateModified)),
 				changeFrequency: "weekly",
 				priority: 0.7,
 			},
 			{
 				loc: absoluteUrl("/wissen/lexikon"),
+				lastModified: newest(terms.map((t) => t.data.dateModified)),
 				changeFrequency: "weekly",
 				priority: 0.7,
 			},
