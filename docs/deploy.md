@@ -274,7 +274,14 @@ Deliberately out of scope for this deploy, in rough priority order:
 - **Order confirmation email** (checklist §6) — needs a mailbox on the domain
   plus SPF, DKIM and DMARC records at Hostinger. Now unblocked: DNS exists.
 - **Backups.** No automated database backup yet; the `pg_dump` above is manual.
-  This should not stay true once real orders exist.
+  This should not stay true once real orders exist. Hetzner's own daily snapshot
+  backups are enabled on the box, which covers total loss but is not a substitute
+  for a database dump you can restore selectively.
+- **Session store.** Medusa logs `connect.session() MemoryStore is not designed
+  for a production environment` at boot. Admin sessions live in process memory,
+  so every deploy or restart logs admins out, and it would not survive running
+  more than one instance. Survivable for one operator on one box; worth moving to
+  Redis before the shop is busy.
 - **Cloudflare** in front, per `TECH_STACK.md` — CDN, WAF, rate limiting.
 - **Admin hardening** — 2FA and an IP allowlist on `/app`.
 - **Monitoring / uptime alerting.** Nothing currently reports that the box is
