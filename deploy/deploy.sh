@@ -53,10 +53,24 @@ if ! flock -n 9; then
 fi
 printf 'pid=%s sha=%s started=%s\n' "$$" "${TARGET_SHA}" "$(date -Is)" >&9
 
-set -a
-# shellcheck disable=SC1090
-source "${ENV_FILE}"
-set +a
+# Load a KEY=VALUE file without letting the shell touch the values.
+#
+# `source` is wrong for these files. The gate's bcrypt hash looks like
+# $2a$14$..., and bash expands $2 as a positional parameter — empty here, and
+# under `set -u` it aborts the script outright. `read` performs no expansion, so
+# the value arrives exactly as written. These files are consumed by systemd's
+# EnvironmentFile, which also does no expansion; this keeps the deploy script on
+# the same contract instead of quietly requiring a different one.
+load_env_file() {
+	local file="$1" key value
+	[[ -f "${file}" ]] || return 0
+	while IFS='=' read -r key value; do
+		[[ "${key}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+		export "${key}=${value}"
+	done < <(grep -vE '^[[:space:]]*(#|$)' "${file}")
+}
+
+load_env_file "${ENV_FILE}"
 
 : "${DATABASE_URL:?DATABASE_URL must be set in ${ENV_FILE}}"
 
@@ -214,10 +228,7 @@ log "Reloading Caddy"
 # placeholders that only the caddy unit normally has in its environment —
 # without them validation fails on a perfectly good file.
 (
-	set -a
-	# shellcheck disable=SC1091
-	source "${APP_DIR}/caddy.env"
-	set +a
+	load_env_file "${APP_DIR}/caddy.env"
 	caddy validate --config "${REPO_DIR}/deploy/Caddyfile" --adapter caddyfile >/dev/null 2>&1
 ) || die "deploy/Caddyfile is invalid, or ${APP_DIR}/caddy.env is incomplete.
      Not installing it — the running config is untouched.
