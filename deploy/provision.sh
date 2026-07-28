@@ -1,20 +1,30 @@
 #!/usr/bin/env bash
 #
-# One-time setup for a fresh Hetzner box (Ubuntu 24.04). Idempotent — safe to
-# re-run; it checks for what it is about to install.
+# One-time setup for a fresh Hetzner box (Ubuntu 24.04). No Docker: Postgres,
+# Redis, Node and Caddy come from apt, and Medusa runs as a systemd service.
+#
+# Idempotent — safe to re-run. It checks for what it is about to install and
+# never overwrites an existing /srv/peptides/.env.
 #
 # Run as root on the server:
 #   bash provision.sh
 #
-# Afterwards: fill in /srv/peptides/.env, then run deploy/deploy.sh.
+# Afterwards: fill in the blanks in /srv/peptides/.env and
+# /srv/peptides/caddy.env, then run deploy/deploy.sh.
 
 set -euo pipefail
 
 APP_DIR=/srv/peptides
 REPO_URL=https://github.com/kastriottanaj/peptide.git
 REPO_DIR="${APP_DIR}/repo"
+ENV_FILE="${APP_DIR}/.env"
+CADDY_ENV_FILE="${APP_DIR}/caddy.env"
 
-log() { printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
+DB_NAME=medusa_peptides
+DB_USER=medusa
+SERVICE_USER=medusa
+
+log()  { printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m[warn] %s\033[0m\n' "$*"; }
 
 if [[ "${EUID}" -ne 0 ]]; then
@@ -28,50 +38,145 @@ log "System packages"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 apt-get upgrade -y -qq
-apt-get install -y -qq ca-certificates curl git ufw rsync ntpsec unattended-upgrades
+apt-get install -y -qq \
+	ca-certificates curl git gnupg rsync ufw \
+	debian-keyring debian-archive-keyring apt-transport-https \
+	postgresql postgresql-contrib redis-server \
+	unattended-upgrades
 
 # ---------------------------------------------------------------------------
-log "Docker"
+log "Node.js 22"
 # ---------------------------------------------------------------------------
-if ! command -v docker >/dev/null 2>&1; then
-	install -m 0755 -d /etc/apt/keyrings
-	curl -fsSL https://download.docker.com/linux/ubuntu/gpg \
-		-o /etc/apt/keyrings/docker.asc
-	chmod a+r /etc/apt/keyrings/docker.asc
-	cat >/etc/apt/sources.list.d/docker.list <<-EOF
-		deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "${VERSION_CODENAME}") stable
-	EOF
+# The storefront requires >= 22.12; Ubuntu 24.04 ships 18.
+if ! command -v node >/dev/null 2>&1 || [[ "$(node -v | cut -d. -f1 | tr -d v)" -lt 22 ]]; then
+	curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+	apt-get install -y -qq nodejs
+fi
+echo "node $(node -v), npm $(npm -v)"
+
+# ---------------------------------------------------------------------------
+log "Caddy"
+# ---------------------------------------------------------------------------
+if ! command -v caddy >/dev/null 2>&1; then
+	curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
+		| gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+	curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
+		> /etc/apt/sources.list.d/caddy-stable.list
 	apt-get update -qq
-	apt-get install -y -qq docker-ce docker-ce-cli containerd.io \
-		docker-buildx-plugin docker-compose-plugin
-	systemctl enable --now docker
+	apt-get install -y -qq caddy
+fi
+echo "$(caddy version)"
+
+# ---------------------------------------------------------------------------
+log "Redis"
+# ---------------------------------------------------------------------------
+# Default Ubuntu config already binds 127.0.0.1 only. Enable persistence so
+# queued events survive a restart — the reason Redis is here at all.
+if ! grep -q '^appendonly yes' /etc/redis/redis.conf; then
+	sed -i 's/^appendonly no/appendonly yes/' /etc/redis/redis.conf
+	grep -q '^appendonly' /etc/redis/redis.conf || echo 'appendonly yes' >>/etc/redis/redis.conf
+fi
+systemctl enable --now redis-server
+systemctl restart redis-server
+redis-cli ping
+
+# ---------------------------------------------------------------------------
+log "Postgres role and database"
+# ---------------------------------------------------------------------------
+systemctl enable --now postgresql
+
+DB_PASSWORD=""
+if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${DB_USER}'" | grep -q 1; then
+	DB_PASSWORD="$(openssl rand -base64 24 | tr -d '/+=' | head -c 32)"
+	sudo -u postgres psql -qc \
+		"CREATE ROLE ${DB_USER} LOGIN PASSWORD '${DB_PASSWORD}';"
+	echo "Created role ${DB_USER}"
 else
-	echo "Docker already installed: $(docker --version)"
+	echo "Role ${DB_USER} already exists — leaving its password alone"
 fi
 
-# Cap journald and container logs — a chatty Medusa can otherwise fill the disk.
-if [[ ! -f /etc/docker/daemon.json ]]; then
-	log "Docker log rotation"
-	cat >/etc/docker/daemon.json <<-'EOF'
-		{
-		  "log-driver": "json-file",
-		  "log-opts": { "max-size": "10m", "max-file": "3" }
-		}
-	EOF
-	systemctl restart docker
+if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; then
+	sudo -u postgres createdb -O "${DB_USER}" "${DB_NAME}"
+	echo "Created database ${DB_NAME}"
+else
+	echo "Database ${DB_NAME} already exists"
 fi
+
+# ---------------------------------------------------------------------------
+log "Service user and directories"
+# ---------------------------------------------------------------------------
+if ! id -u "${SERVICE_USER}" >/dev/null 2>&1; then
+	useradd --system --home-dir "${APP_DIR}" --shell /usr/sbin/nologin "${SERVICE_USER}"
+fi
+
+mkdir -p "${APP_DIR}/releases" "${APP_DIR}/storefront"
+
+if [[ ! -d "${REPO_DIR}/.git" ]]; then
+	git clone --quiet "${REPO_URL}" "${REPO_DIR}"
+else
+	echo "Repo already cloned at ${REPO_DIR}"
+fi
+
+# ---------------------------------------------------------------------------
+log "Environment files"
+# ---------------------------------------------------------------------------
+if [[ ! -f "${ENV_FILE}" ]]; then
+	cp "${REPO_DIR}/deploy/.env.template" "${ENV_FILE}"
+
+	if [[ -n "${DB_PASSWORD}" ]]; then
+		sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@127.0.0.1:5432/${DB_NAME}|" "${ENV_FILE}"
+	else
+		warn "The Postgres role already existed, so its password is unknown here."
+		warn "Set DATABASE_URL in ${ENV_FILE} by hand."
+	fi
+
+	sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -base64 32)|"       "${ENV_FILE}"
+	sed -i "s|^COOKIE_SECRET=.*|COOKIE_SECRET=$(openssl rand -base64 32)|" "${ENV_FILE}"
+
+	echo "Created ${ENV_FILE} with generated database URL and signing secrets"
+else
+	echo "${ENV_FILE} already present — left untouched"
+fi
+chown "${SERVICE_USER}:${SERVICE_USER}" "${ENV_FILE}"
+chmod 600 "${ENV_FILE}"
+
+if [[ ! -f "${CADDY_ENV_FILE}" ]]; then
+	cp "${REPO_DIR}/deploy/caddy.env.template" "${CADDY_ENV_FILE}"
+	warn "Created ${CADDY_ENV_FILE} — set ACME_EMAIL, GATE_USER and GATE_PASSWORD_HASH."
+else
+	echo "${CADDY_ENV_FILE} already present — left untouched"
+fi
+chown root:caddy "${CADDY_ENV_FILE}"
+chmod 640 "${CADDY_ENV_FILE}"
+
+chown -R "${SERVICE_USER}:${SERVICE_USER}" "${APP_DIR}/releases" "${APP_DIR}/storefront"
+
+# ---------------------------------------------------------------------------
+log "systemd units"
+# ---------------------------------------------------------------------------
+install -m 0644 "${REPO_DIR}/deploy/medusa.service" /etc/systemd/system/medusa.service
+
+# Caddy needs SITE_DOMAIN and the gate variables from caddy.env.
+mkdir -p /etc/systemd/system/caddy.service.d
+cat >/etc/systemd/system/caddy.service.d/override.conf <<-EOF
+	[Service]
+	EnvironmentFile=${CADDY_ENV_FILE}
+EOF
+
+install -m 0644 "${REPO_DIR}/deploy/Caddyfile" /etc/caddy/Caddyfile
+
+systemctl daemon-reload
+systemctl enable medusa >/dev/null
+# Not started here: there is no release to run yet. deploy.sh starts it.
 
 # ---------------------------------------------------------------------------
 log "Firewall"
 # ---------------------------------------------------------------------------
-# Docker publishes ports by writing iptables rules that bypass ufw's INPUT
-# chain, so ufw is a backstop for host services, not for the containers. Only
-# Caddy publishes ports, and 80/443 are open here anyway.
 ufw allow 22/tcp   >/dev/null
 ufw allow 80/tcp   >/dev/null
 ufw allow 443/tcp  >/dev/null
 ufw allow 443/udp  >/dev/null
-ufw --force default deny incoming >/dev/null
+ufw --force default deny incoming  >/dev/null
 ufw --force default allow outgoing >/dev/null
 ufw --force enable >/dev/null
 ufw status verbose
@@ -79,8 +184,8 @@ ufw status verbose
 # ---------------------------------------------------------------------------
 log "Swap"
 # ---------------------------------------------------------------------------
-# `medusa build` compiles the admin dashboard and is memory hungry; on a small
-# Hetzner instance it gets OOM-killed without swap.
+# `medusa build` compiles the admin dashboard with Vite and is memory hungry; on
+# a small Hetzner instance it gets OOM-killed without swap.
 if ! swapon --show | grep -q '/swapfile'; then
 	fallocate -l 4G /swapfile
 	chmod 600 /swapfile
@@ -98,26 +203,6 @@ log "Unattended security upgrades"
 dpkg-reconfigure -f noninteractive unattended-upgrades
 
 # ---------------------------------------------------------------------------
-log "Application directories"
-# ---------------------------------------------------------------------------
-mkdir -p "${APP_DIR}" "${APP_DIR}/storefront"
-
-if [[ ! -d "${REPO_DIR}/.git" ]]; then
-	git clone "${REPO_URL}" "${REPO_DIR}"
-else
-	echo "Repo already cloned at ${REPO_DIR}"
-fi
-
-if [[ ! -f "${APP_DIR}/.env" ]]; then
-	cp "${REPO_DIR}/deploy/.env.template" "${APP_DIR}/.env"
-	chmod 600 "${APP_DIR}/.env"
-	warn "Created ${APP_DIR}/.env from the template — fill it in before deploying."
-else
-	chmod 600 "${APP_DIR}/.env"
-	echo ".env already present"
-fi
-
-# ---------------------------------------------------------------------------
 log "Done"
 # ---------------------------------------------------------------------------
 cat <<-EOF
@@ -126,7 +211,12 @@ cat <<-EOF
 
 	  1. Point DNS at this box (A records for @, www and api) — Caddy cannot
 	     issue certificates until they resolve. See docs/deploy.md.
-	  2. Fill in ${APP_DIR}/.env  (secrets, gate password hash, ACME email).
+
+	  2. Set ACME_EMAIL, GATE_USER and GATE_PASSWORD_HASH in:
+	       ${CADDY_ENV_FILE}
+	     Generate the hash with:
+	       caddy hash-password --plaintext 'your-password'
+
 	  3. bash ${REPO_DIR}/deploy/deploy.sh <commit-sha>
 
 EOF

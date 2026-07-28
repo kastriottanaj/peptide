@@ -1,12 +1,16 @@
 # Caddy config for peptideeinkaufen.de.
+# Installed to /etc/caddy/Caddyfile by deploy/provision.sh.
 #
 # Certificates are issued automatically from Let's Encrypt on first request per
 # hostname, so the DNS A records must resolve to this box before Caddy starts.
 #
-# Variables come from /srv/peptides/.env via docker-compose. GATE_PASSWORD_HASH
-# is a bcrypt hash and contains `$` characters — it is passed through `env_file`,
-# which does not interpolate, so it must NOT be quoted or escaped there.
-
+# Variables come from /srv/peptides/caddy.env, wired in by a systemd drop-in at
+# /etc/systemd/system/caddy.service.d/override.conf. That file is deliberately
+# separate from /srv/peptides/.env: Caddy runs as the `caddy` user and has no
+# business reading the database password or the Medusa signing secrets.
+#
+# GATE_PASSWORD_HASH is a bcrypt hash containing `$`. systemd's EnvironmentFile
+# does no shell expansion, so paste it verbatim — unquoted, unescaped.
 {
 	email {$ACME_EMAIL}
 	# Uncomment to exercise the whole issuance path without burning Let's
@@ -88,5 +92,5 @@ api.{$SITE_DOMAIN} {
 	import security_headers
 	header X-Robots-Tag "noindex, nofollow"
 
-	reverse_proxy medusa:9000
+	reverse_proxy 127.0.0.1:9000
 }

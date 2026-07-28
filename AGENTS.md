@@ -217,10 +217,11 @@ German market, so DSGVO/TTDSG apply to the storefront:
 
 ## Deployment
 
-Production is a single Hetzner VPS running `deploy/docker-compose.yml` (Caddy, Medusa,
-Postgres, Redis), with DNS delegated from Hostinger to that box. The domain is
-`peptideeinkaufen.de`. **[docs/deploy.md](docs/deploy.md) is the runbook** — read it
-before touching anything on the server.
+Production is a single Hetzner VPS with DNS delegated from Hostinger. The domain is
+`peptideeinkaufen.de`. **No Docker** — Postgres, Redis, Node and Caddy come from apt,
+Medusa runs as `medusa.service`, and deploys build into `/srv/peptides/releases/<sha>`
+and repoint the `current` symlink. **[docs/deploy.md](docs/deploy.md) is the runbook** —
+read it before touching anything on the server.
 
 Do not copy deploy scripts or server credentials from the `peptide` project into this
 codebase. That project is read-only prior art; never edit or deploy it from here.
@@ -235,8 +236,8 @@ remove it as a side effect of other work.
 Rules, all enforced by `deploy/deploy.sh`:
 
 - One scripted deploy path only: `bash /srv/peptides/repo/deploy/deploy.sh <sha>`. No
-  manual parallel `ssh`, `git reset`, `docker compose build` or `docker compose up`
-  against the server.
+  manual parallel `ssh`, `git reset`, `npm ci` or `systemctl restart` against the
+  server.
 - Deploy a specific locally verified commit SHA, from the target branch (`main`) — never
   from a feature branch, stash or detached HEAD. The script refuses any commit that is
   not an ancestor of `origin/main`.

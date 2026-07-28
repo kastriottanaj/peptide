@@ -30,7 +30,8 @@ Files: `backend/apps/backend/medusa-config.ts`, `backend/apps/backend/package.js
 
 - [x] Declare `@medusajs/cache-redis`, `@medusajs/event-bus-redis`,
       `@medusajs/workflow-engine-redis` as real dependencies — they were only
-      present transitively, which would have broken a clean Docker build.
+      present transitively, which would have broken a clean install on the
+      server.
 - [x] Register the three modules when `REDIS_URL` is set; throw in production
       when it is not. Local dev without Redis is unaffected.
 - [x] Locking deliberately left on the in-memory default — it is a
@@ -49,18 +50,23 @@ Three things had to be discovered by running it:
 
 ### A3. Deploy infrastructure
 
-- [x] `deploy/Dockerfile.backend` — multi-stage Node 22; `medusa build`, then
-      run the emitted `.medusa/server` as non-root with a healthcheck
-- [x] `.dockerignore` — build context is the repo root
-- [x] `deploy/docker-compose.yml` — postgres 16, redis 7 (appendonly), medusa,
-      caddy; only Caddy publishes ports
+Native, no Docker — see the decision note in the spec.
+
+- [x] `deploy/medusa.service` — systemd unit running `/srv/peptides/current` as
+      the `medusa` user, bound to `127.0.0.1` so Caddy is the only way in
 - [x] `deploy/Caddyfile` — auto-TLS, `Permissions-Policy: tools=(self)`, the
       basic-auth gate, immutable caching for `/_astro/*`
-- [x] `deploy/.env.template` — every variable documented with its generator
-- [x] `deploy/provision.sh` — idempotent fresh-box setup (Docker, ufw, 4 GB
-      swap, unattended upgrades, directories)
+- [x] `deploy/.env.template` — Medusa + storefront-build variables
+- [x] `deploy/caddy.env.template` — domain and gate only, so the `caddy` user
+      never reads the database password or the signing secrets
+- [x] `deploy/provision.sh` — idempotent fresh-box setup: Postgres 16, Redis 7
+      (appendonly), Node 22, Caddy, role + database, service user, systemd
+      units, ufw, 4 GB swap, unattended upgrades. Generates `DATABASE_URL`,
+      `JWT_SECRET` and `COOKIE_SECRET` so there is less to fill in by hand.
 - [x] `deploy/deploy.sh` — single path: SHA pinned to `origin/main`, `flock`,
-      build, migrate, wait healthy, build storefront, reload, verify
+      build into `releases/<sha>`, migrate, atomic symlink swap, restart, health
+      check with automatic symlink rollback, build storefront, validate and
+      reload Caddy, prune old releases, verify
 
 ### A4. Documentation
 
@@ -79,6 +85,27 @@ Three things had to be discovered by running it:
 - [x] `cd storefront && npm run build` — 36 pages
 - [x] Raw-hex check — clean
 - [x] Commit on `main`
+
+The Caddyfile was exercised for real, not just adapted: Caddy was run locally
+against a fixture site and the live local Medusa, confirming
+
+- no credentials → **401**, wrong password → **401**, correct → **200**
+- `Permissions-Policy: tools=(self)`, `X-Robots-Tag: noindex, nofollow`, HSTS,
+  `X-Content-Type-Options` and `Referrer-Policy` all present
+- `/produkte/` (a directory index) gets `must-revalidate` — the reason the cache
+  matcher is written as `not path /_astro/*` rather than `*.html`, which misses
+  every directory-index URL and so would have missed most of the site
+- `/_astro/*` gets `immutable`
+- an unknown path returns a real **404** with the custom page, not a soft 200
+- `www.` → `301` to the apex
+- `api.` proxies to Medusa and is *not* behind basic auth, since a cross-origin
+  XHR would not carry the credentials
+- `caddy validate` **fails** when `caddy.env` is incomplete, so `deploy.sh`
+  catches a missing `SITE_DOMAIN` before installing a config that would emit
+  `Location: https:///...`
+
+Not verified: `provision.sh` and `deploy.sh` end to end. Both are syntax-checked
+only — they need a real Ubuntu box (Phase B). `shellcheck` was not available.
 
 `npm run test` in `backend/` runs nothing — there is no `test` task in
 `turbo.json`, so the gate documented in `AGENTS.md` is currently a no-op. Left

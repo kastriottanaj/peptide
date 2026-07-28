@@ -160,9 +160,9 @@ These can be done at any time:
       scenarios including the €99.80 boundary.
 - [ ] Consent banner and analytics — only once analytics actually exists, and
       the Datenschutz page needs a matching section added at the same time.
-- [x] ~~Deployment~~ — done 2026-07-28. Hetzner VPS, Docker Compose (Caddy,
-      Medusa, Postgres, Redis), DNS from Hostinger, TLS via Let's Encrypt. See
-      [deploy.md](deploy.md).
+- [x] ~~Deployment~~ — done 2026-07-28. Hetzner VPS, no Docker: Postgres, Redis,
+      Node and Caddy from apt, Medusa as a systemd service. DNS from Hostinger,
+      TLS via Let's Encrypt. See [deploy.md](deploy.md).
 
       **The storefront is deployed gated** — HTTP basic auth plus
       `X-Robots-Tag: noindex` — precisely because §1–§6 above are still open.

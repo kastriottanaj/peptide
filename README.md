@@ -137,8 +137,9 @@ dev server.
 
 ## Deployment
 
-Production is a single Hetzner VPS running Docker Compose (Caddy, Medusa, Postgres,
-Redis), with DNS pointed at it from Hostinger. The domain is `peptideeinkaufen.de`.
+Production is a single Hetzner VPS with DNS pointed at it from Hostinger. The domain is
+`peptideeinkaufen.de`. No Docker: Postgres, Redis, Node and Caddy come from apt, and
+Medusa runs as a systemd service from an atomically swapped release directory.
 
 **[docs/deploy.md](docs/deploy.md) is the runbook.** Everything it needs lives in
 [deploy/](deploy/).

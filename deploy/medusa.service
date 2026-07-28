@@ -1,0 +1,53 @@
+# Medusa backend, installed to /etc/systemd/system/medusa.service by
+# deploy/provision.sh.
+#
+# WorkingDirectory is the `current` symlink, which deploy.sh repoints at the new
+# release before restarting. systemd resolves it at start, so a running process
+# keeps the release it booted from and the restart picks up the new one — that
+# is what makes the swap atomic.
+
+[Unit]
+Description=Medusa backend (peptideeinkaufen.de)
+Documentation=https://github.com/kastriottanaj/peptide/blob/main/docs/deploy.md
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+Requires=postgresql.service redis-server.service
+
+[Service]
+Type=simple
+User=medusa
+Group=medusa
+WorkingDirectory=/srv/peptides/current
+
+EnvironmentFile=/srv/peptides/.env
+Environment=NODE_ENV=production
+
+# Bind to loopback only. Caddy is the only thing that should reach Medusa, and
+# binding 0.0.0.0 would expose the admin API directly on the public interface —
+# ufw would be the only thing standing in front of it.
+ExecStart=/usr/bin/node ./node_modules/.bin/medusa start --host 127.0.0.1 --port 9000
+
+Restart=always
+RestartSec=5
+# Medusa loads its modules and runs migrations checks on boot; give it room
+# before systemd calls a slow start a failure.
+TimeoutStartSec=180
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=medusa
+
+# Hardening. ProtectSystem=full leaves /usr and /boot read-only; the app still
+# needs to write inside its own tree, so that is granted explicitly rather than
+# by loosening the whole policy.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+ReadWritePaths=/srv/peptides
+
+[Install]
+WantedBy=multi-user.target

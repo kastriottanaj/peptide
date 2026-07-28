@@ -41,8 +41,18 @@ Explicitly out of scope, so this does not drift:
 
 ## Architecture
 
-One Hetzner box, one Docker Compose stack, Caddy terminating TLS and issuing
-certificates automatically via Let's Encrypt.
+One Hetzner box, no containers. Postgres, Redis, Node and Caddy from apt; Medusa
+as a systemd service. Caddy terminates TLS and issues certificates automatically
+via Let's Encrypt.
+
+> **Decided 2026-07-28:** an earlier revision of this spec used Docker Compose.
+> Rejected in favour of native packages. On Linux the container overhead
+> argument is weak either way, but this box has one operator who will SSH in to
+> debug it, and `systemctl` / `journalctl` / `psql` / `pg_dump` are more direct
+> than the same operations through a container. Postgres in particular is easier
+> to back up and major-version upgrade on the distribution's own path. Atomic
+> deploys and rollback — the real thing Docker was buying — are covered by
+> release directories and a symlink swap.
 
 ```
 Internet
@@ -53,12 +63,17 @@ Internet
         │      basic auth + X-Robots-Tag: noindex  ← removed at real launch
         │      Permissions-Policy: tools=(self)    ← required by WebMCP, see README
         │
-        └── api.peptideeinkaufen.de     →  medusa:9000  (store API + admin at /app)
+        └── api.peptideeinkaufen.de     →  127.0.0.1:9000
         │
-        ├── medusa    (Node 22, @dtc/backend, `medusa start`)
-        ├── postgres  16   (named volume)
-        └── redis     7    (event bus + cache + workflow engine)
+        ├── medusa.service        (Node 22, runs /srv/peptides/current)
+        ├── postgresql.service    16, loopback only
+        └── redis-server.service  7, appendonly, loopback only
 ```
+
+**Releases, not images:** each deploy builds into
+`/srv/peptides/releases/<sha>`, runs migrations, then repoints the
+`/srv/peptides/current` symlink and restarts the unit. A failed build never
+touches the running release; a failed health check puts the symlink back.
 
 **Why static files rather than a Node server for the storefront:** the Astro
 build has no adapter and no `prerender = false` anywhere — all 26 pages and
@@ -105,12 +120,12 @@ New directory `deploy/`, all committed (no secrets):
 
 | File | Purpose |
 | ---- | ------- |
-| `deploy/docker-compose.yml` | postgres 16, redis 7, medusa, caddy; named volumes, healthchecks, `restart: unless-stopped` |
-| `deploy/Dockerfile.backend` | Multi-stage Node 22 build → `medusa build` → `medusa start` as a non-root user |
+| `deploy/medusa.service` | systemd unit: runs `/srv/peptides/current` as the `medusa` user, bound to loopback, with `ProtectSystem`/`NoNewPrivileges` hardening |
 | `deploy/Caddyfile` | TLS, the basic-auth gate, `Permissions-Policy: tools=(self)`, HSTS/`X-Content-Type-Options`/frame options, static serving, API proxy |
-| `deploy/.env.template` | Every production variable documented with generation commands; no values |
-| `deploy/provision.sh` | One-time fresh-box setup: Docker, `ufw` (22/80/443 only), swap, deploy user, `/srv/peptides` |
-| `deploy/deploy.sh` | The single deploy path: pins a commit SHA, holds a server-side lock, pulls, builds, migrates, builds the storefront, reloads |
+| `deploy/.env.template` | Medusa + storefront-build variables. `provision.sh` generates the database URL and signing secrets into it |
+| `deploy/caddy.env.template` | Domain and gate credentials only — kept apart so the `caddy` user cannot read the database password or signing secrets |
+| `deploy/provision.sh` | One-time fresh-box setup: Postgres/Redis/Node/Caddy from apt, role + database, service user, systemd units, `ufw` (22/80/443 only), swap |
+| `deploy/deploy.sh` | The single deploy path: pins a commit SHA, holds a server-side lock, builds a release, migrates, swaps the symlink, builds the storefront, reloads Caddy |
 
 Modified:
 
@@ -135,13 +150,19 @@ verified with `git merge-tree`):
 
 ## Secrets
 
-None committed. Generated once on the server into `/srv/peptides/.env` (mode
-`600`):
+None committed. Split across two files so the `caddy` user cannot read the
+database password or the Medusa signing secrets:
 
+`/srv/peptides/.env` — mode `600`, owned `medusa`. `provision.sh` generates:
+
+- `DATABASE_URL`, with a password it creates the Postgres role with
 - `JWT_SECRET`, `COOKIE_SECRET` — `openssl rand -base64 32`
-- `POSTGRES_PASSWORD` — `openssl rand -base64 24`
-- Basic-auth hash — `caddy hash-password`
-- `PUBLIC_MEDUSA_PUBLISHABLE_KEY` — from the Medusa admin in phase 2
+
+Left for the operator: `PUBLIC_MEDUSA_PUBLISHABLE_KEY` (from the admin in phase
+2) and the four `PUBLIC_BANK_*` values (blocked on checklist §1).
+
+`/srv/peptides/caddy.env` — mode `640`, owned `root:caddy`: `SITE_DOMAIN`,
+`ACME_EMAIL`, `GATE_USER`, `GATE_PASSWORD_HASH` (`caddy hash-password`).
 
 `.gitignore` already covers `.env` and `*.local.md`; no change needed.
 
