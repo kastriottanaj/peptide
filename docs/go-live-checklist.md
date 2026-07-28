@@ -124,8 +124,9 @@ and possibly a refund.
 
 What it needs:
 
-- [ ] A sending domain and mailbox on `peptideeinkaufen.de` (depends on DNS,
-      so effectively on the deployment)
+- [ ] A sending domain and mailbox on `peptideeinkaufen.de` — **unblocked as of
+      2026-07-28**: DNS now points at the Hetzner box and records are managed in
+      Hostinger's hPanel, so SPF/DKIM/DMARC can be added.
 - [ ] SMTP or Resend credentials in the backend `.env`
 - [ ] A Medusa notification provider configured
 - [ ] An `order.placed` subscriber that sends the confirmation, containing at
@@ -159,7 +160,19 @@ These can be done at any time:
       scenarios including the €99.80 boundary.
 - [ ] Consent banner and analytics — only once analytics actually exists, and
       the Datenschutz page needs a matching section added at the same time.
-- [ ] Deployment — no production deploy exists for this repo yet.
+- [x] ~~Deployment~~ — done 2026-07-28. Hetzner VPS, Docker Compose (Caddy,
+      Medusa, Postgres, Redis), DNS from Hostinger, TLS via Let's Encrypt. See
+      [deploy.md](deploy.md).
+
+      **The storefront is deployed gated** — HTTP basic auth plus
+      `X-Robots-Tag: noindex` — precisely because §1–§6 above are still open.
+      Nothing is publicly reachable and no one can place an order. Un-gating is
+      a deliberate step ("Opening the shop" in `deploy.md`) that must not happen
+      until the hard blockers are ticked.
+- [ ] Automated database backups. None exist; `pg_dump` is manual today. Must be
+      in place before real orders arrive.
+- [ ] Monitoring / uptime alerting. Nothing currently reports that the box is
+      down.
 
 ---
 

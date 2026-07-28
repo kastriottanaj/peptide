@@ -217,18 +217,38 @@ German market, so DSGVO/TTDSG apply to the storefront:
 
 ## Deployment
 
-There is currently no production deployment for this repo — the storefront is not live.
-Do not invent one, and do not copy deploy scripts or server credentials from the
-`peptide` project into this codebase. That project is read-only prior art; never edit or
-deploy it from here.
+Production is a single Hetzner VPS running `deploy/docker-compose.yml` (Caddy, Medusa,
+Postgres, Redis), with DNS delegated from Hostinger to that box. The domain is
+`peptideeinkaufen.de`. **[docs/deploy.md](docs/deploy.md) is the runbook** — read it
+before touching anything on the server.
 
-When a deploy path is introduced, these rules from it apply and belong in this section:
+Do not copy deploy scripts or server credentials from the `peptide` project into this
+codebase. That project is read-only prior art; never edit or deploy it from here.
 
-- One scripted deploy path only. No manual parallel `ssh`, `git reset`,
-  `docker compose build` or `docker compose up` against the server.
+**The storefront is gated.** Caddy serves it behind HTTP basic auth and
+`X-Robots-Tag: noindex`, because the legal pages still carry `[Platzhalter]` company
+data, the bank details are placeholders and the catalog purity values are fabricated.
+Removing that gate is a launch decision governed by
+[docs/go-live-checklist.md](docs/go-live-checklist.md), not a routine change — never
+remove it as a side effect of other work.
+
+Rules, all enforced by `deploy/deploy.sh`:
+
+- One scripted deploy path only: `bash /srv/peptides/repo/deploy/deploy.sh <sha>`. No
+  manual parallel `ssh`, `git reset`, `docker compose build` or `docker compose up`
+  against the server.
 - Deploy a specific locally verified commit SHA, from the target branch (`main`) — never
-  from a feature branch, stash or detached HEAD.
+  from a feature branch, stash or detached HEAD. The script refuses any commit that is
+  not an ancestor of `origin/main`.
 - Hold a server-side lock for the duration; if another deploy holds it, abort, re-sync,
   re-run the checks and start over rather than intervening on the server.
 - Publish expected durations, and when output stalls past them, inspect the lock and the
   running processes instead of waiting.
+
+Two things that surprise people:
+
+- **The storefront is static and reads the catalog at build time.** Editing a product in
+  the Medusa admin changes the API but not the built pages — the site has to be rebuilt
+  before the change is visible.
+- **Database migrations do not roll back.** Deploying an older SHA restores the code, not
+  the schema. Dump the database before any deploy that migrates.

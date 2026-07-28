@@ -1,0 +1,92 @@
+# Caddy config for peptideeinkaufen.de.
+#
+# Certificates are issued automatically from Let's Encrypt on first request per
+# hostname, so the DNS A records must resolve to this box before Caddy starts.
+#
+# Variables come from /srv/peptides/.env via docker-compose. GATE_PASSWORD_HASH
+# is a bcrypt hash and contains `$` characters — it is passed through `env_file`,
+# which does not interpolate, so it must NOT be quoted or escaped there.
+
+{
+	email {$ACME_EMAIL}
+	# Uncomment to exercise the whole issuance path without burning Let's
+	# Encrypt rate limits while DNS is still settling:
+	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
+}
+
+(security_headers) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "SAMEORIGIN"
+
+		# Required for WebMCP: browsers only expose navigator.modelContext to a
+		# page that sends this. See README.md — the tools register in code but
+		# no browser will call them without it.
+		Permissions-Policy "tools=(self)"
+
+		-Server
+	}
+}
+
+# ---------------------------------------------------------------------------
+# Storefront — static files produced by deploy.sh
+# ---------------------------------------------------------------------------
+{$SITE_DOMAIN} {
+	import security_headers
+
+	# === PRE-LAUNCH GATE ====================================================
+	# The site is not open to the public: the legal pages still render
+	# [Platzhalter] company data, bank details are placeholders and catalog
+	# purity values are fabricated. See docs/go-live-checklist.md.
+	#
+	# To open the shop, delete this block and reload Caddy. That is the whole
+	# un-gating step — see "Opening the shop" in docs/deploy.md.
+	basic_auth {
+		{$GATE_USER} {$GATE_PASSWORD_HASH}
+	}
+	header X-Robots-Tag "noindex, nofollow"
+	# === END GATE ===========================================================
+
+	root * /srv/storefront
+	encode zstd gzip
+
+	# Astro fingerprints everything under /_astro/, so those URLs are immutable.
+	@immutable path /_astro/*
+	header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+	# Everything else must revalidate, or a deploy takes a day to become visible.
+	# Matching by negation rather than *.html on purpose: almost every page here
+	# is served as a directory index (/produkte/, /wissen/lexikon/), whose
+	# request path does not end in .html and would miss a *.html matcher.
+	@revalidate not path /_astro/*
+	header @revalidate Cache-Control "public, max-age=0, must-revalidate"
+
+	file_server
+
+	handle_errors {
+		@404 expression {err.status_code} == 404
+		rewrite @404 /404.html
+		file_server
+	}
+}
+
+www.{$SITE_DOMAIN} {
+	import security_headers
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}
+
+# ---------------------------------------------------------------------------
+# Medusa — store API and the admin dashboard at /app
+# ---------------------------------------------------------------------------
+# Deliberately NOT behind basic auth: the storefront calls this cross-origin
+# from the browser, and a cross-origin XHR will not carry basic-auth
+# credentials. The store API requires a publishable key and the admin has its
+# own login. noindex keeps it out of search results either way.
+api.{$SITE_DOMAIN} {
+	import security_headers
+	header X-Robots-Tag "noindex, nofollow"
+
+	reverse_proxy medusa:9000
+}

@@ -1,0 +1,33 @@
+# Build context is the repository root (deploy/docker-compose.yml). Everything
+# the Medusa image does not need is excluded so the context stays small.
+
+.git
+.github
+
+node_modules
+**/node_modules
+
+# Build output — rebuilt inside the image
+**/dist
+**/.medusa
+**/.astro
+**/.turbo
+**/build
+
+# Never ship secrets into an image layer
+**/.env
+**/.env.*
+!**/.env.template
+*.local.md
+
+# Not needed by the backend build
+storefront
+docs
+.playwright-mcp
+.claude
+.vscode
+.idea
+
+**/.DS_Store
+**/*-debug.log*
+**/npm-debug.log*

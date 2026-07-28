@@ -1,0 +1,58 @@
+# Medusa backend image.
+#
+# Build context is the repository root (see deploy/docker-compose.yml) because
+# the Medusa app is one workspace of the `backend/` Turbo monorepo and npm needs
+# the root lockfile to resolve it. `.dockerignore` at the root keeps the context
+# small.
+#
+# `medusa build` emits a self-contained server into
+# backend/apps/backend/.medusa/server, with its own package.json. That directory
+# — not the source tree — is what runs in production.
+
+# ---------- build ----------
+FROM node:22-bookworm-slim AS builder
+
+WORKDIR /app
+
+# node-gyp needs these for the few native deps in the Medusa tree.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
+
+# Manifests first, so a source-only change reuses the install layer.
+COPY backend/package.json backend/package-lock.json backend/turbo.json backend/.npmrc ./
+COPY backend/apps/backend/package.json ./apps/backend/package.json
+
+RUN npm ci --no-audit --no-fund
+
+COPY backend/ ./
+
+# NODE_ENV is deliberately NOT production here: medusa-config.ts refuses to boot
+# a production config without JWT_SECRET/COOKIE_SECRET/REDIS_URL, and those are
+# runtime concerns that must not be baked into an image.
+RUN npx turbo run build --filter=@dtc/backend
+
+# ---------- runtime ----------
+FROM node:22-bookworm-slim AS runtime
+
+ENV NODE_ENV=production
+WORKDIR /srv/medusa
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /app/apps/backend/.medusa/server ./
+
+RUN npm install --omit=dev --no-audit --no-fund \
+ && npm cache clean --force \
+ && chown -R node:node /srv/medusa
+
+USER node
+
+EXPOSE 9000
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=90s --retries=5 \
+  CMD curl -fsS http://localhost:9000/health || exit 1
+
+CMD ["npx", "medusa", "start", "--host", "0.0.0.0"]

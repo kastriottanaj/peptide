@@ -125,17 +125,35 @@ Browsers only expose `navigator.modelContext` to a page that sends:
 Permissions-Policy: tools=(self)
 ```
 
-This repo has no production deployment and no host configuration, so the header
-cannot be set here: a static Astro build emits files, not headers. Whoever
-introduces the deploy path must add it, in whichever of these the host uses:
-
-- Cloudflare Pages or Netlify: a `public/_headers` file containing `/*` and the
-  header line beneath it.
-- Vercel: a `headers` entry in `vercel.json`.
-- Nginx or Caddy: an `add_header` / `header` directive on the site block.
-
-Until that header ships, the tools register in code but no browser will call
+A static Astro build emits files, not headers, so this is set by the host. In
+production Caddy sends it on every response — see the `security_headers` snippet
+in [deploy/Caddyfile](deploy/Caddyfile). If the site ever moves hosts, the header
+has to move with it, or the tools register in code and no browser ever calls
 them. Everything else (`llms.txt`, `llms-full.txt`, the search index) works
 without it.
+
+It is not sent by `astro dev`, so WebMCP cannot be exercised locally against the
+dev server.
+
+## Deployment
+
+Production is a single Hetzner VPS running Docker Compose (Caddy, Medusa, Postgres,
+Redis), with DNS pointed at it from Hostinger. The domain is `peptideeinkaufen.de`.
+
+**[docs/deploy.md](docs/deploy.md) is the runbook.** Everything it needs lives in
+[deploy/](deploy/).
+
+```bash
+# routine deploy, on the server
+bash /srv/peptides/repo/deploy/deploy.sh <commit-sha>
+```
+
+The storefront is currently **gated** behind HTTP basic auth and `noindex` — the legal
+pages still show placeholder company data and the catalog carries fabricated purity
+values. Opening it up is the last step of
+[docs/go-live-checklist.md](docs/go-live-checklist.md), not a routine change.
+
+Note that the storefront is a static build that fetches the catalog at build time, so a
+product edited in the admin only appears on the site after a redeploy.
 
 See `backend/README.md` and `storefront/README.md` for stack-specific details.
