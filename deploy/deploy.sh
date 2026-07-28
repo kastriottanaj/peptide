@@ -255,6 +255,12 @@ api_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
 site_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
 	"https://${SITE_DOMAIN}/" || echo 000)"
 
+# Fetch the BODY too, not just the status. A misconfigured error handler can
+# return 401 and serve the page anyway — that combination actually shipped once,
+# and a status-only check reported the gate as working while the whole site was
+# readable to anyone who looked at the response body.
+gate_body="$(curl -s --max-time 10 "https://${SITE_DOMAIN}/" 2>/dev/null | head -c 4000 || true)"
+
 echo "  https://api.${SITE_DOMAIN}/health  -> ${api_code}  (expect 200)"
 echo "  https://${SITE_DOMAIN}/            -> ${site_code}  (expect 401 while gated)"
 
@@ -266,6 +272,12 @@ if [[ "${site_code}" == "200" ]]; then
 	warn "If that was not intended, restore the basic_auth block in deploy/Caddyfile."
 elif [[ "${site_code}" != "401" ]]; then
 	warn "Storefront returned ${site_code}; expected 401 while gated."
+fi
+
+if grep -qiE '<!doctype|<html' <<<"${gate_body}"; then
+	warn "THE GATE IS BYPASSED: an unauthenticated request returned ${site_code} but the"
+	warn "response body contains HTML. Status alone is not proof — something is serving"
+	warn "page content past basic_auth. Check the handle_errors block in deploy/Caddyfile."
 fi
 
 log "Deployed ${FULL_SHA}"
