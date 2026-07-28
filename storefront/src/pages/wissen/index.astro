@@ -1,8 +1,10 @@
 ---
 import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import ContentSearch from "../../components/ContentSearch.astro";
 import { WISSEN_CATEGORY_LABELS } from "../../content.config";
 import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
+import { foldSearchText } from "../../lib/search";
 
 const articles = (await getCollection("wissen", ({ data }) => !data.draft)).sort(
 	(a, b) => b.data.datePublished.getTime() - a.data.datePublished.getTime(),
@@ -22,6 +24,22 @@ const byCategory = (Object.keys(WISSEN_CATEGORY_LABELS) as Array<
 		items: articles.filter((a) => a.data.category === key),
 	}))
 	.filter((group) => group.items.length > 0);
+
+/**
+ * Searchable text per article, folded at build time so the client script only
+ * has to fold the query. The slug is included with its hyphens split so a
+ * URL-shaped memory of an article still finds it.
+ */
+const searchIndex = (article: (typeof articles)[number]) =>
+	foldSearchText(
+		[
+			article.data.title,
+			article.data.excerpt,
+			article.data.metaDescription,
+			WISSEN_CATEGORY_LABELS[article.data.category],
+			article.id.replace(/-/g, " "),
+		].join(" "),
+	);
 
 const jsonLd = [
 	{
@@ -61,13 +79,20 @@ const jsonLd = [
 		Anwendungshinweise.
 	</p>
 
+	<ContentSearch
+		label="Wissensartikel durchsuchen"
+		placeholder="Artikel durchsuchen – z. B. Reinheit, Lagerung…"
+		nounSingular="Artikel"
+		nounPlural="Artikel"
+	/>
+
 	{
 		byCategory.map((group) => (
-			<section class="group">
+			<section class="group" data-search-group>
 				<h2>{group.label}</h2>
 				<ul class="cards">
 					{group.items.map((article) => (
-						<li>
+						<li data-search-item data-search={searchIndex(article)}>
 							<a href={`/wissen/${article.id}`} class="card">
 								<h3>{article.data.title}</h3>
 								<p>{article.data.excerpt}</p>
@@ -80,7 +105,7 @@ const jsonLd = [
 		))
 	}
 
-	<section class="group">
+	<section class="group" data-search-aside>
 		<h2>Lexikon</h2>
 		<p class="lead lead--tight">
 			Kurzdefinitionen der wichtigsten Begriffe.
