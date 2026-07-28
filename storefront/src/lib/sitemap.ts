@@ -5,6 +5,9 @@
  *
  * Product entries include the Google image sitemap extension — image search is
  * a real traffic source for this catalog.
+ *
+ * This module renders XML and nothing else. *Which* URLs exist is decided by
+ * `content-index.ts`, so llms.txt and the sitemaps cannot drift apart.
  */
 
 export type ChangeFrequency =
@@ -29,22 +32,6 @@ export type SitemapUrl = {
 	priority?: number;
 	images?: SitemapImage[];
 };
-
-/** Static routes with their crawl hints. Add new indexable pages here. */
-export const staticRoutes: Array<{
-	path: string;
-	changeFrequency: ChangeFrequency;
-	priority: number;
-}> = [
-	{ path: "/", changeFrequency: "daily", priority: 1 },
-	{ path: "/produkte", changeFrequency: "daily", priority: 0.95 },
-	{ path: "/about", changeFrequency: "monthly", priority: 0.5 },
-	{ path: "/contact", changeFrequency: "monthly", priority: 0.45 },
-	// The legal pages (/impressum, /datenschutz, /agb, /widerruf) are
-	// deliberately absent: they still carry the `draft` flag and therefore
-	// `noindex`, and listing a noindex URL in a sitemap is a contradictory
-	// signal. Add them here at priority 0.2 once they are final.
-];
 
 function escapeXml(value: string): string {
 	return value

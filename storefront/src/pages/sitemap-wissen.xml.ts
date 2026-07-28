@@ -1,48 +1,42 @@
 import type { APIRoute } from "astro";
-import { getCollection } from "astro:content";
-import { absoluteUrl } from "../lib/site";
 import { renderUrlset, xmlResponse } from "../lib/sitemap";
+import {
+	articleEntries,
+	termEntries,
+	toSitemapUrl,
+	wissenIndexEntries,
+	type IndexedEntry,
+} from "../lib/content-index";
 
 /**
  * Editorial content: articles and lexicon entries. `lastmod` comes from each
  * entry's own `dateModified`, so it reflects real edits rather than build time.
  */
 export const GET: APIRoute = async () => {
-	const articles = await getCollection("wissen", ({ data }) => !data.draft);
-	const terms = await getCollection("lexikon", ({ data }) => !data.draft);
+	const [articles, terms] = await Promise.all([articleEntries(), termEntries()]);
 
 	// The two index pages change exactly when their newest entry does, so they
 	// carry that date rather than no `lastmod` at all — an entry without one is
-	// the weakest possible crawl signal.
-	const newest = (dates: Date[]) =>
-		dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : undefined;
+	// the weakest possible crawl signal. They come from the hand-maintained
+	// static routes, which have no date of their own to contribute.
+	const newest = (entries: IndexedEntry[]) => {
+		const times = entries
+			.map((entry) => entry.lastModified?.getTime())
+			.filter((time): time is number => time !== undefined);
+		return times.length ? new Date(Math.max(...times)) : undefined;
+	};
+
+	const contributorsFor: Record<string, IndexedEntry[]> = {
+		"/wissen": articles,
+		"/wissen/lexikon": terms,
+	};
+
+	const indexes = wissenIndexEntries().map((entry) => ({
+		...entry,
+		lastModified: entry.lastModified ?? newest(contributorsFor[entry.path] ?? []),
+	}));
 
 	return xmlResponse(
-		renderUrlset([
-			{
-				loc: absoluteUrl("/wissen"),
-				lastModified: newest(articles.map((a) => a.data.dateModified)),
-				changeFrequency: "weekly",
-				priority: 0.7,
-			},
-			{
-				loc: absoluteUrl("/wissen/lexikon"),
-				lastModified: newest(terms.map((t) => t.data.dateModified)),
-				changeFrequency: "weekly",
-				priority: 0.7,
-			},
-			...articles.map((article) => ({
-				loc: absoluteUrl(`/wissen/${article.id}`),
-				lastModified: article.data.dateModified,
-				changeFrequency: "monthly" as const,
-				priority: 0.6,
-			})),
-			...terms.map((term) => ({
-				loc: absoluteUrl(`/wissen/lexikon/${term.id}`),
-				lastModified: term.data.dateModified,
-				changeFrequency: "monthly" as const,
-				priority: 0.5,
-			})),
-		]),
+		renderUrlset([...indexes, ...articles, ...terms].map(toSitemapUrl)),
 	);
 };

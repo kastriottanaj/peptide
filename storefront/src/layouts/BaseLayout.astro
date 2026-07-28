@@ -1,5 +1,6 @@
 ---
 import Seo from "../components/Seo.astro";
+import WebMCPTools from "../components/WebMCPTools.astro";
 
 export interface Props {
 	title: string;
@@ -61,17 +62,29 @@ const {
 					<span>Peptide<span class="brand__accent">Einkaufen</span></span>
 				</a>
 
-				<form class="search" action="/produkte" method="get" role="search">
+				{/* The WebMCP tool attributes annotate this real form rather than a
+				    hidden copy: a duplicate would give agents a second, invisible
+				    search that can silently diverge from the one customers use. */}
+				<form
+					class="search"
+					action="/produkte"
+					method="get"
+					role="search"
+					toolname="search_site_form"
+					tooldescription="Submit the site search form to load the product listing filtered by a keyword."
+				>
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 						<circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"></circle>
 						<path d="m20 20-3-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
 					</svg>
+					<label class="visually-hidden" for="site-search">Peptide suchen</label>
 					<input
+						id="site-search"
 						type="search"
 						name="q"
 						placeholder="Peptide suchen…"
-						aria-label="Peptide suchen"
 						autocomplete="off"
+						toolparamdescription="The keyword or phrase to search for. Plain text, for example a product name or a research code such as BPC-157."
 					/>
 				</form>
 
@@ -165,6 +178,8 @@ const {
 				/* No cart yet, or Medusa unreachable — leave the badge hidden. */
 			});
 		</script>
+
+		<WebMCPTools />
 
 		<style is:global>
 			:root {
@@ -261,6 +276,17 @@ const {
 
 			.main-pad {
 				padding-block: 2.5rem 3.5rem;
+			}
+
+			/* Label text that screen readers and WebMCP agents need but the
+			   layout has no room for. */
+			.visually-hidden {
+				position: absolute;
+				width: 1px;
+				height: 1px;
+				overflow: hidden;
+				clip: rect(0 0 0 0);
+				white-space: nowrap;
 			}
 
 			/* Buttons */

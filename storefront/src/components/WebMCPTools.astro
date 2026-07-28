@@ -1,0 +1,175 @@
+---
+/**
+ * Registers the storefront's WebMCP tools with an agentic browser.
+ * See https://developer.chrome.com/docs/ai/webmcp
+ *
+ * Rendered once from BaseLayout, so the tools exist on every page.
+ *
+ * This is a bundled Astro <script>, not `is:inline`, on purpose: `add_to_cart`
+ * has to go through `lib/cart.ts`, which owns the cart id storage key and the
+ * `cart:updated` event the header badge listens for. An inline script cannot
+ * import it, and reimplementing it here would leave two cart implementations
+ * free to drift. BaseLayout already bundles `lib/cart.ts` on every page for the
+ * badge, so reusing it costs no extra bytes.
+ *
+ * Tool names and descriptions come from `lib/webmcp-tools.ts`, which llms.txt
+ * reads too, so what we advertise is always what we register.
+ */
+---
+
+<script>
+	import { addLine, cartItemCount } from "../lib/cart";
+	import { searchTerms } from "../lib/search";
+	import { WEBMCP_TOOLS } from "../lib/webmcp-tools";
+	import type { SearchDoc } from "../pages/api/search.json";
+
+	// Nothing to do in a browser without WebMCP, which is nearly all of them today.
+	if (navigator.modelContext) {
+		const register = navigator.modelContext.registerTool.bind(
+			navigator.modelContext,
+		);
+
+		type Index = { generated: string; results: SearchDoc[] };
+		let indexPromise: Promise<Index> | null = null;
+
+		/**
+		 * The index is a static file, so fetch it at most once per page and reuse
+		 * it across tool calls.
+		 */
+		const loadIndex = (): Promise<Index> => {
+			indexPromise ??= fetch("/api/search.json").then((response) => {
+				if (!response.ok) throw new Error(`Suchindex nicht erreichbar (${response.status})`);
+				return response.json() as Promise<Index>;
+			});
+			return indexPromise;
+		};
+
+		/** Every query term must appear in the document's folded haystack. */
+		const matches = (doc: SearchDoc, terms: string[]) =>
+			terms.every((term) => doc.search.includes(term));
+
+		const describe = (doc: SearchDoc) => {
+			const parts = [`- ${doc.title} (${doc.type}): ${doc.url}`];
+			if (doc.purity) parts.push(`  Reinheit: ${doc.purity}`);
+			if (doc.variants?.length) {
+				parts.push(
+					`  Packgrößen: ${doc.variants
+						.map((v) => (v.price ? `${v.title} (${v.price})` : v.title))
+						.join(", ")}`,
+				);
+			}
+			if (doc.excerpt) parts.push(`  ${doc.excerpt}`);
+			return parts.join("\n");
+		};
+
+		const staleness = (generated: string) =>
+			`Preise und Verfügbarkeit mit Stand ${generated}. Verbindlich ist die Produktseite.`;
+
+		register({
+			...WEBMCP_TOOLS.search_site,
+			execute: async (input: Record<string, unknown>) => {
+				const terms = searchTerms(String(input.query ?? ""));
+				if (!terms.length) return "Keine Suchanfrage übergeben.";
+
+				const limit = Math.min(Math.max(Number(input.limit) || 5, 1), 10);
+				const type = String(input.type ?? "alle");
+
+				try {
+					const index = await loadIndex();
+					const hits = index.results
+						.filter((doc) => type === "alle" || doc.type === type)
+						.filter((doc) => matches(doc, terms));
+
+					if (!hits.length) return `Keine Treffer für "${input.query}".`;
+
+					const top = hits.slice(0, limit);
+					const shown = top.map(describe).join("\n");
+					const more =
+						hits.length > limit
+							? `\n\nWeitere ${hits.length - limit} Treffer nicht angezeigt.`
+							: "";
+					// Only claim anything about prices when a price was actually shown.
+					const note = top.some((doc) => doc.type === "produkt")
+						? `\n\n${staleness(index.generated)}`
+						: "";
+
+					return `${shown}${more}${note}`;
+				} catch (error) {
+					return `Suche fehlgeschlagen: ${(error as Error).message}`;
+				}
+			},
+		});
+
+		register({
+			...WEBMCP_TOOLS.get_product_details,
+			execute: async (input: Record<string, unknown>) => {
+				const wanted = String(input.product ?? "").trim();
+				if (!wanted) return "Kein Produkt angegeben.";
+
+				const folded = searchTerms(wanted);
+
+				try {
+					const index = await loadIndex();
+					const products = index.results.filter((doc) => doc.type === "produkt");
+					const product =
+						products.find((doc) => doc.handle === wanted.toLowerCase()) ??
+						products.find((doc) => matches(doc, folded));
+
+					if (!product) {
+						const available = products.map((doc) => doc.title).join(", ");
+						return `Kein Produkt "${wanted}" gefunden. Verfügbar: ${available}.`;
+					}
+
+					const lines = [
+						product.title,
+						`URL: ${product.url}`,
+						product.purity ? `Reinheit: ${product.purity}` : null,
+						product.excerpt || null,
+						"",
+						"Packgrößen:",
+						...(product.variants ?? []).map(
+							(variant) =>
+								`- ${variant.title}${variant.price ? `: ${variant.price}` : ""} (variant_id: ${variant.id})`,
+						),
+						"",
+						staleness(index.generated),
+						"Alle Produkte sind ausschließlich für Forschungszwecke bestimmt.",
+					];
+
+					return lines.filter((line) => line !== null).join("\n");
+				} catch (error) {
+					return `Produktabruf fehlgeschlagen: ${(error as Error).message}`;
+				}
+			},
+		});
+
+		register({
+			...WEBMCP_TOOLS.add_to_cart,
+			execute: async (input: Record<string, unknown>) => {
+				const variantId = String(input.variant_id ?? "").trim();
+				if (!variantId) return "Keine variant_id angegeben.";
+
+				const quantity = Math.min(Math.max(Number(input.quantity) || 1, 1), 20);
+
+				try {
+					const cart = await addLine(variantId, quantity);
+					const lines = (cart.items ?? [])
+						.map((item) => `- ${item.title} x${item.quantity}`)
+						.join("\n");
+
+					return [
+						`${quantity} x in den Warenkorb gelegt.`,
+						"",
+						"Warenkorb:",
+						lines,
+						`Positionen gesamt: ${cartItemCount(cart)}`,
+						"",
+						"Zur Kasse: /kasse",
+					].join("\n");
+				} catch (error) {
+					return `Konnte nicht in den Warenkorb legen: ${(error as Error).message}. Prüfen Sie die variant_id mit get_product_details.`;
+				}
+			},
+		});
+	}
+</script>
