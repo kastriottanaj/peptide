@@ -169,9 +169,13 @@ These can be done at any time:
       Datenschutz section. See [analytics.md](analytics.md). What is left is
       configuration, not development:
 
-      - [ ] GA4 property created, `PUBLIC_GA_MEASUREMENT_ID` set in
-            `/srv/peptides/.env`, storefront rebuilt. Until it is set, nothing
-            loads and no dialog appears — which is the correct state while gated.
+      - [x] ~~GA4 property created~~ — 2026-07-29, measurement ID in
+            `CREDENTIALS.local.md`. Verified end to end from a local build: a
+            real `page_view` reached the property after consent.
+      - [ ] `PUBLIC_GA_MEASUREMENT_ID` set in `/srv/peptides/.env` and the
+            storefront rebuilt. Until it is, production loads nothing and shows
+            no dialog — the correct state, but also the reason no production
+            data exists yet.
       - [ ] Google's data-processing terms accepted (the Art. 28 DSGVO
             agreement that Datenschutz §6 refers to).
       - [ ] Data retention chosen (2 or 14 months) and written into
@@ -179,10 +183,14 @@ These can be done at any time:
       - [ ] Third-country transfer basis in Datenschutz §6 confirmed by the
             legal review in §4 above.
 
-- [ ] Search Console — verify the domain property by DNS TXT in Hostinger
-      hPanel. This works **now**, while gated, because DNS is not served by the
-      gated box. The sitemap cannot be submitted until the gate is off; both
-      steps are in [analytics.md](analytics.md).
+- [x] ~~Search Console — verify the domain property by DNS TXT~~ — done
+      2026-07-29. The record resolves publicly on the apex; token in
+      `CREDENTIALS.local.md`, do not delete it. Verification worked while gated
+      precisely because DNS is not served by the gated box.
+
+      - [ ] Submit `sitemap.xml` — **blocked until the gate is off**, since
+            Google gets a 401 for every URL. Step 6 of "Opening the shop" in
+            [deploy.md](deploy.md).
 - [x] ~~Deployment~~ — done 2026-07-28. Hetzner VPS, no Docker: Postgres, Redis,
       Node and Caddy from apt, Medusa as a systemd service. DNS from Hostinger,
       TLS via Let's Encrypt. See [deploy.md](deploy.md).
