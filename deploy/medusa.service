@@ -13,6 +13,12 @@ After=network-online.target postgresql.service redis-server.service
 Wants=network-online.target
 Requires=postgresql.service redis-server.service
 
+# Stop restarting after 5 failures in 5 minutes. Without this a config or
+# permission error restarts forever at RestartSec intervals, which reads as
+# "starting" rather than "broken" and buries the real error in repetition.
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
 [Service]
 Type=simple
 User=medusa
@@ -21,6 +27,15 @@ WorkingDirectory=/srv/peptides/current
 
 EnvironmentFile=/srv/peptides/.env
 Environment=NODE_ENV=production
+
+# The Medusa CLI pulls in `configstore`, which writes under $HOME on import —
+# before any command runs. The `medusa` user's home is /srv/peptides, owned by
+# root, so it cannot create .config there and the process dies at startup with
+# EACCES. StateDirectory= makes systemd create /var/lib/medusa owned by this
+# unit's user, and keeps it writable under the ProtectSystem policy below.
+StateDirectory=medusa
+Environment=HOME=/var/lib/medusa
+Environment=XDG_CONFIG_HOME=/var/lib/medusa/.config
 
 # Bind to loopback only. Caddy is the only thing that should reach Medusa, and
 # binding 0.0.0.0 would expose the admin API directly on the public interface —
