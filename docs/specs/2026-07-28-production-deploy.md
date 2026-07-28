@@ -181,7 +181,9 @@ grep -rnE '#[0-9a-fA-F]{3,8}\b' --include='*.astro' src \
 
 ```bash
 curl -sI https://peptideeinkaufen.de            # 401 — the gate is on
-curl -sI -u '<user>:<pass>' https://peptideeinkaufen.de
+read -r -p 'Gate user: ' gate_user
+curl -sI --user "$gate_user" https://peptideeinkaufen.de
+unset gate_user
 #   200, Permissions-Policy: tools=(self), X-Robots-Tag: noindex
 curl -s  https://api.peptideeinkaufen.de/health # OK
 ```

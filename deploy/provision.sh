@@ -220,8 +220,8 @@ cat <<-EOF
 
 	  2. Set ACME_EMAIL, GATE_USER and GATE_PASSWORD_HASH in:
 	       ${CADDY_ENV_FILE}
-	     Generate the hash with:
-	       caddy hash-password --plaintext 'your-password'
+	     Generate the hash through the non-echoing prompt:
+	       caddy hash-password
 
 	  3. bash ${REPO_DIR}/deploy/deploy.sh <commit-sha>
 

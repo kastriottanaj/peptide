@@ -98,10 +98,11 @@ overwrites an existing env file.
 nano /srv/peptides/caddy.env
 ```
 
-Set `ACME_EMAIL`, `GATE_USER`, and generate the hash on the box:
+Set `ACME_EMAIL`, `GATE_USER`, and generate the hash on the box. The command
+prompts without echoing the password:
 
 ```bash
-caddy hash-password --plaintext 'choose-a-password'
+caddy hash-password
 ```
 
 Paste it verbatim — it starts with `$2a$` and the `$` must not be quoted or
@@ -125,13 +126,16 @@ Use a SHA on `main` that you verified locally — the script refuses anything th
 is not an ancestor of `origin/main`. It will report that it is skipping the
 storefront build; expected here.
 
-Then create an admin user and seed the catalog:
+Then create a one-time admin invitation and seed the catalog:
 
 ```bash
 cd /srv/peptides/current
-sudo -u medusa NODE_ENV=production npx medusa user -e you@example.com -p '<strong-password>'
+sudo -u medusa NODE_ENV=production npx medusa user --invite -e you@example.com
 sudo -u medusa NODE_ENV=production npx medusa exec ./src/scripts/seed-peptides.ts
 ```
+
+Treat the invitation URL as a secret until it has been used; choose the password
+in the browser.
 
 ### Phase 2 — publishable key, then the storefront
 
@@ -149,9 +153,16 @@ bash /srv/peptides/repo/deploy/deploy.sh <same-sha>
 
 ```bash
 curl -sI https://peptideeinkaufen.de            # 401 — the gate is on
-curl -sI -u '<user>:<pass>' https://peptideeinkaufen.de | head -20
+read -r -p 'Gate user: ' gate_user
+curl -sI --user "$gate_user" https://peptideeinkaufen.de | head -20
+unset gate_user
 curl -s  https://api.peptideeinkaufen.de/health # OK
 ```
+
+With only the username supplied, curl securely prompts for the password instead
+of exposing it through the process arguments or shell history. Browser checks
+should use password-manager autofill. Never store a `curl --user user:password`
+command in a local tool allowlist.
 
 Behind the gate, in a browser:
 

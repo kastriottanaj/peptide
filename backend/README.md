@@ -97,12 +97,14 @@ cd apps/backend
 pnpm medusa db:migrate
 ```
 
-5. Add admin user:
+5. Create a one-time admin invitation, then choose the password in the browser:
 
 ```bash
 cd apps/backend
-pnpm medusa user -e admin@test.com -p supersecret
+pnpm medusa user --invite -e admin@test.com
 ```
+
+Treat the invitation URL as a secret until it has been used.
 
 6. Start Medusa backend:
 

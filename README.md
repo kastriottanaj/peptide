@@ -71,6 +71,29 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 `medusa-config.ts` refuses to boot with `NODE_ENV=production` unless both are set to
 something other than the old `supersecret` placeholder.
 
+#### Protect local secrets
+
+Keep ignored credential and environment files readable only by your account. This
+command repairs every file that is present without creating missing placeholders:
+
+```bash
+for secret_file in \
+  .claude/settings.local.json \
+  CREDENTIALS.local.md \
+  storefront/.env \
+  backend/apps/backend/.env
+do
+  test ! -e "$secret_file" || chmod 600 "$secret_file"
+done
+
+bash scripts/check-local-secret-modes.sh
+```
+
+The checker reports only filenames, modes and pass/fail; it never reads or prints
+file contents. Store gate credentials in a password manager. Local tool permissions
+may allow a command shape, but must never contain a username/password pair,
+`Authorization` header or other secret.
+
 ### 2. Install dependencies
 
 ```bash
@@ -100,15 +123,15 @@ backend running, open:
 It covers orders, products, categories, inventory, customers, promotions, price
 lists and settings.
 
-Create a login:
+Create a one-time admin invitation, then choose the password in the browser:
 
 ```bash
 cd backend/apps/backend
-npx medusa user -e you@example.com -p '<strong-password>'
+npx medusa user --invite -e you@example.com
 ```
 
-Credentials are never committed. If you lose the password, re-run the command
-with the same email to set a new one.
+Treat the invitation URL as a secret until it has been used. Credentials are never
+committed. Use the admin password-reset flow if you lose the password.
 
 ## Agent-facing surfaces
 

@@ -36,9 +36,9 @@
 
 - [x] Mark the specification approved on 2026-07-29.
 - [x] Write this file-by-file implementation plan.
-- [ ] Run Markdown/whitespace checks and verify only the two documentation files
+- [x] Run Markdown/whitespace checks and verify only the two documentation files
       are changed in the isolated worktree.
-- [ ] Commit as the approved design unit and push the remediation branch.
+- [x] Commit as the approved design unit and push the remediation branch.
 
 ## Task 1 — P0-A local credential containment
 
@@ -47,7 +47,8 @@
 - Local/ignored: `.claude/settings.local.json`, `CREDENTIALS.local.md`,
   `storefront/.env`, `backend/apps/backend/.env`
 - Committed: `scripts/check-local-secret-modes.sh` (new), `README.md`,
-  `docs/deploy.md`
+  `backend/README.md`, `docs/deploy.md`, `deploy/provision.sh`,
+  `docs/specs/2026-07-28-production-deploy.md`
 
 **Interfaces**
 
@@ -58,20 +59,21 @@
 
 **Steps**
 
-- [ ] Mechanically remove only the credential-bearing live curl permission from
+- [x] Mechanically remove only the credential-bearing live curl permission from
       `.claude/settings.local.json`, without putting the secret in a patch,
       terminal output, chat or logs.
-- [ ] Set all four local files to mode `0600`; tolerate an absent ignored file
+- [x] Set all four local files to mode `0600`; tolerate an absent ignored file
       without creating a placeholder.
-- [ ] Add a checker that reports filename/mode/pass-fail only and never reads or
+- [x] Add a checker that reports filename/mode/pass-fail only and never reads or
       prints contents.
-- [ ] Add a non-secret file-mode check and stdin/password-manager examples to
+- [x] Add a non-secret file-mode check and interactive/password-manager examples to
       the runbook; remove password-in-argv examples.
-- [ ] Verify the settings JSON parses, the sensitive entry is absent by boolean
+- [x] Verify the settings JSON parses, the sensitive entry is absent by boolean
       check, modes are `0600`, and no value is printed.
-- [ ] Verify every present local secret file is ignored and absent from tracked
+- [x] Verify every present local secret file is ignored and absent from tracked
       history.
-- [ ] Do not rotate the production gate until separately approved.
+- [x] Do not rotate the production gate until separately approved.
+- [x] Commit and push the P0-A repository changes.
 
 ## Task 2 — P0-B runtime/build trust boundary
 
@@ -333,12 +335,17 @@ containment SHA is the one for which Tasks 2–4 all pass together.
 - `storefront/src/lib/bank.ts`
 - `storefront/src/lib/legal.ts` (new)
 - `storefront/src/lib/analytics.ts`
+- `storefront/src/components/ConsentBanner.astro`
 - `storefront/src/layouts/BaseLayout.astro`
+- `storefront/src/layouts/LegalLayout.astro`
 - `storefront/src/pages/kasse.astro`
 - `storefront/src/pages/bestellung.astro`
 - `storefront/src/pages/bestellung/suchen.astro`
+- `storefront/src/pages/agb.astro`
 - `storefront/src/pages/datenschutz.astro`
+- `storefront/src/pages/widerruf.astro`
 - `storefront/src/pages/warenkorb.astro`
+- `storefront/package.json` and `storefront/package-lock.json`
 - storefront unit/browser tests (new)
 - `storefront/vitest.config.ts` (new)
 - `storefront/playwright.config.ts` (new)
@@ -356,8 +363,9 @@ containment SHA is the one for which Tasks 2–4 all pass together.
 
 - [ ] Replace direct payment/cart completion and order retrieve calls with the
       custom contracts.
-- [ ] Add the dev-only unit/browser harness and typed DTO boundary before
-      switching the page flow; no production test dependency.
+- [ ] Add the dev-only unit/browser dependencies, scripts, lockfile, runnable
+      harness and typed DTO boundary before switching the page flow; no
+      production test dependency.
 - [ ] Bind the initial shipping option before submit; version async country,
       address and option operations and ignore stale responses.
 - [ ] Render €10/€20/`Kostenlos` from the authoritative cart and block while
@@ -369,8 +377,10 @@ containment SHA is the one for which Tasks 2–4 all pass together.
       `sessionStorage` key; redirect to `/bestellung/` with no identifier.
 - [ ] Render in place if session storage is unavailable.
 - [ ] Remove every bank-reference and lookup fallback.
-- [ ] Disable GA entirely on cart/checkout/confirmation/recovery; sanitize
-      location/referrer elsewhere.
+- [ ] Disable GA entirely on cart/checkout/confirmation/recovery: the base
+      layout must omit both the consent renderer and footer control and must
+      never invoke analytics on those routes; sanitize location/referrer
+      elsewhere.
 - [ ] Migrate cart storage to a 30-day versioned record; move PII-bearing cart
       IDs to session-only storage and implement explicit reset.
 - [ ] Correct privacy/retention text and policy version embedding.
@@ -378,7 +388,9 @@ containment SHA is the one for which Tasks 2–4 all pass together.
       typecheck/build.
 - [ ] Run the cross-app checkout suite, then set the documented production
       enablement prerequisite.
-- [ ] Commit and push the P0-C storefront unit.
+- [ ] Commit and push the P0-C storefront unit atomically. Any intermediate
+      commit is non-enabling; checkout remains disabled until the final
+      cross-app P0-C gate passes.
 
 ## Task 8 — P1 Redis sessions, MFA and convergent commerce data
 
@@ -428,11 +440,13 @@ containment SHA is the one for which Tasks 2–4 all pass together.
 
 **Files**
 
-- backend/storefront `package.json` and lockfiles
+- backend `package.json` and lockfiles; storefront manifests only for later
+  harness/dependency extensions
 - `backend/apps/backend/jest.config.js`
 - `backend/apps/backend/integration-tests/setup.js` (new)
 - backend unit/integration tests (new)
-- storefront Vitest/Playwright configuration and tests from P0-C
+- storefront Vitest/Playwright configuration and tests already runnable from
+  P0-C
 - dependency-audit allowlist/review script (new, only if unavoidable)
 - `.github/workflows/quality.yml` (new)
 - app READMEs
@@ -465,10 +479,17 @@ containment SHA is the one for which Tasks 2–4 all pass together.
 - `storefront/src/lib/pricing.ts`
 - `storefront/src/lib/site.ts`
 - `storefront/src/lib/catalog.ts`
+- `storefront/src/lib/content-index.ts`
+- `storefront/src/components/Seo.astro`
+- `storefront/src/layouts/BaseLayout.astro`
 - `storefront/src/components/{AddToCart,ProductCard,ContentSearch,WebMCPTools}.astro`
 - `storefront/src/lib/webmcp-tools.ts`
 - `storefront/src/webmcp.d.ts`
-- filterable listing/product/article pages
+- `storefront/src/pages/produkte/index.astro`
+- `storefront/src/pages/wissen/index.astro`
+- `storefront/src/pages/wissen/lexikon/index.astro`
+- affected product, category, article and legal page route files
+- sitemap route files and `storefront/src/pages/llms*.txt.ts`
 - `storefront/astro.config.mjs`
 - `deploy/Caddyfile`
 - `AGENTS.md`, SEO/analytics docs
@@ -486,6 +507,10 @@ containment SHA is the one for which Tasks 2–4 all pass together.
 
 - [ ] Clear cart IDs only on terminal 404/410; retain/rethrow transient failures.
 - [ ] Serialize/version cart/line mutations and reject fractional quantities.
+- [ ] Consume Task 8's single availability predicate everywhere: select the
+      first available variant, disable and label unavailable options, suppress
+      purchase controls when all variants are sold out, emit `OutOfStock`,
+      expose no unavailable variant ID and show no unavailable “ab” price.
 - [ ] Move product/content listing filters to fragments; permanently discard
       legacy query filters on all three listing routes.
 - [ ] Normalize directory trailing slashes across links, redirects, canonical,
