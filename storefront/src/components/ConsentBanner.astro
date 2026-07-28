@@ -1,0 +1,173 @@
+---
+/**
+ * Statistics consent dialog (Google Analytics 4).
+ *
+ * Renders nothing when `PUBLIC_GA_MEASUREMENT_ID` is unset — with no tracking
+ * on the page there is nothing to consent to, and asking anyway would be both
+ * pointless and misleading.
+ *
+ * A native `<dialog>` opened with `showModal()` because it gives a focus trap
+ * and an inert background for free, and browsers do not light-dismiss it on a
+ * backdrop click unless `closedby` opts in. That leaves ESC as the only way out
+ * without deciding, which the script below suppresses.
+ */
+import { ANALYTICS_ENABLED } from "../lib/analytics";
+---
+
+{
+	ANALYTICS_ENABLED && (
+		<dialog class="consent" data-consent-dialog aria-labelledby="consent-title">
+			<h2 id="consent-title">Datenschutz-Einstellungen</h2>
+
+			<p>
+				Wir möchten mit Google Analytics auswerten, wie diese Website genutzt
+				wird. Für den Betrieb des Shops ist das nicht erforderlich, deshalb
+				geschieht es nur mit Ihrer Einwilligung. Dabei werden Cookies gesetzt
+				und Daten an Google übertragen, auch in die USA.
+			</p>
+			<p>
+				Ohne Ihre Einwilligung wird nichts geladen und nichts übertragen. Sie
+				können Ihre Entscheidung jederzeit über „Cookie-Einstellungen“ im
+				Fußbereich ändern — Einzelheiten in der{" "}
+				<a href="/datenschutz">Datenschutzerklärung</a>.
+			</p>
+
+			<p class="consent__current" data-consent-current hidden />
+
+			<div class="consent__actions">
+				<button type="button" class="consent__btn" data-consent-reject>
+					Ablehnen
+				</button>
+				<button type="button" class="consent__btn" data-consent-accept>
+					Statistiken erlauben
+				</button>
+			</div>
+		</dialog>
+	)
+}
+
+<script>
+	// No dialog in the document means no measurement ID was configured at build
+	// time, so there is nothing to gate and nothing to load.
+	import {
+		hasDecision,
+		readConsent,
+		saveConsent,
+		OPEN_CONSENT_EVENT,
+	} from "../lib/consent";
+	import { initAnalytics } from "../lib/analytics";
+
+	const dialog = document.querySelector<HTMLDialogElement>("[data-consent-dialog]");
+
+	if (dialog) {
+		// Before the dialog is shown: a returning visitor who already consented
+		// must be measured without having to touch anything, and one who refused
+		// must have the kill switch set even if GA were somehow loaded.
+		initAnalytics();
+
+		const current = dialog.querySelector<HTMLElement>("[data-consent-current]");
+
+		const paintCurrent = () => {
+			if (!current) return;
+			const state = readConsent();
+			current.hidden = state === null;
+			current.textContent =
+				state === null
+					? ""
+					: state.statistics
+						? "Aktuelle Auswahl: Statistiken erlaubt."
+						: "Aktuelle Auswahl: Statistiken abgelehnt.";
+		};
+
+		const open = () => {
+			paintCurrent();
+			if (!dialog.open) dialog.showModal();
+		};
+
+		const decide = (statistics: boolean) => {
+			saveConsent({ statistics });
+			dialog.close();
+		};
+
+		// A consent dialog must not be dismissible without a decision, and ESC is
+		// the one native escape hatch `showModal()` leaves open.
+		dialog.addEventListener("cancel", (event) => event.preventDefault());
+
+		dialog
+			.querySelector("[data-consent-reject]")
+			?.addEventListener("click", () => decide(false));
+		dialog
+			.querySelector("[data-consent-accept]")
+			?.addEventListener("click", () => decide(true));
+
+		window.addEventListener(OPEN_CONSENT_EVENT, open);
+
+		if (!hasDecision()) open();
+	}
+</script>
+
+<style>
+	.consent {
+		width: min(34rem, calc(100vw - 2rem));
+		padding: 1.6rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius);
+		background: var(--c-white);
+		color: var(--c-ink);
+		box-shadow: 0 18px 40px var(--c-scrim);
+	}
+	.consent::backdrop {
+		background: var(--c-scrim);
+	}
+	.consent h2 {
+		margin: 0 0 0.8rem;
+		font-size: 1.15rem;
+	}
+	.consent p {
+		margin: 0 0 0.8rem;
+		font-size: 0.9rem;
+		line-height: 1.6;
+		color: var(--c-muted);
+	}
+	.consent a {
+		color: var(--c-green-dark);
+	}
+	.consent__current {
+		font-weight: 600;
+		color: var(--c-ink);
+	}
+	.consent__actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.6rem;
+		margin-top: 1.2rem;
+	}
+	/*
+	 * Reject and accept carry identical weight — same size, same padding, same
+	 * solid treatment — because a reject that reads as secondary is not a valid
+	 * choice. They differ only in hue, and reject comes first.
+	 */
+	.consent__btn {
+		flex: 1 1 12rem;
+		padding: 0.75rem 1rem;
+		border: none;
+		border-radius: var(--radius-sm);
+		font-family: inherit;
+		font-size: 0.92rem;
+		font-weight: 600;
+		color: var(--c-white);
+		cursor: pointer;
+	}
+	.consent__btn[data-consent-reject] {
+		background: var(--c-navy);
+	}
+	.consent__btn[data-consent-reject]:hover {
+		background: var(--c-navy-deep);
+	}
+	.consent__btn[data-consent-accept] {
+		background: var(--c-green);
+	}
+	.consent__btn[data-consent-accept]:hover {
+		background: var(--c-green-dark);
+	}
+</style>

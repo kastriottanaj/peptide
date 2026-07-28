@@ -1,13 +1,15 @@
 ---
 import LegalLayout from "../layouts/LegalLayout.astro";
+import { ANALYTICS_ENABLED } from "../lib/analytics";
 
 // Informationspflichten nach Art. 13/14 DSGVO.
 //
 // WICHTIG: Dieser Text beschreibt bewusst nur die Verarbeitungen, die im Shop
-// tatsächlich stattfinden. Es sind derzeit KEINE Analyse-, Tracking- oder
-// Marketing-Dienste eingebunden. Sobald PostHog (siehe TECH_STACK.md) oder ein
-// anderer Dienst hinzukommt, müssen hier ein eigener Abschnitt und ein
-// Consent-Banner ergänzt werden — vorher nicht.
+// tatsächlich stattfinden. Sections 6 and 8 therefore branch on
+// ANALYTICS_ENABLED: a build without PUBLIC_GA_MEASUREMENT_ID loads no Google
+// script at all, and a privacy policy claiming otherwise would be wrong in the
+// direction that matters. Any further service added here needs its own section
+// and its own consent category — see src/lib/consent.ts.
 ---
 
 <LegalLayout
@@ -96,8 +98,35 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 			Dienstleister, die uns weisungsgebunden im Rahmen einer
 			Auftragsverarbeitung nach Art. 28 DSGVO unterstützen (Hosting).
 		</li>
+		{
+			ANALYTICS_ENABLED && (
+				<li>
+					die Google Ireland Limited als Anbieterin von Google Analytics —
+					aber nur, wenn Sie in die Statistik-Auswertung eingewilligt haben
+					(siehe Abschnitt 8).
+				</li>
+			)
+		}
 	</ul>
-	<p>Eine Übermittlung in Drittländer findet nicht statt.</p>
+	{
+		ANALYTICS_ENABLED ? (
+			<p>
+				Im Rahmen von Google Analytics können Daten auch an die Google LLC in
+				den USA übermittelt werden. Diese Übermittlung findet ausschließlich
+				auf Grundlage Ihrer Einwilligung statt und unterbleibt vollständig,
+				solange Sie nicht eingewilligt haben.
+				<span class="todo">
+					[Aktuelle Übermittlungsgrundlage zum Zeitpunkt des Launch prüfen und
+					hier benennen — Angemessenheitsbeschluss EU-US Data Privacy Framework
+					(Art. 45 DSGVO) und/oder Standardvertragsklauseln (Art. 46 Abs. 2
+					lit. c DSGVO). Der Status des DPF ist gerichtlich angegriffen; die
+					Angabe muss bei der rechtlichen Prüfung bestätigt werden.]
+				</span>
+			</p>
+		) : (
+			<p>Eine Übermittlung in Drittländer findet nicht statt.</p>
+		)
+	}
 
 	<h2>7. Speicherdauer</h2>
 	<p>
@@ -109,12 +138,88 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 	</p>
 
 	<h2>8. Analyse und Tracking</h2>
-	<p>
-		Wir setzen derzeit <strong>keine</strong> Analyse-, Tracking- oder
-		Marketing-Dienste ein und binden keine externen Schriftarten, Karten oder
-		sonstigen Inhalte Dritter ein. Es werden ausschließlich die oben
-		beschriebenen, technisch erforderlichen Daten verarbeitet.
-	</p>
+	{
+		ANALYTICS_ENABLED ? (
+			<Fragment>
+				<p>
+					Wir verwenden Google Analytics 4, einen Webanalysedienst der Google
+					Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irland
+					(„Google“). Damit werten wir aus, wie unsere Website genutzt wird,
+					um sie zu verbessern.
+				</p>
+				<p>
+					<strong>
+						Die Auswertung findet ausschließlich nach Ihrer ausdrücklichen
+						Einwilligung statt.
+					</strong>{" "}
+					Rechtsgrundlage ist Art. 6 Abs. 1 lit. a DSGVO in Verbindung mit
+					§ 25 Abs. 1 TTDSG. Solange Sie nicht eingewilligt haben, wird kein
+					Google-Skript geladen, kein Cookie gesetzt und keine Verbindung zu
+					Google hergestellt.
+				</p>
+				<p>Mit Ihrer Einwilligung werden insbesondere verarbeitet:</p>
+				<ul>
+					<li>
+						die aufgerufenen Seiten, der Zeitpunkt und die Dauer des Aufrufs,
+					</li>
+					<li>die zuvor besuchte Seite (Referrer),</li>
+					<li>
+						Angaben zu Gerät, Browser und Betriebssystem sowie ein ungefährer
+						Standort auf Land- und Stadtebene,
+					</li>
+					<li>
+						Ihre IP-Adresse, die Google zur Ermittlung dieses ungefähren
+						Standorts verwendet und dabei kürzt; eine Speicherung der
+						vollständigen IP-Adresse findet in Google Analytics 4 nach Angaben
+						von Google nicht statt,
+					</li>
+					<li>
+						eine pseudonyme Kennung in den Cookies <code>_ga</code> und{" "}
+						<code>_ga_&lt;ID&gt;</code>, über die wiederkehrende Aufrufe
+						demselben Gerät zugeordnet werden. Diese Cookies haben eine
+						Laufzeit von bis zu 24 Monaten.
+					</li>
+				</ul>
+				<p class="todo">
+					[Aufbewahrungsdauer der Ereignisdaten in der Google-Analytics-
+					Property festlegen (2 oder 14 Monate) und den gewählten Wert hier
+					eintragen. Auftragsverarbeitungsvertrag mit Google abschließen und
+					in Abschnitt 6 als Auftragsverarbeitung kenntlich machen.]
+				</p>
+				<p>
+					Sie können Ihre Einwilligung jederzeit mit Wirkung für die Zukunft
+					widerrufen — über „Cookie-Einstellungen“ im Fußbereich jeder Seite.
+					Beim Widerruf stoppen wir die weitere Erfassung und löschen die
+					gesetzten Google-Analytics-Cookies. Die Rechtmäßigkeit der bis zum
+					Widerruf erfolgten Verarbeitung bleibt unberührt.
+				</p>
+				<p>
+					Einzelheiten zur Datenverarbeitung durch Google finden Sie in deren
+					Datenschutzerklärung unter{" "}
+					<a
+						href="https://policies.google.com/privacy"
+						rel="noopener noreferrer"
+						target="_blank"
+					>
+						policies.google.com/privacy
+					</a>
+					.
+				</p>
+				<p>
+					Darüber hinaus setzen wir keine Marketing- oder Werbedienste ein und
+					binden keine externen Schriftarten, Karten oder sonstigen Inhalte
+					Dritter ein.
+				</p>
+			</Fragment>
+		) : (
+			<p>
+				Wir setzen derzeit <strong>keine</strong> Analyse-, Tracking- oder
+				Marketing-Dienste ein und binden keine externen Schriftarten, Karten
+				oder sonstigen Inhalte Dritter ein. Es werden ausschließlich die oben
+				beschriebenen, technisch erforderlichen Daten verarbeitet.
+			</p>
+		)
+	}
 
 	<h2>9. Ihre Rechte</h2>
 	<p>Sie haben uns gegenüber das Recht auf:</p>

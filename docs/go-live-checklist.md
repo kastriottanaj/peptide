@@ -164,8 +164,25 @@ These can be done at any time:
 - [x] ~~Shipping rules~~ — done 2026-07-26. €10 Germany, €20 rest of Europe,
       free from €100 merchandise after discount, verified across seven cart
       scenarios including the €99.80 boundary.
-- [ ] Consent banner and analytics — only once analytics actually exists, and
-      the Datenschutz page needs a matching section added at the same time.
+- [x] ~~Consent banner and analytics~~ — built 2026-07-29. Google Analytics 4
+      behind an explicit statistics consent dialog, with the matching
+      Datenschutz section. See [analytics.md](analytics.md). What is left is
+      configuration, not development:
+
+      - [ ] GA4 property created, `PUBLIC_GA_MEASUREMENT_ID` set in
+            `/srv/peptides/.env`, storefront rebuilt. Until it is set, nothing
+            loads and no dialog appears — which is the correct state while gated.
+      - [ ] Google's data-processing terms accepted (the Art. 28 DSGVO
+            agreement that Datenschutz §6 refers to).
+      - [ ] Data retention chosen (2 or 14 months) and written into
+            Datenschutz §8, replacing the `[Platzhalter]` note.
+      - [ ] Third-country transfer basis in Datenschutz §6 confirmed by the
+            legal review in §4 above.
+
+- [ ] Search Console — verify the domain property by DNS TXT in Hostinger
+      hPanel. This works **now**, while gated, because DNS is not served by the
+      gated box. The sitemap cannot be submitted until the gate is off; both
+      steps are in [analytics.md](analytics.md).
 - [x] ~~Deployment~~ — done 2026-07-28. Hetzner VPS, no Docker: Postgres, Redis,
       Node and Caddy from apt, Medusa as a systemd service. DNS from Hostinger,
       TLS via Let's Encrypt. See [deploy.md](deploy.md).

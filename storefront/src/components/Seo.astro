@@ -36,6 +36,18 @@ const {
 const fullTitle = rawTitle ? title : `${title} | ${SITE_NAME}`;
 const canonical = canonicalFrom(Astro.url);
 
+/**
+ * Google Search Console ownership token, for the meta-tag verification method.
+ *
+ * Unset by default, and deliberately not the route used today: the storefront
+ * sits behind HTTP basic auth (deploy/Caddyfile), so Googlebot receives 401 for
+ * every URL and can never read this tag. Verification currently runs over a DNS
+ * TXT record instead — see docs/analytics.md. This exists for a URL-prefix
+ * property added after the gate comes off.
+ */
+const googleSiteVerification: string =
+	import.meta.env.PUBLIC_GOOGLE_SITE_VERIFICATION ?? "";
+
 const graph = {
 	"@context": "https://schema.org",
 	"@graph": [organizationNode(), ...jsonLd],
@@ -71,6 +83,11 @@ function serializeJsonLd(value: unknown): string {
 <meta name="description" content={description} />
 <link rel="canonical" href={canonical} />
 {noindex && <meta name="robots" content="noindex, nofollow" />}
+{
+	googleSiteVerification && (
+		<meta name="google-site-verification" content={googleSiteVerification} />
+	)
+}
 
 <meta property="og:type" content={ogType} />
 <meta property="og:title" content={fullTitle} />

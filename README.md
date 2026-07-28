@@ -35,12 +35,21 @@ The `.env` files hold secrets and are **git-ignored**, so you must recreate them
 PUBLIC_MEDUSA_BACKEND_URL=http://localhost:9000
 PUBLIC_MEDUSA_PUBLISHABLE_KEY=pk_...   # from Medusa admin → Settings → Publishable API keys
 PUBLIC_SITE_URL=http://localhost:4321  # local dev only; production is peptideeinkaufen.de
+
+# Optional — measurement. Both are safe to leave unset; see docs/analytics.md.
+PUBLIC_GA_MEASUREMENT_ID=              # G-XXXXXXXXXX. Unset = no analytics, no consent dialog.
+PUBLIC_GOOGLE_SITE_VERIFICATION=       # Search Console meta-tag token; DNS TXT is used instead today.
 ```
 
 `PUBLIC_SITE_URL` drives every canonical URL, OpenGraph tag, JSON-LD `@id` and sitemap
 entry. If it is wrong, all of them are wrong. It defaults to
 `https://peptideeinkaufen.de`, so set it to `http://localhost:4321` locally to keep dev
 builds off the production origin.
+
+`PUBLIC_GA_MEASUREMENT_ID` switches Google Analytics on. Leaving it unset is a complete
+off switch: no Google script, no consent dialog, no "Cookie-Einstellungen" footer entry,
+and the Datenschutz page keeps its "no tracking in use" wording. Analytics never loads
+before explicit consent either way — see [docs/analytics.md](docs/analytics.md).
 
 **`backend/apps/backend/.env`** — copy the template and fill in the blanks:
 

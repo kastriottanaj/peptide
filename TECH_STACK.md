@@ -37,7 +37,8 @@ Customer → Cloudflare (CDN / WAF / DDoS / bot management)
 | Purpose | Tool |
 |---|---|
 | Product search / filtering | Meilisearch (self-hosted) |
-| Analytics, funnels, session replay, A/B testing (CRO) | PostHog |
+| Analytics | Google Analytics 4 (consent-gated — see [docs/analytics.md](docs/analytics.md)) |
+| Search performance / indexing | Google Search Console (domain property, DNS-verified) |
 | Payments | High-risk processor (Durango / PaymentCloud / NMI) or crypto (BitPay / Coinbase Commerce) |
 | Admin access | 2FA enforced, IP allowlist / VPN where feasible, separate subdomain |
 | Dependency security | Dependabot / Snyk on both Astro app and Medusa backend |

@@ -264,6 +264,11 @@ B2B/B2C decision, and the order confirmation email.
    curl -sI https://peptideeinkaufen.de | head -5   # 200, and no X-Robots-Tag
    ```
 
+6. Submit `sitemap.xml` in Search Console and request indexing for the homepage
+   and the catalog listing. Not before this point: while the gate is up Google
+   gets a 401 for every URL, so the submission simply fails. Steps in
+   [analytics.md](analytics.md).
+
 `deploy.sh` warns loudly if the storefront answers 200 without credentials, so an
 accidental un-gating is visible in the deploy output.
 

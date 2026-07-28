@@ -1,6 +1,8 @@
 ---
 import Seo from "../components/Seo.astro";
 import WebMCPTools from "../components/WebMCPTools.astro";
+import ConsentBanner from "../components/ConsentBanner.astro";
+import { ANALYTICS_ENABLED } from "../lib/analytics";
 
 export interface Props {
 	title: string;
@@ -149,6 +151,13 @@ const {
 					<a href="/datenschutz">Datenschutz</a>
 					<a href="/agb">AGB</a>
 					<a href="/widerruf">Widerruf</a>
+					{/* Consent must stay revocable, so the dialog needs a permanent
+					    way back. A button rather than a link: it opens a dialog on
+					    this page instead of navigating anywhere. Hidden entirely
+					    when no analytics is configured, so it can never be dead. */}
+					{ANALYTICS_ENABLED && (
+						<button type="button" data-consent-open>Cookie-Einstellungen</button>
+					)}
 				</div>
 			</div>
 			<div class="footer__legal">
@@ -179,7 +188,19 @@ const {
 			});
 		</script>
 
+		<script>
+			// The footer entry point back into the consent dialog. Dispatching the
+			// event rather than reaching into the component keeps the layout
+			// ignorant of how the dialog is built, and lets any page ask for it.
+			import { requestConsentDialog } from "../lib/consent";
+
+			document
+				.querySelector("[data-consent-open]")
+				?.addEventListener("click", () => requestConsentDialog());
+		</script>
+
 		<WebMCPTools />
+		<ConsentBanner />
 
 		<style is:global>
 			:root {
@@ -217,6 +238,9 @@ const {
 				/* Text on the gold announcement bar */
 				--c-gold-ink: #3a2f15;
 				--c-gold-ink-soft: #5a4d33;
+
+				/* Modal scrim, and the shadow cast onto it */
+				--c-scrim: rgb(21 39 63 / 0.55);
 
 				/* Status tones */
 				--c-warn-bg: #f7f1e5;
@@ -500,14 +524,26 @@ const {
 				color: var(--c-white);
 				margin-bottom: 0.9rem;
 			}
-			.footer__col a {
+			/* The consent entry point is a button, but it belongs to this list
+			   visually — so it is styled with the links, minus the UA defaults a
+			   button brings along. */
+			.footer__col a,
+			.footer__col button {
 				display: block;
 				text-decoration: none;
 				font-size: 0.875rem;
 				color: var(--c-on-navy-500);
 				padding: 0.25rem 0;
 			}
-			.footer__col a:hover {
+			.footer__col button {
+				background: none;
+				border: none;
+				font-family: inherit;
+				text-align: left;
+				cursor: pointer;
+			}
+			.footer__col a:hover,
+			.footer__col button:hover {
 				color: var(--c-white);
 			}
 			.footer__legal {

@@ -206,14 +206,23 @@ head tags in a page:
 
 German market, so DSGVO/TTDSG apply to the storefront:
 
-- Analytics (PostHog per `TECH_STACK.md`) loads **only** after explicit statistics
-  consent — default off, no pre-ticked toggles.
+Analytics is Google Analytics 4, gated on consent. **[docs/analytics.md](docs/analytics.md)
+is the runbook** — read it before touching consent or measurement.
+
+- Analytics loads **only** after explicit statistics consent — default off, no
+  pre-ticked toggles. A hard block, not Google Consent Mode: before consent there is
+  no script tag, no request to Google and no cookie.
 - Reject and accept must be equally prominent; a decision is required, so the dialog
   does not dismiss on backdrop click or ESC.
-- Keep consent logic in one module (e.g. `src/lib/consent.ts`) as the single source of
-  truth, with a versioned storage key and a migration path when the shape changes, and a
-  footer entry point to reopen the dialog.
-- Only offer categories that correspond to tracking actually present on the site.
+- Consent logic lives in `src/lib/consent.ts` and nowhere else, with a versioned storage
+  key (`pe_consent_v1`) and a migration path when the shape changes: bump
+  `CONSENT_VERSION`, add the old key to `LEGACY_KEYS`, and everyone is asked again.
+  `src/components/ConsentBanner.astro` owns the dialog, reopened from the footer.
+- Only offer categories that correspond to tracking actually present on the site. There
+  is one, `statistics`. A new category needs its own section in `datenschutz.astro`.
+- `PUBLIC_GA_MEASUREMENT_ID` is the off switch: unset means no Google script, no dialog,
+  and a Datenschutz page that says no tracking is in use. Keep those three consistent —
+  a privacy policy describing tracking that is not there is as wrong as the reverse.
 
 ## Deployment
 
