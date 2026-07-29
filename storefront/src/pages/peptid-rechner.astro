@@ -1,0 +1,273 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ReconstitutionCalculator from "../components/ReconstitutionCalculator.astro";
+import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../lib/site";
+
+const highlights = [
+	{
+		title: "Konzentration",
+		text: "Rechnet Peptidmenge und Lösungsvolumen in mcg/ml um.",
+	},
+	{
+		title: "Aliquotvolumen",
+		text: "Zeigt Milliliter und U-100-Units für die gewählte Zielmenge.",
+	},
+	{
+		title: "Nachvollziehbar",
+		text: "Jeder Rechenschritt ist sichtbar und lässt sich dokumentieren.",
+	},
+];
+
+/**
+ * The questions this page answers in prose. Kept in one array so the visible
+ * FAQ and the FAQPage node are the same text — a mismatch between them is a
+ * structured-data error that nothing else would catch.
+ */
+const faq = [
+	{
+		question: "Wie berechne ich die Konzentration nach der Rekonstitution?",
+		answer:
+			"Die Peptidmenge im Vial wird von Milligramm in Mikrogramm umgerechnet (mg × 1000) und durch das zugegebene Lösungsvolumen geteilt. 5 mg in 1 ml ergeben 5.000 mcg/ml. Das Volumen des Lyophilisats selbst ist so gering, dass es in dieser Rechnung üblicherweise vernachlässigt wird.",
+	},
+	{
+		question: "Was bedeuten die Units auf einer U-100-Skala?",
+		answer:
+			"Eine U-100-Skala ist in 100 Units pro Milliliter eingeteilt: 1 Unit entspricht 0,01 ml. Die Skala misst also ein Volumen und keine Wirkstoffmenge — wie viel Peptid auf eine Unit entfällt, hängt allein von der Konzentration ab.",
+	},
+	{
+		question: "Wie viele Aliquots ergibt ein Vial?",
+		answer:
+			"Die Gesamtmenge in Mikrogramm geteilt durch die Zielmenge pro Aliquot, abgerundet auf ganze Aliquots. Ein Vial mit 5 mg ergibt bei 250 mcg pro Aliquot 20 vollständige Aliquots. Ein verbleibender Rest wird separat ausgewiesen.",
+	},
+	{
+		question: "Welches Lösungsvolumen ist sinnvoll?",
+		answer:
+			"Rechnerisch gilt: mehr Lösungsvolumen senkt die Konzentration und erhöht die Units pro Aliquot. Unterhalb von etwa 2 Units wird eine U-100-Skala schwer abzulesen, oberhalb der Skalenlänge passt das Aliquot nicht mehr in einen Zug. Der Rechner weist auf beide Fälle hin.",
+	},
+];
+
+const jsonLd = [
+	{
+		"@type": "WebApplication",
+		"@id": `${absoluteUrl("/peptid-rechner")}#app`,
+		name: "Peptid-Rechner",
+		url: absoluteUrl("/peptid-rechner"),
+		applicationCategory: "UtilitiesApplication",
+		operatingSystem: "Web",
+		inLanguage: "de-DE",
+		description:
+			"Rechner für Rekonstitution und Aliquotierung von Forschungspeptiden: Konzentration in mcg/ml, Volumen pro Aliquot und die Ablesung auf einer U-100-Skala.",
+		offers: {
+			"@type": "Offer",
+			price: "0",
+			priceCurrency: "EUR",
+		},
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	{
+		"@type": "FAQPage",
+		"@id": `${absoluteUrl("/peptid-rechner")}#faq`,
+		mainEntity: faq.map((item) => ({
+			"@type": "Question",
+			name: item.question,
+			acceptedAnswer: { "@type": "Answer", text: item.answer },
+		})),
+	},
+	breadcrumbNode([
+		["Start", "/"],
+		["Peptid-Rechner", "/peptid-rechner"],
+	]),
+];
+---
+
+<BaseLayout
+	title="Peptid-Rechner für Rekonstitution und Aliquotierung"
+	description="Kostenloser Peptid-Rechner für Laboransätze: Konzentration in mcg/ml, Volumen pro Aliquot und U-100-Units aus Vialmenge und Lösungsvolumen berechnen."
+	jsonLd={jsonLd}
+>
+	<span class="eyebrow">Labor-Tool</span>
+	<h1>Peptid-Rechner für Laboransätze</h1>
+	<p class="lead">
+		Rekonstitution und Aliquotierung für Forschungspeptide berechnen:
+		Peptidmenge, Lösungsvolumen und Zielmenge eingeben — Konzentration,
+		Volumen und U-100-Units ablesen.
+	</p>
+
+	<ul class="highlights">
+		{
+			highlights.map((item) => (
+				<li>
+					<h2>{item.title}</h2>
+					<p>{item.text}</p>
+				</li>
+			))
+		}
+	</ul>
+
+	<ReconstitutionCalculator />
+
+	<section class="prose">
+		<h2>So funktioniert die Rechnung</h2>
+		<p>
+			Ein lyophilisiertes Peptid liegt als Feststoff im Vial vor. Nach Zugabe
+			eines Lösungsmittels ergibt sich eine Konzentration, und erst diese
+			Konzentration übersetzt eine gewünschte Menge in ein ablesbares Volumen.
+			Der Rechner führt diese Kette in vier Schritten aus:
+		</p>
+		<ol>
+			<li>
+				<strong>Gesamtmenge:</strong> Die Vialmenge in Milligramm wird mit 1000
+				multipliziert und damit in Mikrogramm ausgedrückt.
+			</li>
+			<li>
+				<strong>Konzentration:</strong> Gesamtmenge geteilt durch das
+				Lösungsvolumen ergibt mcg/ml.
+			</li>
+			<li>
+				<strong>Volumen:</strong> Zielmenge geteilt durch die Konzentration
+				ergibt das Volumen pro Aliquot in Millilitern.
+			</li>
+			<li>
+				<strong>Units:</strong> Milliliter mal 100 ergibt die Ablesung auf einer
+				U-100-Skala.
+			</li>
+		</ol>
+		<p>
+			Zwei Randfälle sind praktisch relevant und werden deshalb angezeigt: Liegt
+			das Ergebnis über der gewählten Skalenlänge, lässt es sich nicht in einem
+			Zug aufziehen — der Rechner schlägt dann die nächstgrößere Skala vor.
+			Liegt es unter etwa 2 Units, wird die Ablesung ungenau; ein größeres
+			Lösungsvolumen verteilt dieselbe Menge auf mehr Units.
+		</p>
+
+		<h2>Häufige Fragen</h2>
+		<dl class="faq">
+			{
+				faq.map((item) => (
+					<div class="faq__item">
+						<dt>{item.question}</dt>
+						<dd>{item.answer}</dd>
+					</div>
+				))
+			}
+		</dl>
+
+		<p class="disclaimer">
+			<strong>Hinweis:</strong> Dieser Rechner ist ein Hilfsmittel zur
+			Umrechnung von Mengen und Volumina im Laborkontext. Alle angebotenen
+			Produkte sind ausschließlich für Forschungs- und Laborzwecke bestimmt und
+			nicht für den menschlichen Gebrauch. Die Berechnung stellt keine
+			Anwendungsempfehlung dar. Für die Richtigkeit der eingegebenen Werte und
+			der daraus abgeleiteten Laborplanung ist die durchführende Einrichtung
+			verantwortlich.
+		</p>
+
+		<p class="more">
+			Weiterführend: <a href="/wissen/lagerung-lyophilisierter-peptide"
+				>Lagerung lyophilisierter Peptide</a
+			> · <a href="/wissen/reinheit-und-coa">Reinheit und CoA</a> · <a
+				href="/wissen/lexikon">Peptid-Lexikon</a
+			>
+		</p>
+	</section>
+
+	<style>
+		.lead {
+			color: var(--c-muted);
+			margin: 0.25rem 0 2rem;
+			max-width: 62ch;
+			font-size: 1.02rem;
+		}
+
+		.highlights {
+			list-style: none;
+			margin: 0 0 1.5rem;
+			padding: 0;
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 1rem;
+		}
+		.highlights li {
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.1rem;
+			background: var(--c-white);
+		}
+		.highlights h2 {
+			font-size: 0.95rem;
+			margin: 0 0 0.35rem;
+		}
+		.highlights p {
+			margin: 0;
+			font-size: 0.86rem;
+			color: var(--c-muted);
+		}
+
+		.prose {
+			margin-top: 3rem;
+			max-width: 70ch;
+		}
+		.prose h2 {
+			font-size: 1.25rem;
+			margin-top: 2.25rem;
+		}
+		.prose h2:first-child {
+			margin-top: 0;
+		}
+		.prose p,
+		.prose li {
+			color: var(--c-muted);
+		}
+		.prose strong {
+			color: var(--c-ink);
+		}
+		.prose ol {
+			padding-left: 1.2rem;
+		}
+		.prose ol li {
+			margin-bottom: 0.5rem;
+		}
+
+		.faq {
+			margin: 0;
+		}
+		.faq__item {
+			padding: 1rem 0;
+			border-top: 1px solid var(--c-border);
+		}
+		.faq__item:first-child {
+			border-top: none;
+		}
+		.faq dt {
+			font-weight: 700;
+			margin-bottom: 0.35rem;
+		}
+		.faq dd {
+			margin: 0;
+			color: var(--c-muted);
+		}
+
+		.disclaimer {
+			margin-top: 2rem;
+			padding: 1rem 1.1rem;
+			border-radius: var(--radius-sm);
+			background: var(--c-surface);
+			border: 1px solid var(--c-border);
+			font-size: 0.86rem;
+		}
+
+		.more {
+			font-size: 0.9rem;
+		}
+		.more a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+
+		@media (max-width: 760px) {
+			.highlights {
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</BaseLayout>

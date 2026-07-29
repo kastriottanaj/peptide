@@ -1,0 +1,1120 @@
+---
+/**
+ * The Peptid-Rechner itself: four inputs on the left, the result read-out on
+ * the right.
+ *
+ * The default setup is computed here, at build time, and written into the
+ * markup complete — headline, syringe scale, stats and formula rows. The
+ * `<script>` below only *re*-calculates. That ordering is deliberate: this page
+ * exists to be found in search, and a crawler that never runs our JavaScript
+ * still gets a finished worked example rather than an empty shell. It also
+ * means the tool degrades to a static reference table instead of breaking.
+ *
+ * A plain bundled script, like `AddToCart.astro` — a few hundred bytes, no
+ * framework, no `client:*` directive.
+ */
+import {
+	DEFAULT_SETUP,
+	SOLVENT_PRESETS,
+	SYRINGE_SCALES,
+	TARGET_PRESETS,
+	VIAL_PRESETS,
+	calculate,
+	formatDe,
+	formulaSteps,
+	scaleByUnits,
+	scaleTicks,
+	unitsPhrase,
+} from "../lib/reconstitution";
+
+const result = calculate(DEFAULT_SETUP);
+const steps = formulaSteps(result);
+const scale = scaleByUnits(DEFAULT_SETUP.scaleUnits);
+const ticks = scaleTicks(DEFAULT_SETUP.scaleUnits);
+
+/**
+ * SVG geometry, shared with the island through `data-` attributes below so the
+ * two cannot drift apart.
+ */
+const BARREL_X = 70;
+const BARREL_W = 530;
+const markerX = BARREL_X + Math.min(result.units / DEFAULT_SETUP.scaleUnits, 1) * BARREL_W;
+
+const aliquotUnit =
+	result.remainingMcg > 0 ? `${formatDe(result.remainingMcg, 0)} mcg Rest` : "Stück";
+
+/** The four input groups, so the markup below is written once rather than four times. */
+const groups = [
+	{
+		key: "vial",
+		step: "Schritt 2",
+		title: "Peptidmenge pro Vial",
+		description: "Typische Packgrößen sind direkt auswählbar.",
+		suffix: "mg",
+		presets: VIAL_PRESETS,
+		value: String(DEFAULT_SETUP.vialMg),
+		placeholder: "z. B. 2,5",
+	},
+	{
+		key: "solvent",
+		step: "Schritt 3",
+		title: "Lösungsvolumen",
+		description:
+			"Mehr Volumen senkt die Konzentration und erhöht die Units pro Aliquot.",
+		suffix: "ml",
+		presets: SOLVENT_PRESETS,
+		value: String(DEFAULT_SETUP.solventMl),
+		placeholder: "z. B. 2,5",
+	},
+	{
+		key: "target",
+		step: "Schritt 4",
+		title: "Zielmenge pro Aliquot",
+		description: "Die Zielmenge wird rein rechnerisch als Aliquot behandelt.",
+		suffix: "mcg",
+		presets: TARGET_PRESETS,
+		value: String(DEFAULT_SETUP.targetMcg),
+		placeholder: "z. B. 750",
+	},
+] as const;
+---
+
+<div class="calc" data-calculator data-barrel-x={BARREL_X} data-barrel-w={BARREL_W}>
+	<div class="calc__head">
+		<div>
+			<p class="calc__kicker">Rekonstitution &amp; Aliquotplanung</p>
+			<h2>Peptid-Rechner</h2>
+			<p class="calc__intro">
+				Skala, Vialmenge, Lösungsvolumen und Zielmenge wählen — das Tool
+				übersetzt die Laborparameter in Konzentration, Milliliter und
+				U-100-Units.
+			</p>
+		</div>
+		<span class="calc__badge" aria-hidden="true">
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+				<rect x="4" y="2" width="16" height="20" rx="3" stroke="currentColor" stroke-width="1.7"></rect>
+				<path d="M8 7h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"></path>
+				<path d="M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h.01M16 16h.01" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+			</svg>
+		</span>
+	</div>
+
+	<div class="calc__body">
+		<!-- ── Inputs ───────────────────────────────────────────────── -->
+		<div class="calc__inputs">
+			<fieldset class="group">
+				<legend class="visually-hidden">U-100-Skala wählen</legend>
+				<p class="group__step">Schritt 1</p>
+				<p class="group__title" aria-hidden="true">U-100-Skala wählen</p>
+				<p class="group__desc">Die Skala bestimmt, ob das Ergebnis bequem ablesbar ist.</p>
+
+				<div class="scales">
+					{
+						SYRINGE_SCALES.map((option) => (
+							<label class="scales__item">
+								<input
+									type="radio"
+									name="scale"
+									value={option.units}
+									checked={option.units === DEFAULT_SETUP.scaleUnits}
+								/>
+								<span class="scales__body">
+									<span class="scales__label">{option.label}</span>
+									<span class="scales__sub">{option.sub}</span>
+									<span class="scales__helper">{option.helper}</span>
+								</span>
+							</label>
+						))
+					}
+				</div>
+			</fieldset>
+
+			{
+				groups.map((group) => (
+					<fieldset class="group">
+						<legend class="visually-hidden">{group.title}</legend>
+						<p class="group__step">{group.step}</p>
+						<p class="group__title" aria-hidden="true">{group.title}</p>
+						<p class="group__desc">{group.description}</p>
+
+						<div class="presets">
+							{group.presets.map((preset) => (
+								<label class="presets__item">
+									<input
+										type="radio"
+										name={group.key}
+										value={preset}
+										checked={preset === group.value}
+										data-preset
+									/>
+									<span>
+										{preset} {group.suffix}
+									</span>
+								</label>
+							))}
+						</div>
+
+						{/* Two controls, so two labels — the radio selects "custom", the
+						    text field holds the value. Wrapping both in one <label> would
+						    associate the field's clicks and its accessible name with the
+						    radio. */}
+						<div class="custom">
+							<label class="custom__mode">
+								<input type="radio" name={group.key} value="custom" data-custom-mode />
+								<span class="custom__text">Eigener Wert</span>
+							</label>
+							<span class="custom__field">
+								<input
+									type="text"
+									inputmode="decimal"
+									placeholder={group.placeholder}
+									aria-label={`${group.title} – eigener Wert in ${group.suffix}`}
+									data-custom-value={group.key}
+								/>
+								<span class="custom__suffix">{group.suffix}</span>
+							</span>
+						</div>
+					</fieldset>
+				))
+			}
+		</div>
+
+		<!-- ── Results ──────────────────────────────────────────────── -->
+		<div class="calc__results">
+			{/* The setup summary sits with the outputs, not the inputs: it restates
+			    what the result was computed from, which is what you want next to
+			    the number rather than next to the controls you just used. */}
+			<div class="setup">
+				<p class="setup__title">Aktuelles Setup</p>
+				<dl class="setup__grid">
+					<div>
+						<dt>Skala</dt>
+						<dd data-out="setup-scale">{scale.label} / {scale.sub}</dd>
+					</div>
+					<div>
+						<dt>Vial</dt>
+						<dd data-out="setup-vial">{formatDe(result.vialMg)} mg</dd>
+					</div>
+					<div>
+						<dt>Lösung</dt>
+						<dd data-out="setup-solvent">{formatDe(result.solventMl)} ml</dd>
+					</div>
+					<div>
+						<dt>Aliquot</dt>
+						<dd data-out="setup-target">{formatDe(result.targetMcg, 0)} mcg</dd>
+					</div>
+				</dl>
+			</div>
+
+			<div class="readout">
+				<div class="readout__top" role="status">
+					<p class="readout__kicker">Live-Ergebnis</p>
+					<h3 class="readout__headline" data-out="headline">
+						{unitsPhrase(result.units)} auf der U-100-Skala
+					</h3>
+					<p class="readout__sub" data-out="subline">
+						Für ein Aliquot mit {formatDe(result.targetMcg, 0)} mcg entspricht das
+						{" "}{formatDe(result.volumeMl, 3)} ml.
+					</p>
+				</div>
+
+				<div class="scaleview">
+					<svg
+						class="scaleview__svg"
+						viewBox="0 0 700 132"
+						fill="none"
+						role="img"
+						data-scale-svg
+						aria-label={`U-100-Skala mit ${unitsPhrase(result.units)} von ${DEFAULT_SETUP.scaleUnits} Units`}
+					>
+						{/* Plunger */}
+						<rect class="sv-plunger" x="46" y="41" width="12" height="52" rx="3"></rect>
+						{/* Barrel */}
+						<rect class="sv-barrel" x={BARREL_X} y="50" width={BARREL_W} height="34" rx="6"></rect>
+						<rect
+							class="sv-fill"
+							x={BARREL_X}
+							y="50"
+							width={(result.fillPct / 100) * BARREL_W}
+							height="34"
+							rx="6"
+							data-scale-fill
+						></rect>
+						{/* Ticks */}
+						<g data-scale-ticks>
+							{
+								ticks.map((tick) => {
+									const x = BARREL_X + (tick.at / DEFAULT_SETUP.scaleUnits) * BARREL_W;
+									return (
+										<>
+											<line
+												class={tick.major ? "sv-tick sv-tick--major" : "sv-tick"}
+												x1={x}
+												x2={x}
+												y1={tick.major ? 35 : 41}
+												y2="50"
+											/>
+											{tick.major && tick.at > 0 && (
+												<text class="sv-ticklabel" x={x} y="30" text-anchor="middle">
+													{tick.at}
+												</text>
+											)}
+										</>
+									);
+								})
+							}
+						</g>
+						{/* Needle */}
+						<path class="sv-needle" d="M600 55 L622 64 L622 70 L600 79 Z"></path>
+						<line class="sv-needle-line" x1="622" x2="666" y1="67" y2="67"></line>
+						{/* Marker */}
+						<rect
+							class="sv-marker-bg"
+							x={Math.min(Math.max(markerX - 58, 18), 566)}
+							y="4"
+							width="116"
+							height="26"
+							rx="6"
+							data-marker-bg
+						></rect>
+						<text
+							class="sv-marker-text"
+							x={Math.min(Math.max(markerX, 76), 624)}
+							y="22"
+							text-anchor="middle"
+							data-marker-text
+						>
+							{unitsPhrase(result.units, 1)}
+						</text>
+						<line class="sv-marker-line" x1={markerX} x2={markerX} y1="38" y2="88" data-marker-line></line>
+						<polygon
+							class="sv-marker-tip"
+							points={`${markerX},98 ${markerX - 6},88 ${markerX + 6},88`}
+							data-marker-tip></polygon>
+						{/* End labels */}
+						<text class="sv-endlabel" x="70" y="120">0 Units</text>
+						<text class="sv-endlabel" x="600" y="120" text-anchor="end" data-scale-max>
+							{DEFAULT_SETUP.scaleUnits} Units
+						</text>
+					</svg>
+				</div>
+
+				<div class="notice notice--warn" data-notice-overflow hidden>
+					<p class="notice__title">Gewählte Skala reicht nicht aus.</p>
+					<p class="notice__text" data-out="overflow-text"></p>
+					<button type="button" class="notice__action" data-suggest-scale hidden></button>
+				</div>
+
+				<div class="notice notice--info" data-notice-precision hidden>
+					<p class="notice__title">Sehr kleine Ablesung.</p>
+					<p class="notice__text">
+						Unter 2 Units wird die Skala schwer abzulesen. Mehr Lösungsvolumen
+						erhöht die Units pro Aliquot und macht die Planung genauer.
+					</p>
+				</div>
+			</div>
+
+			<div class="stats">
+				<div class="stat">
+					<p class="stat__label">Konzentration</p>
+					<p class="stat__value" data-out="concentration">{formatDe(result.concentrationMcgMl)}</p>
+					<p class="stat__unit">mcg/ml</p>
+				</div>
+				<div class="stat">
+					<p class="stat__label">Volumen pro Aliquot</p>
+					<p class="stat__value" data-out="volume">{formatDe(result.volumeMl, 3)}</p>
+					<p class="stat__unit">ml</p>
+				</div>
+				<div class="stat">
+					<p class="stat__label">Aliquots pro Vial</p>
+					<p class="stat__value" data-out="aliquots">{formatDe(result.aliquots, 0)}</p>
+					<p class="stat__unit" data-out="aliquots-unit">{aliquotUnit}</p>
+				</div>
+				<div class="stat">
+					<p class="stat__label">Menge pro Unit</p>
+					<p class="stat__value" data-out="mcg-per-unit">{formatDe(result.mcgPerUnit)}</p>
+					<p class="stat__unit">mcg</p>
+				</div>
+			</div>
+
+			<div class="formula">
+				<p class="formula__title">So entsteht das Ergebnis</p>
+				<p class="formula__desc">Rechenweg mit den aktuellen Laborparametern.</p>
+				<dl class="formula__rows">
+					{
+						steps.map((step, index) => (
+							<div class="formula__row">
+								<dt>{step.label}</dt>
+								<dd data-out={`formula-${index}`}>{step.expression}</dd>
+							</div>
+						))
+					}
+				</dl>
+			</div>
+		</div>
+	</div>
+</div>
+
+<script>
+	import {
+		SYRINGE_SCALES,
+		calculate,
+		formatDe,
+		formulaSteps,
+		parseDecimal,
+		scaleByUnits,
+		scaleTicks,
+		unitsPhrase,
+		type ReconstitutionResult,
+	} from "../lib/reconstitution";
+
+	const SVG_NS = "http://www.w3.org/2000/svg";
+
+	document.querySelectorAll<HTMLElement>("[data-calculator]").forEach((root) => {
+		const barrelX = Number(root.dataset.barrelX ?? 70);
+		const barrelW = Number(root.dataset.barrelW ?? 530);
+
+		const out = (name: string) =>
+			root.querySelector<HTMLElement>(`[data-out="${name}"]`);
+		const setText = (name: string, value: string) => {
+			const node = out(name);
+			if (node) node.textContent = value;
+		};
+
+		const svg = root.querySelector<SVGSVGElement>("[data-scale-svg]");
+		const fillRect = root.querySelector<SVGRectElement>("[data-scale-fill]");
+		const tickGroup = root.querySelector<SVGGElement>("[data-scale-ticks]");
+		const markerBg = root.querySelector<SVGRectElement>("[data-marker-bg]");
+		const markerText = root.querySelector<SVGTextElement>("[data-marker-text]");
+		const markerLine = root.querySelector<SVGLineElement>("[data-marker-line]");
+		const markerTip = root.querySelector<SVGPolygonElement>("[data-marker-tip]");
+		const scaleMax = root.querySelector<SVGTextElement>("[data-scale-max]");
+
+		const overflowNotice = root.querySelector<HTMLElement>("[data-notice-overflow]");
+		const precisionNotice = root.querySelector<HTMLElement>("[data-notice-precision]");
+		const suggestButton = root.querySelector<HTMLButtonElement>("[data-suggest-scale]");
+
+		/**
+		 * Read one input group. A group is either on a preset radio or on the
+		 * "custom" radio, in which case the value comes from its text field.
+		 */
+		const readGroup = (name: string): number => {
+			const checked = root.querySelector<HTMLInputElement>(
+				`input[name="${name}"]:checked`,
+			);
+			if (!checked) return 0;
+			if (checked.value !== "custom") return parseDecimal(checked.value);
+
+			const field = root.querySelector<HTMLInputElement>(
+				`[data-custom-value="${name}"]`,
+			);
+			return parseDecimal(field?.value ?? "");
+		};
+
+		const readScale = (): number => {
+			const checked = root.querySelector<HTMLInputElement>(
+				'input[name="scale"]:checked',
+			);
+			return Number(checked?.value ?? 30) || 30;
+		};
+
+		/** Redraw the ticks — their count and spacing change with the scale. */
+		const paintTicks = (scaleUnits: number) => {
+			if (!tickGroup) return;
+			const fragment = document.createDocumentFragment();
+
+			for (const tick of scaleTicks(scaleUnits)) {
+				const x = barrelX + (tick.at / scaleUnits) * barrelW;
+
+				const line = document.createElementNS(SVG_NS, "line");
+				line.setAttribute("class", tick.major ? "sv-tick sv-tick--major" : "sv-tick");
+				line.setAttribute("x1", String(x));
+				line.setAttribute("x2", String(x));
+				line.setAttribute("y1", String(tick.major ? 35 : 41));
+				line.setAttribute("y2", "50");
+				fragment.append(line);
+
+				if (tick.major && tick.at > 0) {
+					const label = document.createElementNS(SVG_NS, "text");
+					label.setAttribute("class", "sv-ticklabel");
+					label.setAttribute("x", String(x));
+					label.setAttribute("y", "30");
+					label.setAttribute("text-anchor", "middle");
+					label.textContent = String(tick.at);
+					fragment.append(label);
+				}
+			}
+
+			tickGroup.replaceChildren(fragment);
+		};
+
+		const paintScale = (result: ReconstitutionResult) => {
+			const { scaleUnits } = result;
+			const capped = Math.min(Math.max(result.units, 0), scaleUnits);
+			const markerX = barrelX + (capped / scaleUnits) * barrelW;
+
+			fillRect?.setAttribute("width", String((result.fillPct / 100) * barrelW));
+			markerBg?.setAttribute("x", String(Math.min(Math.max(markerX - 58, 18), 566)));
+			markerText?.setAttribute("x", String(Math.min(Math.max(markerX, 76), 624)));
+			markerLine?.setAttribute("x1", String(markerX));
+			markerLine?.setAttribute("x2", String(markerX));
+			markerTip?.setAttribute(
+				"points",
+				`${markerX},98 ${markerX - 6},88 ${markerX + 6},88`,
+			);
+
+			if (markerText) {
+				markerText.textContent = result.overflow
+					? `> ${scaleUnits} Units`
+					: unitsPhrase(capped, 1);
+			}
+			if (scaleMax) scaleMax.textContent = `${scaleUnits} Units`;
+			svg?.setAttribute(
+				"aria-label",
+				result.valid
+					? `U-100-Skala mit ${unitsPhrase(result.units)} von ${scaleUnits} Units`
+					: `U-100-Skala bis ${scaleUnits} Units, keine gültige Eingabe`,
+			);
+		};
+
+		const render = () => {
+			const result = calculate({
+				vialMg: readGroup("vial"),
+				solventMl: readGroup("solvent"),
+				targetMcg: readGroup("target"),
+				scaleUnits: readScale(),
+			});
+
+			const scale = scaleByUnits(result.scaleUnits);
+			setText("setup-scale", `${scale.label} / ${scale.sub}`);
+			setText("setup-vial", result.valid ? `${formatDe(result.vialMg)} mg` : "—");
+			setText("setup-solvent", result.valid ? `${formatDe(result.solventMl)} ml` : "—");
+			setText("setup-target", result.valid ? `${formatDe(result.targetMcg, 0)} mcg` : "—");
+
+			setText(
+				"headline",
+				result.valid
+					? `${unitsPhrase(result.units)} auf der U-100-Skala`
+					: "Bitte Werte eingeben",
+			);
+			setText(
+				"subline",
+				result.valid
+					? `Für ein Aliquot mit ${formatDe(result.targetMcg, 0)} mcg entspricht das ${formatDe(result.volumeMl, 3)} ml.`
+					: "Sobald Vialmenge, Lösungsvolumen und Zielmenge größer als 0 sind, erscheint die Berechnung.",
+			);
+
+			setText("concentration", result.valid ? formatDe(result.concentrationMcgMl) : "—");
+			setText("volume", result.valid ? formatDe(result.volumeMl, 3) : "—");
+			setText("aliquots", result.valid ? formatDe(result.aliquots, 0) : "—");
+			setText(
+				"aliquots-unit",
+				result.valid && result.remainingMcg > 0
+					? `${formatDe(result.remainingMcg, 0)} mcg Rest`
+					: "Stück",
+			);
+			setText("mcg-per-unit", result.valid ? formatDe(result.mcgPerUnit) : "—");
+
+			formulaSteps(result).forEach((step, index) => {
+				setText(`formula-${index}`, step.expression);
+			});
+
+			paintTicks(result.scaleUnits);
+			paintScale(result);
+
+			overflowNotice?.toggleAttribute("hidden", !result.overflow);
+			precisionNotice?.toggleAttribute("hidden", !result.lowPrecision);
+
+			if (result.overflow) {
+				setText(
+					"overflow-text",
+					`Das Ergebnis liegt bei ${unitsPhrase(result.units)}, die gewählte Skala endet bei ${result.scaleUnits} Units.`,
+				);
+			}
+			if (suggestButton) {
+				const suggestion = result.overflow ? result.suggestedScale : null;
+				suggestButton.toggleAttribute("hidden", !suggestion);
+				if (suggestion) {
+					suggestButton.textContent = `Auf ${suggestion.sub} wechseln`;
+					suggestButton.dataset.scaleUnits = String(suggestion.units);
+				}
+			}
+		};
+
+		// Any radio or custom field changes the answer, so one listener on the
+		// root covers all of them — including controls added later.
+		root.addEventListener("change", render);
+		root.addEventListener("input", render);
+
+		// Typing in a custom field means you want that field's value used, so
+		// select its radio rather than making it a two-step interaction.
+		root.querySelectorAll<HTMLInputElement>("[data-custom-value]").forEach((field) => {
+			const activate = () => {
+				const mode = field
+					.closest(".custom")
+					?.querySelector<HTMLInputElement>("[data-custom-mode]");
+				if (mode && !mode.checked) {
+					mode.checked = true;
+					render();
+				}
+			};
+			field.addEventListener("focus", activate);
+			field.addEventListener("input", activate);
+		});
+
+		suggestButton?.addEventListener("click", () => {
+			const units = suggestButton.dataset.scaleUnits;
+			const target = root.querySelector<HTMLInputElement>(
+				`input[name="scale"][value="${units}"]`,
+			);
+			if (!target) return;
+			target.checked = true;
+			render();
+			target.focus();
+		});
+
+		// The markup already holds the build-time default. Re-render once anyway:
+		// a browser restoring form state on reload would otherwise leave the
+		// read-out describing a setup the controls no longer show.
+		render();
+
+		// Guard against the preset list and the scale list drifting apart in
+		// development — the island reads `SYRINGE_SCALES`, the markup renders it.
+		if (import.meta.env.DEV) {
+			const rendered = root.querySelectorAll('input[name="scale"]').length;
+			if (rendered !== SYRINGE_SCALES.length) {
+				console.warn(
+					`Peptid-Rechner: ${rendered} Skalen im Markup, ${SYRINGE_SCALES.length} in SYRINGE_SCALES.`,
+				);
+			}
+		}
+	});
+</script>
+
+<style>
+	.calc {
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius);
+		background: var(--c-white);
+		overflow: hidden;
+	}
+
+	/* Head */
+	.calc__head {
+		display: flex;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 1.5rem;
+		padding: 1.5rem;
+		border-bottom: 1px solid var(--c-border);
+	}
+	.calc__kicker {
+		margin: 0;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--c-green-dark);
+	}
+	.calc__head h2 {
+		font-size: 1.4rem;
+		margin: 0.5rem 0 0.5rem;
+	}
+	.calc__intro {
+		margin: 0;
+		max-width: 56ch;
+		color: var(--c-muted);
+		font-size: 0.92rem;
+	}
+	.calc__badge {
+		display: grid;
+		place-items: center;
+		width: 46px;
+		height: 46px;
+		flex: none;
+		border-radius: var(--radius-sm);
+		background: var(--c-mint);
+		color: var(--c-green-dark);
+	}
+
+	/* Body split */
+	.calc__body {
+		display: grid;
+		grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+	}
+	.calc__inputs {
+		padding: 1.5rem;
+		background: var(--c-surface);
+		border-right: 1px solid var(--c-border);
+		display: grid;
+		gap: 1rem;
+		align-content: start;
+	}
+	.calc__results {
+		padding: 1.5rem;
+		display: grid;
+		gap: 1rem;
+		align-content: start;
+	}
+
+	/* Setup summary */
+	.setup {
+		background: var(--c-white);
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+		padding: 1rem;
+	}
+	.setup__title {
+		margin: 0 0 0.75rem;
+		font-weight: 700;
+		font-size: 0.95rem;
+	}
+	.setup__grid {
+		margin: 0;
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0.75rem 1rem;
+	}
+	.setup__grid dt {
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--c-muted);
+	}
+	.setup__grid dd {
+		margin: 0.2rem 0 0;
+		font-weight: 700;
+		font-size: 0.95rem;
+	}
+
+	/* Input groups */
+	.group {
+		margin: 0;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+		background: var(--c-white);
+		padding: 1rem;
+	}
+	.group__step {
+		margin: 0;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--c-muted);
+	}
+	.group__title {
+		margin: 0.25rem 0 0;
+		font-weight: 700;
+		font-size: 1rem;
+	}
+	.group__desc {
+		margin: 0.25rem 0 0.9rem;
+		font-size: 0.84rem;
+		color: var(--c-muted);
+	}
+
+	/* Scale picker */
+	.scales {
+		display: grid;
+		gap: 0.5rem;
+	}
+	.scales__item,
+	.presets__item,
+	.custom__mode {
+		cursor: pointer;
+	}
+	.scales__item input,
+	.presets__item input,
+	.custom input[type="radio"] {
+		position: absolute;
+		opacity: 0;
+		width: 1px;
+		height: 1px;
+	}
+	.scales__body {
+		display: flex;
+		align-items: baseline;
+		gap: 0.6rem;
+		padding: 0.7rem 0.9rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+		background: var(--c-white);
+		transition: border-color 0.15s ease, background-color 0.15s ease;
+	}
+	.scales__item:hover .scales__body {
+		border-color: var(--c-green);
+	}
+	.scales__item input:checked + .scales__body {
+		border-color: var(--c-green);
+		background: var(--c-mint);
+	}
+	.scales__item input:focus-visible + .scales__body {
+		outline: 2px solid var(--c-green);
+		outline-offset: 2px;
+	}
+	.scales__label {
+		font-weight: 700;
+	}
+	.scales__sub {
+		font-size: 0.8rem;
+		color: var(--c-muted);
+	}
+	.scales__helper {
+		margin-left: auto;
+		font-size: 0.72rem;
+		font-weight: 600;
+		color: var(--c-muted);
+	}
+
+	/* Preset buttons */
+	.presets {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+		gap: 0.4rem;
+	}
+	.presets__item span {
+		display: block;
+		text-align: center;
+		padding: 0.55rem 0.4rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+		font-size: 0.85rem;
+		font-weight: 600;
+		white-space: nowrap;
+		transition: border-color 0.15s ease, background-color 0.15s ease,
+			color 0.15s ease;
+	}
+	.presets__item:hover span {
+		border-color: var(--c-green);
+	}
+	.presets__item input:checked + span {
+		background: var(--c-green);
+		border-color: var(--c-green);
+		color: var(--c-white);
+	}
+	.presets__item input:focus-visible + span {
+		outline: 2px solid var(--c-green);
+		outline-offset: 2px;
+	}
+
+	/* Custom value row */
+	.custom {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		margin-top: 0.6rem;
+		padding: 0.5rem 0.6rem 0.5rem 0.8rem;
+		border: 1px dashed var(--c-border);
+		border-radius: var(--radius-sm);
+	}
+	.custom:has(input[type="radio"]:checked) {
+		border-style: solid;
+		border-color: var(--c-green);
+		background: var(--c-mint);
+	}
+	.custom__mode {
+		display: inline-flex;
+		align-items: center;
+	}
+	.custom__text {
+		font-size: 0.85rem;
+		font-weight: 600;
+		white-space: nowrap;
+		padding: 0.15rem 0.2rem;
+		border-radius: var(--radius-sm);
+	}
+	.custom__mode input:focus-visible + .custom__text {
+		outline: 2px solid var(--c-green);
+		outline-offset: 2px;
+	}
+	.custom__field {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		margin-left: auto;
+	}
+	.custom__field input {
+		width: 6rem;
+		padding: 0.45rem 0.6rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+		background: var(--c-white);
+		font-family: inherit;
+		font-size: 0.9rem;
+		font-weight: 600;
+		color: var(--c-ink);
+	}
+	.custom__field input:focus-visible {
+		outline: 2px solid var(--c-green);
+		outline-offset: 1px;
+	}
+	.custom__suffix {
+		font-size: 0.82rem;
+		font-weight: 600;
+		color: var(--c-muted);
+		min-width: 1.9rem;
+	}
+
+	/* Read-out */
+	.readout {
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+		background: var(--c-surface);
+		padding: 1.1rem;
+	}
+	.readout__kicker {
+		margin: 0;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--c-green-dark);
+	}
+	.readout__headline {
+		margin: 0.5rem 0 0.4rem;
+		font-size: 1.5rem;
+	}
+	.readout__sub {
+		margin: 0;
+		color: var(--c-muted);
+		font-size: 0.9rem;
+	}
+
+	.scaleview {
+		margin-top: 1rem;
+		padding: 0.6rem;
+		background: var(--c-white);
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+	}
+	.scaleview__svg {
+		display: block;
+		width: 100%;
+		height: auto;
+	}
+
+	/* SVG parts. Styled here rather than with fill="#…" attributes so the
+	   drawing uses the same tokens as everything else. */
+	.sv-barrel {
+		fill: var(--c-white);
+		stroke: var(--c-border);
+	}
+	.sv-fill {
+		fill: var(--c-green);
+		opacity: 0.85;
+	}
+	.sv-plunger {
+		fill: var(--c-mint);
+		stroke: var(--c-green);
+		stroke-opacity: 0.4;
+	}
+	/* The tick marks are the one part of the drawing the island *recreates*
+	   rather than mutates, because their number changes with the scale. Nodes
+	   built with createElementNS never get Astro's `data-astro-cid-*`
+	   attribute, so a plain scoped selector silently stops matching the moment
+	   the island redraws — the ticks inherit `stroke: none` and disappear.
+	   `:global()` under the scoped `.scaleview` parent styles them without
+	   leaking past this component. */
+	.scaleview :global(.sv-tick) {
+		stroke: var(--c-muted);
+		stroke-opacity: 0.35;
+	}
+	.scaleview :global(.sv-tick--major) {
+		stroke-opacity: 0.7;
+		stroke-width: 1.4;
+	}
+	/* Font sizes are in viewBox units, and the SVG renders at roughly 65 % of
+	   its 700-unit width in the two-column layout — so these are deliberately
+	   larger than they look. At 10px the tick numbers came out around 6px on
+	   screen and could not be read. */
+	.scaleview :global(.sv-ticklabel) {
+		fill: var(--c-muted);
+		font-size: 14px;
+	}
+	.sv-needle {
+		fill: var(--c-surface-2);
+		stroke: var(--c-green);
+		stroke-opacity: 0.35;
+	}
+	.sv-needle-line {
+		stroke: var(--c-green);
+		stroke-opacity: 0.5;
+		stroke-width: 1.8;
+		stroke-linecap: round;
+	}
+	.sv-marker-bg {
+		fill: var(--c-navy);
+	}
+	.sv-marker-text {
+		fill: var(--c-white);
+		font-size: 15px;
+		font-weight: 700;
+	}
+	.sv-marker-line {
+		stroke: var(--c-navy);
+		stroke-width: 2.5;
+		stroke-linecap: round;
+	}
+	.sv-marker-tip {
+		fill: var(--c-navy);
+	}
+	.sv-endlabel {
+		fill: var(--c-ink);
+		font-size: 16px;
+		font-weight: 700;
+	}
+
+	/* Notices */
+	.notice {
+		margin-top: 0.9rem;
+		padding: 0.8rem 0.9rem;
+		border-radius: var(--radius-sm);
+		font-size: 0.86rem;
+	}
+	.notice--warn {
+		background: var(--c-warn-bg);
+		color: var(--c-warn-ink);
+	}
+	.notice--info {
+		background: var(--c-mint);
+		color: var(--c-green-dark);
+	}
+	.notice__title {
+		margin: 0;
+		font-weight: 700;
+	}
+	.notice__text {
+		margin: 0.3rem 0 0;
+	}
+	.notice__action {
+		margin-top: 0.7rem;
+		padding: 0.45rem 0.9rem;
+		border: 1px solid currentColor;
+		border-radius: 999px;
+		background: transparent;
+		color: inherit;
+		font-family: inherit;
+		font-size: 0.82rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.notice__action:hover {
+		background: var(--c-white);
+	}
+
+	/* Stats */
+	.stats {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+		padding: 1.1rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+	}
+	.stat__label {
+		margin: 0;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--c-muted);
+	}
+	.stat__value {
+		margin: 0.35rem 0 0;
+		font-size: 1.6rem;
+		font-weight: 700;
+		line-height: 1.1;
+		letter-spacing: -0.02em;
+	}
+	.stat__unit {
+		margin: 0.2rem 0 0;
+		font-size: 0.76rem;
+		font-weight: 600;
+		color: var(--c-muted);
+	}
+
+	/* Formula */
+	.formula {
+		padding: 1.1rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
+	}
+	.formula__title {
+		margin: 0;
+		font-weight: 700;
+	}
+	.formula__desc {
+		margin: 0.25rem 0 0.75rem;
+		font-size: 0.84rem;
+		color: var(--c-muted);
+	}
+	.formula__rows {
+		margin: 0;
+	}
+	.formula__row {
+		display: grid;
+		grid-template-columns: 8.5rem minmax(0, 1fr);
+		gap: 0.5rem;
+		padding: 0.55rem 0;
+		border-top: 1px solid var(--c-border);
+		font-size: 0.86rem;
+	}
+	.formula__row:first-child {
+		border-top: none;
+	}
+	.formula__row dt {
+		font-weight: 700;
+	}
+	.formula__row dd {
+		margin: 0;
+		color: var(--c-muted);
+	}
+
+	@media (max-width: 900px) {
+		.calc__body {
+			grid-template-columns: 1fr;
+		}
+		.calc__inputs {
+			border-right: none;
+			border-bottom: 1px solid var(--c-border);
+		}
+	}
+
+	@media (max-width: 520px) {
+		.calc__head,
+		.calc__inputs,
+		.calc__results {
+			padding: 1.1rem;
+		}
+		.presets {
+			grid-template-columns: repeat(2, minmax(0, 1fr));
+		}
+		.stats {
+			grid-template-columns: 1fr;
+			gap: 0.9rem;
+		}
+		.formula__row {
+			grid-template-columns: 1fr;
+			gap: 0.15rem;
+		}
+		.custom {
+			flex-wrap: wrap;
+		}
+
+		/* On a phone the drawing renders at ~40 % of its viewBox width, which
+		   turns 14px tick numbers into 6px. Drop them — the tick marks still
+		   convey the subdivision — and enlarge the three labels that carry the
+		   actual reading. */
+		.scaleview :global(.sv-ticklabel) {
+			display: none;
+		}
+		.sv-endlabel {
+			font-size: 24px;
+		}
+		.sv-marker-text {
+			font-size: 17px;
+		}
+	}
+</style>

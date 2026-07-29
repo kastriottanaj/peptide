@@ -90,6 +90,15 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 		priority: 0.7,
 	},
 	{
+		path: "/peptid-rechner",
+		title: "Peptid-Rechner",
+		description:
+			"Rechner für Rekonstitution und Aliquotierung: Konzentration in mcg/ml, Volumen pro Aliquot und U-100-Units.",
+		keywords: ["Rechner", "Rekonstitution", "Aliquot", "U-100", "mcg/ml"],
+		changeFrequency: "monthly",
+		priority: 0.75,
+	},
+	{
 		path: "/about",
 		title: "Über uns",
 		description: "Wer hinter dem Shop steht und wofür die Produkte bestimmt sind.",
