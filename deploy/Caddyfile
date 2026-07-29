@@ -40,18 +40,15 @@
 {$SITE_DOMAIN} {
 	import security_headers
 
-	# === PRE-LAUNCH GATE ====================================================
-	# The site is not open to the public: the legal pages still render
-	# [Platzhalter] company data, bank details are placeholders and catalog
-	# purity values are fabricated. See docs/go-live-checklist.md.
+	# The pre-launch gate (basic auth + a site-wide X-Robots-Tag) was removed on
+	# 2026-07-29 by decision: the site is public and indexable.
 	#
-	# To open the shop, delete this block and reload Caddy. That is the whole
-	# un-gating step — see "Opening the shop" in docs/deploy.md.
-	basic_auth {
-		{$GATE_USER} {$GATE_PASSWORD_HASH}
-	}
-	header X-Robots-Tag "noindex, nofollow"
-	# === END GATE ===========================================================
+	# The four legal pages still carry their own `noindex` from the `draft` prop
+	# in LegalLayout, so they stay out of the index until their [Platzhalter]
+	# company data is replaced. That is per-page and unaffected by anything here.
+	#
+	# GATE_USER and GATE_PASSWORD_HASH remain in /srv/peptides/caddy.env, unused.
+	# Re-gating means restoring a basic_auth block here, not editing that file.
 
 	root * /srv/peptides/storefront
 	encode zstd gzip
@@ -70,11 +67,11 @@
 	file_server
 
 	# Only 404s get the custom page. The matcher has to gate `file_server` too,
-	# not just the rewrite: a bare `file_server` here runs for EVERY error,
-	# including the 401 from the gate above, and would serve the requested page
-	# out of the error handler — turning basic auth into a suggestion. Anything
-	# that is not a 404 falls through to Caddy's default error response, which
-	# preserves the original status.
+	# not just the rewrite: a bare `file_server` here runs for EVERY error and
+	# would serve the requested page out of the error handler, masking the real
+	# status. That once turned the pre-launch basic auth into a suggestion —
+	# a 401 that still returned the page body. Anything that is not a 404 falls
+	# through to Caddy's default error response, which preserves the status.
 	handle_errors {
 		@404 expression {err.status_code} == 404
 		handle @404 {

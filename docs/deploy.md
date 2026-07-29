@@ -4,13 +4,17 @@ Production is a single Hetzner VPS with DNS delegated from Hostinger. The domain
 is `peptideeinkaufen.de`. **No Docker** — Postgres, Redis, Node and Caddy come
 from apt, and Medusa runs as a systemd service.
 
-> **The site is currently gated.** The storefront sits behind HTTP basic auth and
-> `X-Robots-Tag: noindex`. This is deliberate: the legal pages still render
-> `[Platzhalter]` company data, bank details are placeholders and every purity
-> value in the catalog is fabricated. See
-> [go-live-checklist.md](go-live-checklist.md). Do not remove the gate before
-> those clear — [Opening the shop](#opening-the-shop) is the last step, not the
-> first.
+> **The site is public as of 2026-07-29.** The pre-launch gate — HTTP basic auth
+> plus a site-wide `X-Robots-Tag: noindex` — was removed by explicit decision,
+> before the hard blockers in [go-live-checklist.md](go-live-checklist.md) were
+> cleared. Bank details are still empty, the legal pages still render
+> `[Platzhalter]` company data and there is still no order confirmation email, so
+> **the shop can take an order it cannot be paid for.** Closing that gap is the
+> live priority; see [What is still open](#what-is-still-open).
+>
+> The four legal pages remain `noindex` through the `draft` prop in
+> `LegalLayout`. That is per-page and independent of Caddy — leave it until the
+> real company data lands.
 
 ```
 Internet
@@ -148,18 +152,19 @@ bash /srv/peptides/repo/deploy/deploy.sh <same-sha>
 ## 5. Verify
 
 ```bash
-curl -sI https://peptideeinkaufen.de            # 401 — the gate is on
-curl -sI -u '<user>:<pass>' https://peptideeinkaufen.de | head -20
+curl -sI https://peptideeinkaufen.de            # 200, no X-Robots-Tag
 curl -s  https://api.peptideeinkaufen.de/health # OK
+curl -sI https://peptideeinkaufen.de/impressum | grep -i x-robots  # per-page noindex stays
 ```
 
-Behind the gate, in a browser:
+In a browser:
 
 - Homepage, a product page and a Wissen article render
 - Product pages show real prices — not an empty catalog
 - `https://api.peptideeinkaufen.de/app` reaches the admin login
 - `Permissions-Policy: tools=(self)` present (required for WebMCP)
-- `X-Robots-Tag: noindex, nofollow` present
+- No site-wide `X-Robots-Tag` — but `/impressum` and the other three legal pages
+  still carry a per-page `noindex`
 - `/sitemap.xml` and `/llms.txt` contain `https://peptideeinkaufen.de` URLs,
   not `localhost`
 - Add to cart works against the live API
@@ -243,34 +248,46 @@ systemctl reload caddy
 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 ```
 
-## Opening the shop
+## What is still open
 
-**Only after every hard blocker in [go-live-checklist.md](go-live-checklist.md)
-is ticked** — real bank details, real company data on the legal pages, the
-B2B/B2C decision, and the order confirmation email.
+The gate came off on 2026-07-29, **before** the hard blockers in
+[go-live-checklist.md](go-live-checklist.md) were cleared. The site is public and
+crawlable, so these are now live exposures rather than pre-launch tasks. In
+priority order:
 
-1. Set the four `PUBLIC_BANK_*` values in `/srv/peptides/.env`.
-2. Remove the `draft` prop from each legal page that is now final, so the "not
-   legally binding" banner goes and the page becomes indexable.
-3. Rate-limit `/store/order-lookup` before it is publicly reachable. It is an
-   unauthenticated endpoint taking an order number and an email; the generic
-   error stops probing for which half was wrong, but nothing stops volume.
-4. Delete the `=== PRE-LAUNCH GATE ===` block in
-   [deploy/Caddyfile](../deploy/Caddyfile) — the `basic_auth` directive and the
-   `X-Robots-Tag` line.
-5. Deploy, then confirm:
+1. **Bank details.** The four `PUBLIC_BANK_*` values in `/srv/peptides/.env` are
+   empty, so an order confirmation shows no account to pay into. A customer can
+   order right now and has no way to pay. Set them and redeploy — the storefront
+   is static, so the values only reach the page on a rebuild.
+2. **Company data on the legal pages.** All four still render `[Platzhalter]`.
+   They keep a per-page `noindex` from the `draft` prop, so they are not indexed,
+   but they *are* publicly reachable — and a German commercial site is required
+   to carry a valid Impressum. Fill in the data, then drop the `draft` prop.
+3. **Order confirmation email.** Still absent (checklist §6). With bank transfer
+   the payment reference exists only on the confirmation page.
+4. **Rate-limit `/store/order-lookup`.** Now publicly reachable. Unauthenticated,
+   takes an order number and an email; the generic error stops probing for which
+   half was wrong, but nothing stops volume.
+5. **Catalog purity values** are still fabricated and tagged `demo`.
 
-   ```bash
-   curl -sI https://peptideeinkaufen.de | head -5   # 200, and no X-Robots-Tag
-   ```
+To submit the sitemap now that Google can reach the site, see step 6 in
+[analytics.md](analytics.md).
 
-6. Submit `sitemap.xml` in Search Console and request indexing for the homepage
-   and the catalog listing. Not before this point: while the gate is up Google
-   gets a 401 for every URL, so the submission simply fails. Steps in
-   [analytics.md](analytics.md).
+### Re-gating
 
-`deploy.sh` warns loudly if the storefront answers 200 without credentials, so an
-accidental un-gating is visible in the deploy output.
+If the site needs to go back behind a password, restore a `basic_auth` block in
+[deploy/Caddyfile](../deploy/Caddyfile) and redeploy. `GATE_USER` and
+`GATE_PASSWORD_HASH` are still present in `/srv/peptides/caddy.env`:
+
+```caddyfile
+basic_auth {
+	{$GATE_USER} {$GATE_PASSWORD_HASH}
+}
+header X-Robots-Tag "noindex, nofollow"
+```
+
+`deploy.sh` verifies the storefront answers **200** on every deploy and warns on a
+401, so an accidental re-gating is visible in the deploy output.
 
 ## Still missing
 

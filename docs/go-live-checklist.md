@@ -17,10 +17,20 @@ Update it as items land.
 > value down and how to apply it. This file stays the canonical list of *what
 > blocks launch and why*.
 
-**Hard blockers before any live deployment:** real bank details (§1), real
-company data on the legal pages (§2), the B2B/B2C decision (§3), and the order
-confirmation email (§6). None of them are optional — the shop either cannot take
-money or cannot lawfully trade without them.
+> **The site went public on 2026-07-29, with §1, §2, §3 and §6 still open.** The
+> pre-launch gate was removed by explicit decision ahead of these items, so
+> everything below is now a **live exposure**, not a pre-launch task. The shop is
+> reachable and can accept an order it cannot be paid for. Data to fill the gaps
+> is to follow.
+
+**Hard blockers, none of them cleared:** real bank details (§1), real company
+data on the legal pages (§2), the B2B/B2C decision (§3), and the order
+confirmation email (§6). The shop either cannot take money or cannot lawfully
+trade without them.
+
+The one mitigation still in place: the four legal pages keep a per-page
+`noindex` from the `draft` prop, so unreviewed legal text is publicly reachable
+but not indexed. `deploy.sh` checks `/impressum` for it on every deploy.
 
 ---
 
@@ -188,18 +198,17 @@ These can be done at any time:
       `CREDENTIALS.local.md`, do not delete it. Verification worked while gated
       precisely because DNS is not served by the gated box.
 
-      - [ ] Submit `sitemap.xml` — **blocked until the gate is off**, since
-            Google gets a 401 for every URL. Step 6 of "Opening the shop" in
-            [deploy.md](deploy.md).
+      - [ ] Submit `sitemap.xml` — **unblocked as of 2026-07-29**, now that the
+            gate is off and Google no longer gets a 401. Steps in
+            [analytics.md](analytics.md).
 - [x] ~~Deployment~~ — done 2026-07-28. Hetzner VPS, no Docker: Postgres, Redis,
       Node and Caddy from apt, Medusa as a systemd service. DNS from Hostinger,
       TLS via Let's Encrypt. See [deploy.md](deploy.md).
 
-      **The storefront is deployed gated** — HTTP basic auth plus
-      `X-Robots-Tag: noindex` — precisely because §1–§6 above are still open.
-      Nothing is publicly reachable and no one can place an order. Un-gating is
-      a deliberate step ("Opening the shop" in `deploy.md`) that must not happen
-      until the hard blockers are ticked.
+- [x] ~~Un-gate the storefront~~ — done 2026-07-29 by explicit decision, with
+      §1–§6 still open. Basic auth and the site-wide `X-Robots-Tag` are gone;
+      the site is public and crawlable. See "What is still open" in
+      [deploy.md](deploy.md) for the resulting exposures and how to re-gate.
 - [ ] Automated database backups. None exist; `pg_dump` is manual today. Must be
       in place before real orders arrive.
 - [ ] Monitoring / uptime alerting. Nothing currently reports that the box is

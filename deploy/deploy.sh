@@ -257,29 +257,35 @@ api_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
 site_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
 	"https://${SITE_DOMAIN}/" || echo 000)"
 
-# Fetch the BODY too, not just the status. A misconfigured error handler can
-# return 401 and serve the page anyway — that combination actually shipped once,
-# and a status-only check reported the gate as working while the whole site was
-# readable to anyone who looked at the response body.
-gate_body="$(curl -s --max-time 10 "https://${SITE_DOMAIN}/" 2>/dev/null | head -c 4000 || true)"
+# Fetch the BODY too, not just the status. A status alone proves little: a
+# misconfigured error handler can return one status and serve entirely different
+# content, which has shipped here before.
+site_body="$(curl -s --max-time 10 "https://${SITE_DOMAIN}/" 2>/dev/null | head -c 4000 || true)"
 
 echo "  https://api.${SITE_DOMAIN}/health  -> ${api_code}  (expect 200)"
-echo "  https://${SITE_DOMAIN}/            -> ${site_code}  (expect 401 while gated)"
+echo "  https://${SITE_DOMAIN}/            -> ${site_code}  (expect 200, public since 2026-07-29)"
 
 [[ "${api_code}" == "200" ]] \
 	|| warn "API health check did not return 200. Check: journalctl -u medusa -n 100"
 
-if [[ "${site_code}" == "200" ]]; then
-	warn "The storefront answered 200 without credentials — THE GATE IS OFF."
-	warn "If that was not intended, restore the basic_auth block in deploy/Caddyfile."
-elif [[ "${site_code}" != "401" ]]; then
-	warn "Storefront returned ${site_code}; expected 401 while gated."
+# The site is public by decision. A 401 now means someone reinstated basic auth
+# without meaning to — the inverse of the check this replaced.
+if [[ "${site_code}" == "401" ]]; then
+	warn "The storefront answered 401 — something is asking for credentials."
+	warn "The pre-launch gate was removed on 2026-07-29; check deploy/Caddyfile."
+elif [[ "${site_code}" != "200" ]]; then
+	warn "Storefront returned ${site_code}; expected 200."
+elif ! grep -qiE '<!doctype|<html' <<<"${site_body}"; then
+	warn "Storefront returned 200 but the body is not HTML. Check the root path and"
+	warn "the handle_errors block in deploy/Caddyfile."
 fi
 
-if grep -qiE '<!doctype|<html' <<<"${gate_body}"; then
-	warn "THE GATE IS BYPASSED: an unauthenticated request returned ${site_code} but the"
-	warn "response body contains HTML. Status alone is not proof — something is serving"
-	warn "page content past basic_auth. Check the handle_errors block in deploy/Caddyfile."
+# The legal pages carry their own noindex until the [Platzhalter] company data
+# is replaced (docs/go-live-checklist.md §2). Losing that silently would put
+# unreviewed legal text into the index, so it is checked on every deploy.
+if ! grep -qi 'noindex' "${WEB_ROOT}/impressum/index.html" 2>/dev/null; then
+	warn "/impressum no longer carries noindex. If its company data is still"
+	warn "[Platzhalter], restore the draft prop before Google crawls it."
 fi
 
 log "Deployed ${FULL_SHA}"

@@ -235,12 +235,21 @@ read it before touching anything on the server.
 Do not copy deploy scripts or server credentials from the `peptide` project into this
 codebase. That project is read-only prior art; never edit or deploy it from here.
 
-**The storefront is gated.** Caddy serves it behind HTTP basic auth and
-`X-Robots-Tag: noindex`, because the legal pages still carry `[Platzhalter]` company
-data, the bank details are placeholders and the catalog purity values are fabricated.
-Removing that gate is a launch decision governed by
-[docs/go-live-checklist.md](docs/go-live-checklist.md), not a routine change — never
-remove it as a side effect of other work.
+**The storefront is public.** The pre-launch gate (HTTP basic auth plus a
+site-wide `X-Robots-Tag: noindex`) was removed on 2026-07-29 by explicit decision,
+ahead of the blockers in [docs/go-live-checklist.md](docs/go-live-checklist.md).
+Those blockers are still open: bank details are empty, the legal pages still render
+`[Platzhalter]` company data, there is no order confirmation email, and catalog
+purity values are fabricated.
+
+Two consequences for any change you make here:
+
+- The four legal pages keep their own `noindex` via the `draft` prop in
+  `LegalLayout`. **Do not remove a `draft` prop** until that page's real company
+  data is in place — it is the only thing keeping unreviewed legal text out of
+  the index.
+- Anything you ship is immediately public and crawlable. There is no longer a
+  password between a half-finished change and a real visitor.
 
 Rules, all enforced by `deploy/deploy.sh`:
 

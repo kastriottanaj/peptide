@@ -4,26 +4,25 @@ Runbook for Google Analytics 4 and Google Search Console on
 `peptideeinkaufen.de`. Design decisions live in
 [specs/2026-07-29-analytics-and-search-console.md](specs/2026-07-29-analytics-and-search-console.md).
 
-> **Read this first: the storefront is gated.** Caddy serves it behind HTTP
-> basic auth with `X-Robots-Tag: noindex`, and the `basic_auth` directive has no
-> matcher — so **every** request to the domain answers 401, Googlebot included.
-> That single fact decides how verification works and why there will be no data
-> until launch. See [deploy.md](deploy.md) and
-> [go-live-checklist.md](go-live-checklist.md).
+> **The gate came off on 2026-07-29.** Everything below that was blocked by the
+> 401 now works: Googlebot can fetch, the sitemap can be submitted, and GA4 sees
+> real traffic. The historical constraint is kept in the table because it
+> explains why the domain property was verified by DNS TXT rather than by a
+> meta tag — that choice still stands and needs no revisiting.
 
-## What works while gated, and what does not
+## What the gate used to block
 
-| | While gated | After un-gating |
+| | While gated (until 2026-07-29) | Now |
 | --- | --- | --- |
-| Search Console DNS TXT verification | ✅ works — DNS is answered by Hostinger, not by the gated server | ✅ keeps working, no action |
-| Search Console HTML file / meta tag | ❌ Googlebot gets 401 | ✅ possible |
-| Sitemap submission | ❌ fetch fails with 401 | ✅ submit `sitemap.xml` |
-| Indexing | ❌ blocked by `noindex` even if fetched | ✅ |
-| GA4 collection | ⚠️ only your own through-the-gate sessions | ✅ real traffic |
+| Search Console DNS TXT verification | ✅ worked — DNS is answered by Hostinger, not by the gated server | ✅ still valid, no action |
+| Search Console HTML file / meta tag | ❌ Googlebot got 401 | ✅ possible, but unnecessary — DNS verification already holds |
+| Sitemap submission | ❌ fetch failed with 401 | ✅ **do this now** — see step 3 below |
+| Indexing | ❌ blocked by `noindex` even if fetched | ✅ site-wide; the four legal pages stay `noindex` via their `draft` prop |
+| GA4 collection | ⚠️ only your own through-the-gate sessions | ✅ real traffic, once `PUBLIC_GA_MEASUREMENT_ID` is set on the server |
 
-Setting both up now is still the right order: the property, the consent flow and
-the Datenschutz text all have to exist and be verified *before* traffic arrives.
-An empty Search Console is the expected state, not a fault to debug.
+Note GA4 is still not collecting: `PUBLIC_GA_MEASUREMENT_ID` is unset in
+`/srv/peptides/.env`, so no script loads and no consent dialog appears. That is
+consistent, not broken — but it now means real traffic is going unmeasured.
 
 ## Google Search Console
 
@@ -54,10 +53,10 @@ and retry once the record shows up. **Do not delete the TXT record afterwards**;
 Google re-checks it periodically and removing it un-verifies the property.
 
 The meta-tag method is wired up in code (`PUBLIC_GOOGLE_SITE_VERIFICATION` →
-`Seo.astro`) but is not usable while the gate is on, for the 401 reason above.
-It is there for a URL-prefix property added later.
+`Seo.astro`). It is usable now that the gate is off, but unnecessary — the DNS
+verification already holds. It is there for a URL-prefix property added later.
 
-### 3. At launch, once the gate is off
+### 3. Now that the gate is off — do this
 
 In this order:
 
@@ -152,7 +151,7 @@ With `astro dev` and a measurement ID set, in a fresh private window:
 ```
 
 In GA4 itself, Reports → Realtime should show your own session within a minute
-of step 5. Until the gate is removed, that is the only traffic it will ever see.
+of step 5.
 
 ## Troubleshooting
 
