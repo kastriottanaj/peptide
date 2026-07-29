@@ -1,0 +1,19 @@
+# Root-managed deployment state: keep the storefront closed and reject every
+# state-changing API request while the database is snapshotted or migrated.
+
+(storefront_maintenance) {
+	header {
+		Cache-Control "private, no-store"
+		Retry-After "300"
+	}
+	respond "" 503
+}
+
+(api_maintenance) {
+	@maintenance_write method POST PUT PATCH DELETE
+	header @maintenance_write {
+		Cache-Control "no-store"
+		Retry-After "300"
+	}
+	respond @maintenance_write "" 503
+}

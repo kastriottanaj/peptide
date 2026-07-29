@@ -1,0 +1,38 @@
+# Stops public routing and Medusa if deploy PID %i disappears while a durable
+# activation-required marker still exists.
+
+[Unit]
+Description=Peptides release activation watchdog for deploy PID %i
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/bin/tail --pid=%i -f /dev/null
+ExecStopPost=/usr/bin/bash /srv/peptides/ops-current/deploy/activation-fail-closed.sh
+Restart=no
+RuntimeMaxSec=1800
+TimeoutStopSec=15
+UMask=0077
+UnsetEnvironment=BASH_ENV ENV CDPATH GLOBIGNORE LD_PRELOAD LD_LIBRARY_PATH
+
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RemoveIPC=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native

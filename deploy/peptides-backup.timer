@@ -1,0 +1,13 @@
+[Unit]
+Description=Daily encrypted off-host backup for peptideeinkaufen.de
+Documentation=https://github.com/kastriottanaj/peptide/blob/main/docs/deploy.md
+
+[Timer]
+OnCalendar=*-*-* 03:15:00
+RandomizedDelaySec=30m
+AccuracySec=1m
+Persistent=true
+Unit=peptides-backup.service
+
+[Install]
+WantedBy=timers.target

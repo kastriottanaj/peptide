@@ -1,0 +1,65 @@
+# Run Medusa schema and migration scripts against a root-selected candidate
+# release. The deploy process creates backend-candidate, stops the live backend,
+# starts this oneshot, and removes or replaces the pointer after activation.
+
+[Unit]
+Description=Medusa database migration (peptideeinkaufen.de candidate)
+Documentation=https://github.com/kastriottanaj/peptide/blob/main/docs/deploy.md
+After=network-online.target postgresql.service redis-server.service
+Wants=network-online.target
+Requires=postgresql.service redis-server.service
+Conflicts=medusa.service
+Before=medusa.service
+
+[Service]
+Type=oneshot
+User=medusa
+Group=medusa
+WorkingDirectory=/srv/peptides/backend-candidate/apps/backend/.medusa/server
+
+EnvironmentFile=/srv/peptides/.env
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/var/lib/peptides
+Environment=XDG_CONFIG_HOME=/var/lib/peptides/.config
+Environment=XDG_CACHE_HOME=/var/lib/peptides/.cache
+UnsetEnvironment=BASH_ENV ENV CDPATH GLOBIGNORE LD_PRELOAD LD_LIBRARY_PATH
+UnsetEnvironment=NODE_OPTIONS NPM_CONFIG_SCRIPT_SHELL npm_config_script_shell
+UnsetEnvironment=GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM PYTHONHOME PYTHONPATH
+
+# Use only the CLI shipped in the candidate artifact. A missing candidate or
+# dependency is a hard migration failure, never an implicit network download.
+ExecStartPre=/usr/bin/test -d /srv/peptides/backend-candidate/apps/backend/.medusa/server
+ExecStartPre=/usr/bin/test -f /srv/peptides/backend-candidate/node_modules/@medusajs/cli/cli.js
+ExecStart=/usr/bin/node /srv/peptides/backend-candidate/node_modules/@medusajs/cli/cli.js db:migrate
+TimeoutStartSec=900
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=medusa-migrate
+
+StateDirectory=peptides
+StateDirectoryMode=0700
+UMask=0077
+ProtectSystem=strict
+ReadOnlyPaths=/srv/peptides
+
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RemoveIPC=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native

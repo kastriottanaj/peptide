@@ -1,18 +1,13 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductCard from "../components/ProductCard.astro";
-import { medusa, getDefaultRegionId } from "../lib/medusa";
 import { ORGANIZATION_ID, SITE_NAME, SITE_URL } from "../lib/site";
-import { listCategories } from "../lib/catalog";
+import {
+	listCategories,
+	listProductsInSourceOrder,
+} from "../lib/catalog";
 
-const regionId = await getDefaultRegionId();
-
-const { products: allProducts } = await medusa.store.product.list({
-	region_id: regionId,
-	fields:
-		"id,title,handle,thumbnail,metadata,*variants,*variants.calculated_price",
-	limit: 20,
-});
+const allProducts = await listProductsInSourceOrder({ limit: 20 });
 
 // Prefer peptides (products carrying a research_code) for the homepage so the
 // intended design is showcased; fall back to whatever exists otherwise.

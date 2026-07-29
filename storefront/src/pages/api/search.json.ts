@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { absoluteUrl } from "../../lib/site";
 import { foldSearchText } from "../../lib/search";
 import { listProducts } from "../../lib/catalog";
+import { BUILD_DATE } from "../../lib/build-time";
 import {
 	allStaticEntries,
 	articleEntries,
@@ -124,7 +125,7 @@ export const GET: APIRoute = async () => {
 
 	const body = {
 		/** Build date, so a tool can tell the model how fresh the numbers are. */
-		generated: new Date().toISOString().slice(0, 10),
+		generated: BUILD_DATE,
 		results: [
 			...productDocs,
 			...categories.map(fromEntry("kategorie")),

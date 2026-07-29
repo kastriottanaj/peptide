@@ -1,10 +1,9 @@
 # Medusa backend, installed to /etc/systemd/system/medusa.service by
 # deploy/provision.sh.
 #
-# WorkingDirectory is the `current` symlink, which deploy.sh repoints at the new
-# release before restarting. systemd resolves it at start, so a running process
-# keeps the release it booted from and the restart picks up the new one — that
-# is what makes the swap atomic.
+# backend-current is a root-managed symlink to an immutable release. The
+# runtime user can read the release and its environment, but ProtectSystem and
+# ReadOnlyPaths prevent it from changing any part of /srv/peptides.
 
 [Unit]
 Description=Medusa backend (peptideeinkaufen.de)
@@ -13,9 +12,8 @@ After=network-online.target postgresql.service redis-server.service
 Wants=network-online.target
 Requires=postgresql.service redis-server.service
 
-# Stop restarting after 5 failures in 5 minutes. Without this a config or
-# permission error restarts forever at RestartSec intervals, which reads as
-# "starting" rather than "broken" and buries the real error in repetition.
+# Stop restarting after 5 failures in 5 minutes so a configuration or
+# permission error remains visible instead of becoming an endless restart loop.
 StartLimitIntervalSec=300
 StartLimitBurst=5
 
@@ -23,46 +21,67 @@ StartLimitBurst=5
 Type=simple
 User=medusa
 Group=medusa
-WorkingDirectory=/srv/peptides/current
+WorkingDirectory=/srv/peptides/backend-current/apps/backend/.medusa/server
 
 EnvironmentFile=/srv/peptides/.env
 Environment=NODE_ENV=production
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/var/lib/peptides
+Environment=XDG_CONFIG_HOME=/var/lib/peptides/.config
+Environment=XDG_CACHE_HOME=/var/lib/peptides/.cache
+UnsetEnvironment=BASH_ENV ENV CDPATH GLOBIGNORE LD_PRELOAD LD_LIBRARY_PATH
+UnsetEnvironment=NODE_OPTIONS NPM_CONFIG_SCRIPT_SHELL npm_config_script_shell
+UnsetEnvironment=GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM PYTHONHOME PYTHONPATH
 
-# The Medusa CLI pulls in `configstore`, which writes under $HOME on import —
-# before any command runs. The `medusa` user's home is /srv/peptides, owned by
-# root, so it cannot create .config there and the process dies at startup with
-# EACCES. StateDirectory= makes systemd create /var/lib/medusa owned by this
-# unit's user, and keeps it writable under the ProtectSystem policy below.
-StateDirectory=medusa
-Environment=HOME=/var/lib/medusa
-Environment=XDG_CONFIG_HOME=/var/lib/medusa/.config
-
-# Bind to loopback only. Caddy is the only thing that should reach Medusa, and
-# binding 0.0.0.0 would expose the admin API directly on the public interface —
-# ufw would be the only thing standing in front of it.
-ExecStart=/usr/bin/node ./node_modules/.bin/medusa start --host 127.0.0.1 --port 9000
+# Invoke the CLI installed in the immutable release. Do not use npx, PATH
+# lookup, or a repository checkout executable.
+ExecStartPre=/usr/bin/test -d /srv/peptides/backend-current/apps/backend/.medusa/server
+ExecStartPre=/usr/bin/test -f /srv/peptides/backend-current/node_modules/@medusajs/cli/cli.js
+ExecStartPre=/usr/bin/test ! -e /srv/peptides/recovery-required
+ExecStartPre=/usr/bin/test ! -L /srv/peptides/recovery-required
+ExecStartPre=/usr/bin/test ! -e /srv/peptides/activation-required
+ExecStartPre=/usr/bin/test ! -L /srv/peptides/activation-required
+ExecStartPre=/usr/bin/mkdir -p /var/lib/peptides/static
+ExecStartPre=/usr/bin/chmod 0700 /var/lib/peptides/static
+ExecStart=/usr/bin/node /srv/peptides/backend-current/node_modules/@medusajs/cli/cli.js start --host 127.0.0.1 --port 9000
 
 Restart=always
 RestartSec=5
-# Medusa loads its modules and runs migrations checks on boot; give it room
-# before systemd calls a slow start a failure.
 TimeoutStartSec=180
+TimeoutStopSec=90
 
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=medusa
 
-# Hardening. ProtectSystem=full leaves /usr and /boot read-only; the app still
-# needs to write inside its own tree, so that is granted explicitly rather than
-# by loosening the whole policy.
+# The only writable application path is /var/lib/peptides, created and owned by
+# systemd. Releases, pointers, configuration, repository and storefront under
+# /srv/peptides remain read-only to the service.
+StateDirectory=peptides
+StateDirectoryMode=0700
+UMask=0077
+ProtectSystem=strict
+ReadOnlyPaths=/srv/peptides
+
 NoNewPrivileges=true
+PrivateDevices=true
 PrivateTmp=true
-ProtectSystem=full
-ProtectHome=true
-ProtectKernelTunables=true
+ProtectClock=true
 ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
 RestrictSUIDSGID=true
-ReadWritePaths=/srv/peptides
+LockPersonality=true
+RemoveIPC=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
 
 [Install]
 WantedBy=multi-user.target

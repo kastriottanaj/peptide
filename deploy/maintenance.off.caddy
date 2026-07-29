@@ -1,0 +1,9 @@
+# Root-managed deployment state: normal gated service.
+
+(storefront_maintenance) {
+	header -X-Peptides-Maintenance
+}
+
+(api_maintenance) {
+	header -X-Peptides-Maintenance
+}

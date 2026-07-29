@@ -13,17 +13,24 @@
 # does no shell expansion, so paste it verbatim — unquoted, unescaped.
 {
 	email {$ACME_EMAIL}
+	# The default localhost:2019 endpoint is unauthenticated. Medusa and build
+	# processes can open loopback sockets, so keep the configuration API on a
+	# caddy-owned Unix socket that those identities cannot traverse.
+	admin unix//run/caddy/admin.sock
+	persist_config off
 	# Uncomment to exercise the whole issuance path without burning Let's
 	# Encrypt rate limits while DNS is still settling:
 	# acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
 }
+
+import {$MAINTENANCE_CONFIG}
 
 (security_headers) {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
-		X-Frame-Options "SAMEORIGIN"
+		X-Frame-Options "DENY"
 
 		# Required for WebMCP: browsers only expose navigator.modelContext to a
 		# page that sends this. See README.md — the tools register in code but
@@ -31,6 +38,30 @@
 		Permissions-Policy "tools=(self)"
 
 		-Server
+		-X-Powered-By
+	}
+}
+
+(private_gate_error) {
+	handle_errors {
+		@unauthorized expression {err.status_code} == 401
+		handle @unauthorized {
+			import security_headers
+			header {
+				Cache-Control "private, no-store"
+				Content-Length "0"
+				WWW-Authenticate "Basic realm=\"Private preview\""
+				X-Robots-Tag "noindex, nofollow"
+			}
+			respond "" 401
+		}
+
+		@not_found expression {err.status_code} == 404
+		handle @not_found {
+			import security_headers
+			rewrite * /404.html
+			file_server
+		}
 	}
 }
 
@@ -38,55 +69,84 @@
 # Storefront — static files produced by deploy.sh
 # ---------------------------------------------------------------------------
 {$SITE_DOMAIN} {
-	import security_headers
+	route {
+		import security_headers
+		import {$CSP_CONFIG}
+		header {
+			Cache-Control "private, no-store"
+			X-Robots-Tag "noindex, nofollow"
+		}
+		encode zstd gzip
 
-	# === PRE-LAUNCH GATE ====================================================
-	# The site is not open to the public: the legal pages still render
-	# [Platzhalter] company data, bank details are placeholders and catalog
-	# purity values are fabricated. See docs/go-live-checklist.md.
-	#
-	# To open the shop, delete this block and reload Caddy. That is the whole
-	# un-gating step — see "Opening the shop" in docs/deploy.md.
-	basic_auth {
-		{$GATE_USER} {$GATE_PASSWORD_HASH}
-	}
-	header X-Robots-Tag "noindex, nofollow"
-	# === END GATE ===========================================================
-
-	root * /srv/peptides/storefront
-	encode zstd gzip
-
-	# Astro fingerprints everything under /_astro/, so those URLs are immutable.
-	@immutable path /_astro/*
-	header @immutable Cache-Control "public, max-age=31536000, immutable"
-
-	# Everything else must revalidate, or a deploy takes a day to become visible.
-	# Matching by negation rather than *.html on purpose: almost every page here
-	# is served as a directory index (/produkte/, /wissen/lexikon/), whose
-	# request path does not end in .html and would miss a *.html matcher.
-	@revalidate not path /_astro/*
-	header @revalidate Cache-Control "public, max-age=0, must-revalidate"
-
-	file_server
-
-	# Only 404s get the custom page. The matcher has to gate `file_server` too,
-	# not just the rewrite: a bare `file_server` here runs for EVERY error,
-	# including the 401 from the gate above, and would serve the requested page
-	# out of the error handler — turning basic auth into a suggestion. Anything
-	# that is not a 404 falls through to Caddy's default error response, which
-	# preserves the original status.
-	handle_errors {
-		@404 expression {err.status_code} == 404
-		handle @404 {
-			rewrite * /404.html
+		# Root-only loopback verification reaches the candidate without a gate
+		# password. Both conditions are required, so an Internet client cannot
+		# opt into the bypass by forging the header.
+		@candidate {
+			remote_ip 127.0.0.1 ::1
+			header X-Peptides-Candidate 1
+		}
+		handle @candidate {
+			root * /srv/peptides/storefront-candidate
 			file_server
 		}
+
+		# During first-install maintenance there is no prior storefront on which
+		# to test the gate. This loopback-only route exercises the real
+		# basic-auth hash against the candidate without reopening the public
+		# storefront or any state-changing API route.
+		@gate_probe {
+			remote_ip 127.0.0.1 ::1
+			header X-Peptides-Gate-Probe 1
+		}
+		handle @gate_probe {
+			route {
+				basic_auth {
+					{$GATE_USER} {$GATE_PASSWORD_HASH}
+				}
+				root * /srv/peptides/storefront-candidate
+				file_server
+			}
+		}
+
+		handle {
+			# `handle` sorts its children by directive order unless they are
+			# wrapped in a route. Keep maintenance ahead of authentication so
+			# a deploy can prove the public apex is actually fail-closed.
+			route {
+				import storefront_maintenance
+
+				# === PRE-LAUNCH GATE ========================================
+				# Removal is a separately approved launch change. SITE_GATED
+				# must remain 1 while this committed block is present.
+				basic_auth {
+					{$GATE_USER} {$GATE_PASSWORD_HASH}
+				}
+				# === END GATE ===============================================
+
+				root * /srv/peptides/storefront-current
+				file_server
+			}
+		}
 	}
+
+	import private_gate_error
 }
 
 www.{$SITE_DOMAIN} {
-	import security_headers
-	redir https://{$SITE_DOMAIN}{uri} permanent
+	route {
+		import security_headers
+		header {
+			Cache-Control "private, no-store"
+			X-Robots-Tag "noindex, nofollow"
+		}
+		import storefront_maintenance
+		basic_auth {
+			{$GATE_USER} {$GATE_PASSWORD_HASH}
+		}
+		redir https://{$SITE_DOMAIN}{uri} permanent
+	}
+
+	import private_gate_error
 }
 
 # ---------------------------------------------------------------------------
@@ -97,8 +157,17 @@ www.{$SITE_DOMAIN} {
 # credentials. The store API requires a publishable key and the admin has its
 # own login. noindex keeps it out of search results either way.
 api.{$SITE_DOMAIN} {
-	import security_headers
-	header X-Robots-Tag "noindex, nofollow"
+	route {
+		import security_headers
+		header {
+			Cache-Control "no-store"
+			X-Robots-Tag "noindex, nofollow"
+		}
+		import api_maintenance
 
-	reverse_proxy 127.0.0.1:9000
+		reverse_proxy 127.0.0.1:9000 {
+			header_down -Server
+			header_down -X-Powered-By
+		}
+	}
 }

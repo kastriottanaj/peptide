@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { SITE_NAME, absoluteUrl } from "../lib/site";
 import { editorialBodies } from "../lib/content-index";
+import { BUILD_DATE } from "../lib/build-time";
 
 /**
  * `/llms-full.txt` — the full German text of every non-draft Wissen article and
@@ -49,7 +50,7 @@ export const GET: APIRoute = async () => {
 		"> ausschließlich für Forschungszwecke bestimmt.",
 		"",
 		`Quelle: ${absoluteUrl("/")}`,
-		`Stand: ${new Date().toISOString().slice(0, 10)}`,
+		`Stand: ${BUILD_DATE}`,
 		"",
 	];
 

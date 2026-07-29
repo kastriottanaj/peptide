@@ -1,8 +1,13 @@
 import Medusa from "@medusajs/js-sdk"
 import type { HttpTypes } from "@medusajs/types"
 
+const medusaBaseUrl =
+  import.meta.env.SSR && process.env.MEDUSA_BUILD_SNAPSHOT_REQUIRED === "1"
+    ? "http://127.0.0.1:9"
+    : import.meta.env.PUBLIC_MEDUSA_BACKEND_URL
+
 export const medusa = new Medusa({
-  baseUrl: import.meta.env.PUBLIC_MEDUSA_BACKEND_URL,
+  baseUrl: medusaBaseUrl,
   publishableKey: import.meta.env.PUBLIC_MEDUSA_PUBLISHABLE_KEY,
 })
 
@@ -10,6 +15,17 @@ let cachedRegion: HttpTypes.StoreRegion | null = null
 
 async function getDefaultRegion(): Promise<HttpTypes.StoreRegion> {
   if (cachedRegion) return cachedRegion
+
+  if (import.meta.env.SSR) {
+    const { snapshotRegions } = await import("./build-catalog")
+    const captured = await snapshotRegions()
+    if (captured) {
+      const region = captured[0]
+      if (!region) throw new Error("No region configured in build catalog snapshot.")
+      cachedRegion = region
+      return cachedRegion
+    }
+  }
 
   const { regions } = await medusa.store.region.list()
   const region = regions[0]

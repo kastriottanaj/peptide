@@ -2,19 +2,14 @@
 import type { HttpTypes } from "@medusajs/types";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import AddToCart from "../../components/AddToCart.astro";
-import { medusa, getDefaultRegionId } from "../../lib/medusa";
-import { isProductAvailable } from "../../lib/catalog";
+import {
+	isProductAvailable,
+	listProductsInSourceOrder,
+} from "../../lib/catalog";
 import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
 
 export async function getStaticPaths() {
-	const regionId = await getDefaultRegionId();
-
-	const { products } = await medusa.store.product.list({
-		region_id: regionId,
-		fields:
-			"id,title,handle,description,thumbnail,metadata,*variants,*variants.calculated_price,*variants.options",
-		limit: 1000,
-	});
+	const products = await listProductsInSourceOrder({ limit: 1000 });
 
 	return products.map((product) => ({
 		params: { handle: product.handle },
@@ -26,7 +21,7 @@ interface Props {
 	product: HttpTypes.StoreProduct;
 }
 
-const { product } = Astro.props;
+const { product } = Astro.props as Props;
 const meta = (product.metadata ?? {}) as Record<string, unknown>;
 const researchCode =
 	typeof meta.research_code === "string" ? meta.research_code : null;

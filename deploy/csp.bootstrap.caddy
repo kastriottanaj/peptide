@@ -1,0 +1,4 @@
+# Fail-closed enforced policy used before the first complete storefront release.
+# Candidate builds use build-csp.mjs --report-only with the local Chrome gate;
+# this bootstrap must not be weakened to report-only.
+header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"

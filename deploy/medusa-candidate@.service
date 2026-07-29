@@ -1,0 +1,66 @@
+# Hidden candidate backend. It is never enabled and is bound to the invoking
+# deployment PID's guard, so it cannot survive a crashed deployment shell.
+
+[Unit]
+Description=Medusa candidate backend for deploy PID %i
+After=network-online.target postgresql.service redis-server.service peptides-deploy-guard@%i.service
+Wants=network-online.target
+Requires=postgresql.service redis-server.service peptides-deploy-guard@%i.service
+BindsTo=peptides-deploy-guard@%i.service
+Conflicts=medusa.service
+
+[Service]
+Type=simple
+User=medusa
+Group=medusa
+WorkingDirectory=/srv/peptides/backend-candidate/apps/backend/.medusa/server
+
+EnvironmentFile=/srv/peptides/.env
+Environment=NODE_ENV=production
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=HOME=/var/lib/peptides
+Environment=XDG_CONFIG_HOME=/var/lib/peptides/.config
+Environment=XDG_CACHE_HOME=/var/lib/peptides/.cache
+UnsetEnvironment=BASH_ENV ENV CDPATH GLOBIGNORE LD_PRELOAD LD_LIBRARY_PATH
+UnsetEnvironment=NODE_OPTIONS NPM_CONFIG_SCRIPT_SHELL npm_config_script_shell
+UnsetEnvironment=GIT_CONFIG_GLOBAL GIT_CONFIG_SYSTEM PYTHONHOME PYTHONPATH
+
+ExecStartPre=/usr/bin/test -f /srv/peptides/recovery-required
+ExecStartPre=/usr/bin/test -d /srv/peptides/backend-candidate/apps/backend/.medusa/server
+ExecStartPre=/usr/bin/test -f /srv/peptides/backend-candidate/node_modules/@medusajs/cli/cli.js
+ExecStartPre=/usr/bin/mkdir -p /var/lib/peptides/static
+ExecStartPre=/usr/bin/chmod 0700 /var/lib/peptides/static
+ExecStart=/usr/bin/node /srv/peptides/backend-candidate/node_modules/@medusajs/cli/cli.js start --host 127.0.0.1 --port 9000
+
+Restart=no
+RuntimeMaxSec=900
+TimeoutStartSec=180
+TimeoutStopSec=90
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=medusa-candidate
+
+StateDirectory=peptides
+StateDirectoryMode=0700
+UMask=0077
+ProtectSystem=strict
+ReadOnlyPaths=/srv/peptides
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RemoveIPC=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native

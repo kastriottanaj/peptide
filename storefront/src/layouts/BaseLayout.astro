@@ -3,6 +3,7 @@ import Seo from "../components/Seo.astro";
 import WebMCPTools from "../components/WebMCPTools.astro";
 import ConsentBanner from "../components/ConsentBanner.astro";
 import { ANALYTICS_ENABLED } from "../lib/analytics";
+import { BUILD_YEAR } from "../lib/build-time";
 
 export interface Props {
 	title: string;
@@ -161,7 +162,7 @@ const {
 				</div>
 			</div>
 			<div class="footer__legal">
-				<p>&copy; {new Date().getFullYear()} Peptide Einkaufen</p>
+				<p>&copy; {BUILD_YEAR} Peptide Einkaufen</p>
 				<p>Ausschließlich für Forschungs- und Laborzwecke. Nicht für den menschlichen Gebrauch.</p>
 			</div>
 		</footer>
