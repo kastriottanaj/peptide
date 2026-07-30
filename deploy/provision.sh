@@ -61,6 +61,33 @@ fi
 echo "node $(node -v), npm $(npm -v)"
 
 # ---------------------------------------------------------------------------
+log "npm fetch tuning"
+# ---------------------------------------------------------------------------
+# registry.npmjs.org sits behind Cloudflare, which rate-limits by request volume
+# per IP — and Hetzner ranges are treated harshly. A deploy runs two installs:
+# `npm ci` for the build (~1400 packages) and a second `npm install` when
+# assembling the release. The first one spends the IP's budget, and the second
+# then walks into a wall of 429s.
+#
+# npm's default of 2 retries gives up long before that budget refills, so the
+# deploy dies at "Assembling release" with `E429 Too Many Requests` on whichever
+# @medusajs package it happened to reach. Retrying the deploy does not help; the
+# budget is still empty. Waiting 45 minutes between attempts does not help
+# either, because the first install empties it again immediately.
+#
+# More patient retries are what actually clears it: 8 attempts backing off up to
+# 180 s outlast the refill. Fewer sockets lower the burst rate that trips the
+# limit in the first place. Deploys get slower and stop failing.
+#
+# Observed 2026-07-30: five consecutive deploys of c9fc26e failed here; the
+# sixth, with these settings, went through. See docs/deploy.md.
+npm config set maxsockets 2
+npm config set fetch-retries 8
+npm config set fetch-retry-mintimeout 20000
+npm config set fetch-retry-maxtimeout 180000
+echo "npm: maxsockets=$(npm config get maxsockets), retries=$(npm config get fetch-retries)"
+
+# ---------------------------------------------------------------------------
 log "Caddy"
 # ---------------------------------------------------------------------------
 if ! command -v caddy >/dev/null 2>&1; then

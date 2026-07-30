@@ -268,6 +268,56 @@ systemctl status medusa
 journalctl -u medusa -n 100 --no-pager
 ```
 
+### `E429 Too Many Requests` at "Assembling release"
+
+```
+==> Assembling release  (expect 1-3 min)
+npm error code E429
+npm error 429 Too Many Requests - GET https://registry.npmjs.org/@medusajs%2fmodules-sdk
+```
+
+`registry.npmjs.org` is behind Cloudflare, which rate-limits by request volume
+per IP and treats Hetzner ranges harshly. A deploy runs **two** installs: `npm
+ci` for the build (~1400 packages), then a second `npm install` when assembling
+the release. The first spends the IP's budget; the second hits the wall.
+
+**The failure is not what it looks like.** Three things mislead:
+
+- *It names a package.* The package in the message is just whichever one npm
+  reached first — it moved between `@medusajs/modules-sdk`, `admin-sdk` and
+  `types` across runs. Nothing is wrong with that package.
+- *A plain `curl` of the same URL returns 200.* One request is under the limit;
+  npm opening 15 sockets is not. A green `curl` does **not** mean the deploy
+  will get through, and probing that way will send you in circles.
+- *Waiting does not fix it.* A 45-minute pause changed nothing, because the
+  next deploy's first install empties the budget again within seconds.
+
+The fix is patience in the npm client, not retrying the deploy. `provision.sh`
+sets these; if you are on a box that predates that, apply them by hand:
+
+```bash
+npm config set maxsockets 2            # lower the burst that trips the limit
+npm config set fetch-retries 8         # default 2 — gives up before the refill
+npm config set fetch-retry-mintimeout 20000
+npm config set fetch-retry-maxtimeout 180000
+```
+
+Then re-run the deploy normally. Expect the assemble step to take longer than
+the 1–3 min in the table above; that is the trade, and it succeeds.
+
+Confirm it is this and not a genuine registry outage — the blocked fetch returns
+`server: cloudflare` and a `retry-after` header, and *other* packages still
+return 200 from the same box:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://registry.npmjs.org/express
+curl -sD- -o /dev/null 'https://registry.npmjs.org/@medusajs%2ftypes' | head -5
+```
+
+A failure here is safe: it happens long before the symlink moves, so the running
+release is untouched. Observed 2026-07-30, when five consecutive deploys of
+`c9fc26e` died this way and the sixth, with these settings, went through.
+
 ### A change to `deploy.sh` itself takes effect one deploy later
 
 **The script that runs is the one already on the box, not the one at the SHA you
