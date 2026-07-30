@@ -182,10 +182,12 @@ head tags in a page:
   localhost canonicals. Local dev sets `PUBLIC_SITE_URL=http://localhost:4321`.
 - Derive every absolute URL from `absoluteUrl()` in `src/lib/site.ts`. Never hand-build
   absolute URLs at call sites.
-- Split the sitemap by content type behind a sitemap index (products / pages / content)
-  rather than one flat file, with `changefreq` and `priority` per type and a real
-  `lastmod` from content dates. Rough priorities that worked there: home 1.0, catalog
-  listing 0.95, product 0.9, category and tools 0.7–0.75, legal pages 0.2.
+- Split the sitemap by content type behind a sitemap index (pages / products / wissen /
+  lexikon) rather than one flat file, with `changefreq` and `priority` per type and a
+  real `lastmod` from content dates. Rough priorities that worked there: home 1.0,
+  catalog listing 0.95, product 0.9, category and tools 0.7–0.75, legal pages 0.2. A URL
+  belongs to exactly one sitemap — `/wissen` and `/wissen/lexikon` ride with the entries
+  they list, not with the static pages.
 - Include the image sitemap extension (`xmlns:image`) on product entries with
   `<image:title>` and `<image:caption>` built from the product's name, purity and form.
   Google Images is a real traffic source for this niche.

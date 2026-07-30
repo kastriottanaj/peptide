@@ -11,6 +11,7 @@ export const GET: APIRoute = () => {
 			{ loc: absoluteUrl("/sitemap-pages.xml"), lastModified },
 			{ loc: absoluteUrl("/sitemap-products.xml"), lastModified },
 			{ loc: absoluteUrl("/sitemap-wissen.xml"), lastModified },
+			{ loc: absoluteUrl("/sitemap-lexikon.xml"), lastModified },
 		]),
 	);
 };

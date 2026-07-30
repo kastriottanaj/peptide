@@ -116,32 +116,54 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 
 /**
  * `/wissen` and `/wissen/lexikon` live in STATIC_ROUTES so llms.txt can list
- * them alongside their articles, but they are emitted by the wissen sitemap
- * rather than the pages sitemap — which is where they have always been. Keeping
- * them out of one avoids the same URL appearing in two sitemaps.
+ * them alongside their entries, but each is emitted by the editorial sitemap
+ * that carries the entries below it rather than by the pages sitemap. Keeping
+ * them out of the pages sitemap avoids the same URL appearing in two sitemaps.
  */
-const WISSEN_INDEX_PATHS = new Set(["/wissen", "/wissen/lexikon"]);
+const WISSEN_INDEX_PATH = "/wissen";
+const LEXIKON_INDEX_PATH = "/wissen/lexikon";
+const EDITORIAL_INDEX_PATHS = new Set([WISSEN_INDEX_PATH, LEXIKON_INDEX_PATH]);
 
 const withTimestamp = (
 	routes: Array<Omit<IndexedEntry, "lastModified">>,
 	lastModified: Date,
 ): IndexedEntry[] => routes.map((route) => ({ ...route, lastModified }));
 
-/** Static routes belonging to the pages sitemap (everything but the Wissen indexes). */
+/** Static routes belonging to the pages sitemap (everything but the editorial indexes). */
 export function staticEntries(lastModified = buildDate()): IndexedEntry[] {
 	return withTimestamp(
-		STATIC_ROUTES.filter((route) => !WISSEN_INDEX_PATHS.has(route.path)),
+		STATIC_ROUTES.filter((route) => !EDITORIAL_INDEX_PATHS.has(route.path)),
 		lastModified,
 	);
 }
 
 /**
- * The two Wissen index pages, emitted by the wissen sitemap. No `lastmod`:
- * build time is not a modification date, and the articles listed beneath them
- * carry real dates of their own.
+ * An editorial index page, dated from the newest entry listed on it: the index
+ * changes exactly when its newest entry does. Build time would not be a
+ * modification date, and shipping no `lastmod` at all is the weakest possible
+ * crawl signal — which is what these would get otherwise, coming from the
+ * hand-maintained static routes with no date of their own to contribute.
  */
-export function wissenIndexEntries(): IndexedEntry[] {
-	return STATIC_ROUTES.filter((route) => WISSEN_INDEX_PATHS.has(route.path));
+function editorialIndexEntries(path: string, listed: IndexedEntry[]): IndexedEntry[] {
+	const times = listed
+		.map((entry) => entry.lastModified?.getTime())
+		.filter((time): time is number => time !== undefined);
+	const newest = times.length ? new Date(Math.max(...times)) : undefined;
+
+	return STATIC_ROUTES.filter((route) => route.path === path).map((route) => ({
+		...route,
+		lastModified: newest,
+	}));
+}
+
+/** The `/wissen` index page, emitted by the wissen sitemap above its articles. */
+export function wissenIndexEntries(articles: IndexedEntry[]): IndexedEntry[] {
+	return editorialIndexEntries(WISSEN_INDEX_PATH, articles);
+}
+
+/** The `/wissen/lexikon` index page, emitted by the lexikon sitemap above its terms. */
+export function lexikonIndexEntries(terms: IndexedEntry[]): IndexedEntry[] {
+	return editorialIndexEntries(LEXIKON_INDEX_PATH, terms);
 }
 
 /** Every static route, in declaration order — what llms.txt enumerates. */

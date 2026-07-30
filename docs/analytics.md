@@ -64,7 +64,10 @@ In this order:
    must return `200` with no `X-Robots-Tag` header.
 2. Submit the sitemap index in Search Console → Sitemaps: `sitemap.xml`. It
    fronts the per-type sitemaps (`sitemap-products.xml`, `sitemap-pages.xml`,
-   `sitemap-wissen.xml`), so submitting the index is enough.
+   `sitemap-wissen.xml`, `sitemap-lexikon.xml`), so submitting the index is
+   enough. Search Console then reports coverage per child sitemap, which is the
+   point of the split — a glossary term failing to index looks nothing like an
+   article failing to index.
 3. Use **URL inspection → Request indexing** on the homepage and the catalog
    listing to prompt the first crawl.
 4. Expect coverage reports to stay noisy for a week or two. Filtered listing
