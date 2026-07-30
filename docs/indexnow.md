@@ -159,6 +159,12 @@ do: a crawler could not fetch the URLs either.
 **"skipped: nothing changed since the last submission".** Working as intended —
 the build is byte-identical to the last submitted one. Force with `--all`.
 
+**The deploy printed no IndexNow step at all.** Expected on the first deploy after
+a change to `deploy.sh`: the running script is the copy already on the box, so a
+newly added step only runs on the following deploy. That is exactly how this
+feature behaved on 2026-07-30 — see "A change to `deploy.sh` itself takes effect
+one deploy later" in [deploy.md](deploy.md).
+
 **"skipped: origin is http://localhost:4321, not https".** A local build. Nothing
 to submit.
 

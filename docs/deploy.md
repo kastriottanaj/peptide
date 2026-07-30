@@ -207,6 +207,35 @@ systemctl status medusa
 journalctl -u medusa -n 100 --no-pager
 ```
 
+### A change to `deploy.sh` itself takes effect one deploy later
+
+**The script that runs is the one already on the box, not the one at the SHA you
+are deploying.** `bash /srv/peptides/repo/deploy/deploy.sh <sha>` starts executing
+the working copy in `/srv/peptides/repo`, which is pinned to the *previously*
+deployed commit; the `git checkout` to `<sha>` happens inside that run, after
+bash has begun reading the file. So a deploy that ships a new step in `deploy.sh`
+does not perform that step — the next deploy does, because by then the new script
+is on disk.
+
+Observed on 2026-07-30: the deploy of `2f62d6c` added the IndexNow submission
+step and did not run it. The step first ran on the following deploy (`86f0d7b`),
+six minutes later, which is why the first submission timestamp does not match the
+deploy that introduced it.
+
+Practical consequences:
+
+- **Verify a `deploy.sh` change by its second deploy, not its first.** A missing
+  step in the first run is expected, not a bug to chase.
+- If a step must run with the commit that introduces it, deploy twice — the
+  second run is fast, since npm caches and the build are warm.
+- Do not "fix" this by editing the script on the server. It re-installs from the
+  repo on every deploy, so a hand edit is lost at the next run and, worse, makes
+  the server disagree with the file you are reading.
+- Editing a running bash script is genuinely hazardous — bash reads scripts by
+  byte offset, so a mid-run change can splice the old and new file. Treat a
+  deploy that modifies `deploy.sh` as one whose *later* steps are unpredictable,
+  and re-run it once the new script is in place.
+
 ### The catalog and the storefront are coupled
 
 The storefront is static and fetches the catalog **at build time**. Editing a

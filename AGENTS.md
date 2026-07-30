@@ -275,10 +275,15 @@ Rules, all enforced by `deploy/deploy.sh`:
 - Publish expected durations, and when output stalls past them, inspect the lock and the
   running processes instead of waiting.
 
-Two things that surprise people:
+Three things that surprise people:
 
 - **The storefront is static and reads the catalog at build time.** Editing a product in
   the Medusa admin changes the API but not the built pages — the site has to be rebuilt
   before the change is visible.
 - **Database migrations do not roll back.** Deploying an older SHA restores the code, not
   the schema. Dump the database before any deploy that migrates.
+- **A change to `deploy.sh` itself takes effect one deploy later.** The script that runs
+  is the copy already in `/srv/peptides/repo`, pinned to the previously deployed commit;
+  the checkout to the target SHA happens inside the run. So a deploy that adds a step
+  does not perform it — the next one does. Verify such a change by its second deploy.
+  See "A change to `deploy.sh` itself" in [docs/deploy.md](docs/deploy.md).
