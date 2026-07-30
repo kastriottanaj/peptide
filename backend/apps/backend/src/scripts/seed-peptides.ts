@@ -6,6 +6,8 @@ import {
 import {
   createProductCategoriesWorkflow,
   createProductsWorkflow,
+  updateProductVariantsWorkflow,
+  updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows";
 
 /**
@@ -18,9 +20,17 @@ import {
  * before this store is ever made live. Each product is tagged metadata.demo =
  * "true" and its description carries a visible German placeholder notice.
  *
- * Run once with:  npx medusa exec ./src/scripts/seed-peptides.ts
- * The script is idempotent: existing categories/products (by name/handle) are
- * skipped so re-running will not create duplicates.
+ * Run with:  npx medusa exec ./src/scripts/seed-peptides.ts
+ *
+ * The script is convergent, not merely skip-on-exists. Re-running it writes the
+ * definitions below onto the products it owns — that is the whole point, because
+ * replacing the placeholder purity, COA and price values is the update this
+ * catalog needs before launch, and a seed that skipped every existing handle
+ * could never deliver it.
+ *
+ * It only ever touches products whose handle appears below AND which carry
+ * metadata.demo = "true"; anything else aborts the run rather than overwrite a
+ * real product with placeholder data.
  */
 export default async function seedPeptides({
   container,
@@ -187,48 +197,136 @@ export default async function seedPeptides({
     },
   ];
 
-  // Skip products whose handle already exists.
+  const seedHandles = new Set(peptides.map((p) => p.handle));
+
   const { data: existingProducts } = await query.graph({
     entity: "product",
-    fields: ["handle"],
+    fields: ["id", "handle", "metadata", "variants.id", "variants.title"],
   });
-  const existingHandles = new Set(existingProducts.map((p) => p.handle));
-  const toCreate = peptides.filter((p) => !existingHandles.has(p.handle));
 
-  if (!toCreate.length) {
-    logger.info("Peptide demo products already present. Nothing to create.");
-    return;
+  // Only products this seed owns are ever touched. A handle collision with a
+  // real product must stop the run rather than have the seed overwrite it with
+  // placeholder purity values.
+  const owned = new Map<string, (typeof existingProducts)[number]>();
+  for (const product of existingProducts) {
+    if (!seedHandles.has(product.handle as string)) continue;
+
+    const metadata = (product.metadata ?? {}) as Record<string, unknown>;
+    if (metadata.demo !== "true") {
+      logger.error(
+        `Product "${product.handle}" exists but is not marked metadata.demo = "true". ` +
+          `Refusing to overwrite a non-demo product with placeholder data; ` +
+          `rename or remove it first.`
+      );
+      return;
+    }
+    if (owned.has(product.handle as string)) {
+      logger.error(
+        `More than one product uses the handle "${product.handle}". ` +
+          `Resolve the ambiguity before seeding.`
+      );
+      return;
+    }
+    owned.set(product.handle as string, product);
   }
 
-  await createProductsWorkflow(container).run({
-    input: {
-      products: toCreate.map((p) => ({
-        title: p.title,
-        handle: p.handle,
-        description: p.description,
-        status: ProductStatus.PUBLISHED,
-        category_ids: catId(p.category),
-        shipping_profile_id: shippingProfile.id,
-        metadata: demoMeta(p.code),
-        options: [
-          {
-            title: "Packgröße",
-            values: p.packs.map((pk) => pk.size),
-          },
-        ],
-        variants: p.packs.map((pk) => ({
-          title: pk.size,
-          sku: `${p.code}-${pk.size.replace(/\s+/g, "")}`,
-          manage_inventory: false,
-          options: { "Packgröße": pk.size },
-          prices: eur(pk.price),
-        })),
-        sales_channels: [{ id: salesChannel.id }],
-      })),
-    },
-  });
+  const toCreate = peptides.filter((p) => !owned.has(p.handle));
+  const toConverge = peptides.filter((p) => owned.has(p.handle));
 
-  logger.info(
-    `Seeded ${toCreate.length} DEMO peptide products (placeholder analytical data).`
-  );
+  const variantsFor = (p: PeptideSeed) =>
+    p.packs.map((pk) => ({
+      title: pk.size,
+      sku: `${p.code}-${pk.size.replace(/\s+/g, "")}`,
+      // Inventory is tracked and backorders are refused, so the catalog cannot
+      // oversell. `manage_inventory: false` meant every variant was infinitely
+      // available and the storefront's availability check could never be false.
+      // Stock levels are an operational matter, set in the admin per location.
+      manage_inventory: true,
+      allow_backorder: false,
+      options: { "Packgröße": pk.size },
+      prices: eur(pk.price),
+    }));
+
+  if (toCreate.length) {
+    await createProductsWorkflow(container).run({
+      input: {
+        products: toCreate.map((p) => ({
+          title: p.title,
+          handle: p.handle,
+          description: p.description,
+          status: ProductStatus.PUBLISHED,
+          category_ids: catId(p.category),
+          shipping_profile_id: shippingProfile.id,
+          metadata: demoMeta(p.code),
+          options: [
+            {
+              title: "Packgröße",
+              values: p.packs.map((pk) => pk.size),
+            },
+          ],
+          variants: variantsFor(p),
+          sales_channels: [{ id: salesChannel.id }],
+        })),
+      },
+    });
+    logger.info(
+      `Created ${toCreate.length} DEMO peptide product(s) (placeholder analytical data).`
+    );
+  }
+
+  // Converge, rather than skip.
+  //
+  // Skipping every existing handle meant a corrected purity value, COA status or
+  // price could never reach a store that had already been seeded — the exact
+  // update this catalog needs before launch would silently do nothing. Product
+  // fields and per-variant prices are therefore written on every run.
+  for (const p of toConverge) {
+    const existing = owned.get(p.handle)!;
+
+    await updateProductsWorkflow(container).run({
+      input: {
+        selector: { id: existing.id as string },
+        update: {
+          title: p.title,
+          description: p.description,
+          status: ProductStatus.PUBLISHED,
+          category_ids: catId(p.category),
+          metadata: demoMeta(p.code),
+        },
+      },
+    });
+
+    const existingVariants = (existing.variants ?? []) as Array<{
+      id: string;
+      title: string | null;
+    }>;
+
+    for (const pack of p.packs) {
+      const variant = existingVariants.find((v) => v.title === pack.size);
+      if (!variant) {
+        logger.warn(
+          `Product "${p.handle}" has no "${pack.size}" variant to converge. ` +
+            `Add the pack size in the admin; this seed does not restructure options.`
+        );
+        continue;
+      }
+
+      await updateProductVariantsWorkflow(container).run({
+        input: {
+          selector: { id: variant.id },
+          update: {
+            manage_inventory: true,
+            allow_backorder: false,
+            prices: eur(pack.price),
+          },
+        },
+      });
+    }
+
+    logger.info(`Converged DEMO peptide product "${p.handle}".`);
+  }
+
+  if (!toCreate.length && !toConverge.length) {
+    logger.info("No peptide demo products defined; nothing to do.");
+  }
 }
