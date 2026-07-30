@@ -267,6 +267,13 @@ api_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
 site_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
 	"https://${SITE_DOMAIN}/" || echo 000)"
 
+# The admin dashboard is the same Medusa, so this is not a second health check —
+# it is a check on the hostname. A brand new subdomain fails here first, either
+# because the DNS record is missing or because Caddy has not issued its
+# certificate yet, and both look like "the admin is down" from a browser.
+admin_code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
+	"https://admin.${SITE_DOMAIN}/" || echo 000)"
+
 # Fetch the BODY too, not just the status. A status alone proves little: a
 # misconfigured error handler can return one status and serve entirely different
 # content, which has shipped here before.
@@ -274,9 +281,19 @@ site_body="$(curl -s --max-time 10 "https://${SITE_DOMAIN}/" 2>/dev/null | head 
 
 echo "  https://api.${SITE_DOMAIN}/health  -> ${api_code}  (expect 200)"
 echo "  https://${SITE_DOMAIN}/            -> ${site_code}  (expect 200, public since 2026-07-29)"
+echo "  https://admin.${SITE_DOMAIN}/      -> ${admin_code}  (expect 302 to /app)"
 
 [[ "${api_code}" == "200" ]] \
 	|| warn "API health check did not return 200. Check: journalctl -u medusa -n 100"
+
+if [[ "${admin_code}" == "000" ]]; then
+	warn "admin.${SITE_DOMAIN} did not answer at all. Most likely the DNS A record"
+	warn "is missing, or Caddy has not issued its certificate yet:"
+	warn "  dig +short admin.${SITE_DOMAIN}"
+	warn "  journalctl -u caddy -n 50 --no-pager"
+elif [[ "${admin_code}" != "302" ]]; then
+	warn "admin.${SITE_DOMAIN} returned ${admin_code}; expected a 302 to /app."
+fi
 
 # The site is public by decision. A 401 now means someone reinstated basic auth
 # without meaning to — the inverse of the check this replaced.

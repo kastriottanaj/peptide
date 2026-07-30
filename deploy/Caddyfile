@@ -87,7 +87,7 @@ www.{$SITE_DOMAIN} {
 }
 
 # ---------------------------------------------------------------------------
-# Medusa — store API and the admin dashboard at /app
+# Medusa — store API
 # ---------------------------------------------------------------------------
 # Deliberately NOT behind basic auth: the storefront calls this cross-origin
 # from the browser, and a cross-origin XHR will not carry basic-auth
@@ -96,6 +96,35 @@ www.{$SITE_DOMAIN} {
 api.{$SITE_DOMAIN} {
 	import security_headers
 	header X-Robots-Tag "noindex, nofollow"
+
+	# The dashboard is reachable here too — it is the same Node process — but it
+	# has one home, admin.{$SITE_DOMAIN}. Two working admin URLs means two sets
+	# of bookmarks and two things to remember to lock down. 302, not 301: a
+	# permanent redirect for an internal path is cached in browsers long after
+	# anyone wants to undo it.
+	@admin path /app /app/*
+	redir @admin https://admin.{$SITE_DOMAIN}{uri} 302
+
+	reverse_proxy 127.0.0.1:9000
+}
+
+# ---------------------------------------------------------------------------
+# Medusa — admin dashboard
+# ---------------------------------------------------------------------------
+# Not a separate app: the same Medusa on :9000 serves the dashboard at /app.
+# This host exists to give it its own URL. Everything is proxied, not just
+# /app, because the dashboard's own API calls go to /admin and /auth on
+# whatever origin served it — proxying the whole host keeps them same-origin,
+# so the admin never depends on ADMIN_CORS/AUTH_CORS being right.
+#
+# /app cannot be moved to the root by config: it is compiled into the bundle as
+# Vite's `base`, and the dashboard's router is mounted under it. So the bare
+# hostname redirects instead, and the address bar settles on /app.
+admin.{$SITE_DOMAIN} {
+	import security_headers
+	header X-Robots-Tag "noindex, nofollow"
+
+	redir / /app 302
 
 	reverse_proxy 127.0.0.1:9000
 }

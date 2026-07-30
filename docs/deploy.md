@@ -21,13 +21,18 @@ Internet
   └── Caddy :80/:443 ── auto-TLS, security headers, the gate
         ├── peptideeinkaufen.de  → static files in /srv/peptides/storefront
         ├── www.…                → redirect to apex
-        └── api.…                → 127.0.0.1:9000  (medusa.service)
-              ├── postgresql.service    (127.0.0.1:5432)
-              └── redis-server.service  (127.0.0.1:6379)
+        ├── api.…                → 127.0.0.1:9000  (medusa.service)
+        │     ├── postgresql.service    (127.0.0.1:5432)
+        │     └── redis-server.service  (127.0.0.1:6379)
+        └── admin.…              → 127.0.0.1:9000  (the same Medusa)
 ```
 
 Medusa binds loopback only, so Caddy is the only way in. Postgres and Redis are
 on their Ubuntu defaults, which also bind loopback.
+
+`api.` and `admin.` are the same process. Medusa serves the dashboard from the
+Node server at `/app`, so the second hostname is a Caddy-level split, not a
+second app to deploy or restart. See [The admin dashboard](#the-admin-dashboard).
 
 ## Layout on the server
 
@@ -57,11 +62,12 @@ Servers → DNS records**, add three A records pointing at the Hetzner IPv4:
 | A | `@` | `<hetzner-ipv4>` | 3600 |
 | A | `www` | `<hetzner-ipv4>` | 3600 |
 | A | `api` | `<hetzner-ipv4>` | 3600 |
+| A | `admin` | `<hetzner-ipv4>` | 3600 |
 
-If the box has IPv6, add the same three as `AAAA` records.
+If the box has IPv6, add the same four as `AAAA` records.
 
-Delete any pre-existing `A`/`CNAME` records for `@`, `www` or `api` pointing at
-Hostinger parking — two records for one name resolve unpredictably.
+Delete any pre-existing `A`/`CNAME` records for `@`, `www`, `api` or `admin`
+pointing at Hostinger parking — two records for one name resolve unpredictably.
 
 **Do this before deploying.** Caddy requests certificates on first request per
 hostname and issuance fails until the names resolve. Verify:
@@ -70,9 +76,12 @@ hostname and issuance fails until the names resolve. Verify:
 dig +short peptideeinkaufen.de
 dig +short www.peptideeinkaufen.de
 dig +short api.peptideeinkaufen.de
+dig +short admin.peptideeinkaufen.de
 ```
 
-All three must return the Hetzner IP before continuing.
+All four must return the Hetzner IP before continuing. A hostname that does not
+resolve does not get a certificate, and Caddy retries issuance rather than
+serving the site — so `admin.` will look broken until the record propagates.
 
 ## 2. Provision the box (once)
 
@@ -139,7 +148,7 @@ sudo -u medusa NODE_ENV=production npx medusa exec ./src/scripts/seed-peptides.t
 
 ### Phase 2 — publishable key, then the storefront
 
-Open `https://api.peptideeinkaufen.de/app`, log in, go to **Settings →
+Open `https://admin.peptideeinkaufen.de`, log in, go to **Settings →
 Publishable API keys**. Copy the `pk_…` value, and make sure it is linked to a
 sales channel containing the products — an unlinked key returns an empty catalog
 and the storefront builds an empty shop.
@@ -154,6 +163,8 @@ bash /srv/peptides/repo/deploy/deploy.sh <same-sha>
 ```bash
 curl -sI https://peptideeinkaufen.de            # 200, no X-Robots-Tag
 curl -s  https://api.peptideeinkaufen.de/health # OK
+curl -sI https://admin.peptideeinkaufen.de      # 302 → https://admin.…/app
+curl -sI https://api.peptideeinkaufen.de/app    # 302 → https://admin.…/app
 curl -sI https://peptideeinkaufen.de/impressum | grep -i x-robots  # per-page noindex stays
 ```
 
@@ -161,7 +172,8 @@ In a browser:
 
 - Homepage, a product page and a Wissen article render
 - Product pages show real prices — not an empty catalog
-- `https://api.peptideeinkaufen.de/app` reaches the admin login
+- `https://admin.peptideeinkaufen.de` reaches the admin login, and logging in
+  lands on the dashboard rather than bouncing back to the login form
 - `Permissions-Policy: tools=(self)` present (required for WebMCP)
 - No site-wide `X-Robots-Tag` — but `/impressum` and the other three legal pages
   still carry a per-page `noindex`
@@ -169,6 +181,55 @@ In a browser:
   not `localhost`
 - Add to cart works against the live API
 - `reboot` the box and confirm everything returns unattended
+
+---
+
+## The admin dashboard
+
+**<https://admin.peptideeinkaufen.de>** — log in with the email and password of
+a Medusa user. Credentials for this deployment are in the untracked
+`CREDENTIALS.local.md`, not here.
+
+The bare hostname redirects to `/app`, which is where the dashboard actually
+lives, so the address bar always ends up on `https://admin.peptideeinkaufen.de/app`.
+That path is not a Caddy choice and cannot be moved by config: `medusa build`
+compiles it into the bundle as Vite's `base` and mounts the dashboard's router
+under it. Changing it means changing `admin.path` in `medusa-config.ts` and
+rebuilding.
+
+`admin.` and `api.` are one Medusa process on `127.0.0.1:9000`; the split is two
+Caddy site blocks. Nothing extra runs, so there is nothing extra to restart or
+monitor — `systemctl status medusa` covers both.
+
+- **The whole host is proxied, not just `/app`.** The dashboard calls `/admin`
+  and `/auth` on whatever origin served it, so proxying everything keeps those
+  calls same-origin. That is deliberate: it means a login cannot break because
+  `ADMIN_CORS`/`AUTH_CORS` in `/srv/peptides/.env` forgot a hostname. Do not
+  "tidy" this into a `/app`-only proxy.
+- **`api.…/app` redirects here** (302). One admin URL to bookmark and one to
+  lock down. The old link keeps working, it just does not stay.
+- Both hosts send `X-Robots-Tag: noindex, nofollow`.
+- No basic auth in front of it — the dashboard has its own login, and the same
+  origin serves the store API, which the storefront calls cross-origin without
+  credentials. `GATE_USER`/`GATE_PASSWORD_HASH` sit unused in `caddy.env`; see
+  [Re-gating](#re-gating) before reaching for them here.
+
+Adding or resetting a user (the password is a CLI argument, so it lands in the
+shell history and the terminal scrollback — rotate anything typed on a shared
+machine):
+
+```bash
+cd /srv/peptides/current
+sudo -u medusa HOME=/var/lib/medusa NODE_ENV=production \
+  npx medusa user -e you@example.com -p '<strong-password>'
+```
+
+`HOME=` is not optional: `npx` writes to a cache under `$HOME`, and the `medusa`
+system user's home is `/var/lib/medusa`.
+
+There is no self-service password reset and no email transport configured, so an
+account whose password is lost is recovered with the same command, not from the
+login screen.
 
 ---
 
