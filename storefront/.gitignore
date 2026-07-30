@@ -17,6 +17,9 @@ pnpm-debug.log*
 .env
 .env.production
 
+# what IndexNow has already been told about (see docs/indexnow.md)
+.indexnow-state.json
+
 # macOS-specific files
 .DS_Store
 

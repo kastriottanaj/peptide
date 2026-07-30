@@ -20,6 +20,7 @@
 #   database migrations ....... 5-30 s
 #   Medusa healthy ............ 20-60 s
 #   storefront build .......... 2-4 min
+#   IndexNow ping ............. under 5 s (skips unless INDEXNOW_KEY is set)
 #   total ..................... roughly 8-17 min
 
 set -euo pipefail
@@ -205,6 +206,7 @@ else
 		PUBLIC_BANK_NAME=${PUBLIC_BANK_NAME:-}
 		PUBLIC_GA_MEASUREMENT_ID=${PUBLIC_GA_MEASUREMENT_ID:-}
 		PUBLIC_GOOGLE_SITE_VERIFICATION=${PUBLIC_GOOGLE_SITE_VERIFICATION:-}
+		INDEXNOW_KEY=${INDEXNOW_KEY:-}
 	EOF
 	chmod 600 "${REPO_DIR}/storefront/.env"
 
@@ -219,6 +221,7 @@ else
 	rsync -a --delete "${REPO_DIR}/storefront/dist/" "${WEB_ROOT}/"
 	chown -R "${SERVICE_USER}:${SERVICE_USER}" "${WEB_ROOT}"
 	echo "Storefront published to ${WEB_ROOT}"
+	STOREFRONT_BUILT=1
 fi
 
 # ---------------------------------------------------------------------------
@@ -286,6 +289,33 @@ fi
 if ! grep -qi 'noindex' "${WEB_ROOT}/impressum/index.html" 2>/dev/null; then
 	warn "/impressum no longer carries noindex. If its company data is still"
 	warn "[Platzhalter], restore the draft prop before Google crawls it."
+fi
+
+# ---------------------------------------------------------------------------
+log "Pinging IndexNow  (expect under 5 s)"
+# ---------------------------------------------------------------------------
+# Last, on purpose: the new files are published, Caddy has reloaded, and the URLs
+# we are about to advertise already serve the new content. Pinging any earlier
+# invites a crawl of the release being replaced.
+#
+# The script decides for itself whether to submit: it checks that
+# https://<domain>/<key>.txt is publicly readable and that the built HTML actually
+# changed, and skips cleanly otherwise. Never fatal — a search engine being
+# unreachable is not a bad deploy. See docs/indexnow.md.
+#
+# Gated on STOREFRONT_BUILT rather than on dist/ existing: a deploy that skipped
+# the storefront build leaves the PREVIOUS build in dist/, and diffing that would
+# resubmit whatever it happens to contain.
+if [[ -z "${INDEXNOW_KEY:-}" ]]; then
+	echo "  INDEXNOW_KEY not set in ${ENV_FILE} — skipping (this is the off switch)."
+elif [[ "${STOREFRONT_BUILT:-0}" != "1" ]]; then
+	echo "  No storefront build in this deploy — skipping."
+else
+	(
+		cd "${REPO_DIR}/storefront"
+		node scripts/indexnow-submit.mjs --state "${APP_DIR}/indexnow-state.json"
+	) || warn "IndexNow submission failed. The deploy itself is fine; the state file was
+       not updated, so the next deploy retries these URLs."
 fi
 
 log "Deployed ${FULL_SHA}"

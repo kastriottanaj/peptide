@@ -189,8 +189,11 @@ head tags in a page:
 - Include the image sitemap extension (`xmlns:image`) on product entries with
   `<image:title>` and `<image:caption>` built from the product's name, purity and form.
   Google Images is a real traffic source for this niche.
-- Ping IndexNow when content changes — Bing, Yandex and others index within minutes. The
-  key is a public file at the site root, not a secret.
+- IndexNow pings Bing, Yandex and the other participants when content changes, so they
+  recrawl within minutes. The key is a public file at the site root, not a secret.
+  **[docs/indexnow.md](docs/indexnow.md) is the runbook.** `INDEXNOW_KEY` is the off
+  switch; `deploy.sh` submits the changed URLs after publishing, never during the build,
+  and only pages whose built HTML actually changed are submitted.
 
 ### Images
 

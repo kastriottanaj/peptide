@@ -273,6 +273,30 @@ priority order:
 To submit the sitemap now that Google can reach the site, see step 6 in
 [analytics.md](analytics.md).
 
+### IndexNow
+
+Wired but **off**: `INDEXNOW_KEY` is unset in `/srv/peptides/.env`, so no key file
+is published and no deploy submits anything. Turning it on is one variable plus a
+deploy:
+
+```bash
+nano /srv/peptides/.env    # INDEXNOW_KEY=<8-128 chars of [A-Za-z0-9-]>
+bash /srv/peptides/repo/deploy/deploy.sh <commit-sha>
+```
+
+Then submit the whole site once. Every later deploy submits only the pages whose
+built HTML changed, automatically:
+
+```bash
+cd /srv/peptides/repo/storefront
+node scripts/indexnow-submit.mjs --state /srv/peptides/indexnow-state.json --all
+```
+
+Be clear about what that buys: the site is already crawlable, so Bing will reach
+it either way — IndexNow decides whether that takes minutes or weeks. With items
+1–5 above still open, pulling it forward is a judgement call, not a free win.
+Runbook: [indexnow.md](indexnow.md).
+
 ### Re-gating
 
 If the site needs to go back behind a password, restore a `basic_auth` block in

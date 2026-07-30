@@ -201,6 +201,20 @@ These can be done at any time:
       - [ ] Submit `sitemap.xml` — **unblocked as of 2026-07-29**, now that the
             gate is off and Google no longer gets a 401. Steps in
             [analytics.md](analytics.md).
+- [x] ~~IndexNow~~ — built 2026-07-30. The build emits the key file and
+      `deploy.sh` pushes the URLs whose HTML changed to Bing, Yandex and the
+      other participants after publishing. See [indexnow.md](indexnow.md).
+      Ships **off**: `INDEXNOW_KEY` is unset in `/srv/peptides/.env`.
+
+      - [ ] Decide whether to switch it on now. The site is public and crawlable
+            since 2026-07-29, so Bing will index it regardless; IndexNow only
+            decides whether that takes minutes or weeks. Accelerating it while
+            purity values are fabricated and the legal pages say `[Platzhalter]`
+            is a choice, not an obvious win.
+      - [ ] When switching on: set `INDEXNOW_KEY` in `/srv/peptides/.env`,
+            deploy, then run a full first submission on the server:
+            `cd /srv/peptides/repo/storefront && node scripts/indexnow-submit.mjs
+            --state /srv/peptides/indexnow-state.json --all`
 - [x] ~~Deployment~~ — done 2026-07-28. Hetzner VPS, no Docker: Postgres, Redis,
       Node and Caddy from apt, Medusa as a systemd service. DNS from Hostinger,
       TLS via Let's Encrypt. See [deploy.md](deploy.md).

@@ -39,6 +39,9 @@ PUBLIC_SITE_URL=http://localhost:4321  # local dev only; production is peptideei
 # Optional — measurement. Both are safe to leave unset; see docs/analytics.md.
 PUBLIC_GA_MEASUREMENT_ID=              # G-XXXXXXXXXX. Unset = no analytics, no consent dialog.
 PUBLIC_GOOGLE_SITE_VERIFICATION=       # Search Console meta-tag token; DNS TXT is used instead today.
+
+# Optional — IndexNow. Unset = no key file, no submissions. See docs/indexnow.md.
+INDEXNOW_KEY=                          # 8-128 chars of [A-Za-z0-9-]; served at /<key>.txt
 ```
 
 `PUBLIC_SITE_URL` drives every canonical URL, OpenGraph tag, JSON-LD `@id` and sitemap
@@ -50,6 +53,11 @@ builds off the production origin.
 off switch: no Google script, no consent dialog, no "Cookie-Einstellungen" footer entry,
 and the Datenschutz page keeps its "no tracking in use" wording. Analytics never loads
 before explicit consent either way — see [docs/analytics.md](docs/analytics.md).
+
+`INDEXNOW_KEY` switches IndexNow on: the build emits `/<key>.txt` and a deploy pushes
+the URLs whose HTML changed to Bing, Yandex and the other participants. Unset means no
+key file and no submissions. It is currently unset in production on purpose — see
+[docs/indexnow.md](docs/indexnow.md).
 
 **`backend/apps/backend/.env`** — copy the template and fill in the blanks:
 
