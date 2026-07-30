@@ -1,8 +1,14 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import OrdersClosedNotice from "../components/OrdersClosedNotice.astro";
+import { ORDERS_ENABLED } from "../lib/shop";
 
 // The cart is client-side (static output), so this page renders a shell and the
 // script below fills it in. Not indexable — it is per-visitor state.
+//
+// While orders are closed the cart stays viewable: anyone holding one from
+// before got it legitimately, and emptying it for them is its own surprise. Only
+// the way out to the checkout is removed.
 ---
 
 <BaseLayout
@@ -49,7 +55,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 					Kasse berechnet.
 				</p>
 
-				<a class="btn btn--green cart__checkout" href="/kasse">Zur Kasse</a>
+				{
+					ORDERS_ENABLED ? (
+						<a class="btn btn--green cart__checkout" href="/kasse">
+							Zur Kasse
+						</a>
+					) : (
+						<OrdersClosedNotice contact={false} />
+					)
+				}
 			</aside>
 		</div>
 	</div>

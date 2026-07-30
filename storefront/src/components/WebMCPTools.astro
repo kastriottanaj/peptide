@@ -20,6 +20,7 @@
 <script>
 	import { addLine, cartItemCount } from "../lib/cart";
 	import { searchTerms } from "../lib/search";
+	import { ORDERS_ENABLED } from "../lib/shop";
 	import { WEBMCP_TOOLS } from "../lib/webmcp-tools";
 	import type { SearchDoc } from "../pages/api/search.json";
 
@@ -143,6 +144,10 @@
 			},
 		});
 
+		// Withheld while orders are closed, matching the page: no button, no tool.
+		// ORDERS_ENABLED is inlined at build time, so the cart path below is
+		// dropped from the bundle entirely rather than merely skipped.
+		if (ORDERS_ENABLED) {
 		register({
 			...WEBMCP_TOOLS.add_to_cart,
 			execute: async (input: Record<string, unknown>) => {
@@ -171,5 +176,6 @@
 				}
 			},
 		});
+		}
 	}
 </script>

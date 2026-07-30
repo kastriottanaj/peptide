@@ -245,8 +245,16 @@ Those blockers are still open: bank details are empty, the legal pages still ren
 `[Platzhalter]` company data, there is no order confirmation email, and catalog
 purity values are fabricated.
 
-Two consequences for any change you make here:
+Three consequences for any change you make here:
 
+- **Ordering is closed** (2026-07-30). `ORDERS_ENABLED` is unset in
+  `/srv/peptides/.env`, so add-to-cart, the checkout form and the `add_to_cart`
+  WebMCP tool are not rendered, and the store API refuses cart completion with
+  503. The switch lives in `storefront/src/lib/shop.ts` and
+  `backend/apps/backend/src/api/middlewares.ts`. **Reopening it is a launch
+  decision** tied to the bank details, governed by
+  [docs/go-live-checklist.md](docs/go-live-checklist.md) §1 — never a side effect
+  of other work, and never one app without the other.
 - The four legal pages keep their own `noindex` via the `draft` prop in
   `LegalLayout`. **Do not remove a `draft` prop** until that page's real company
   data is in place — it is the only thing keeping unreviewed legal text out of

@@ -28,9 +28,16 @@ data on the legal pages (§2), the B2B/B2C decision (§3), and the order
 confirmation email (§6). The shop either cannot take money or cannot lawfully
 trade without them.
 
-The one mitigation still in place: the four legal pages keep a per-page
-`noindex` from the `draft` prop, so unreviewed legal text is publicly reachable
-but not indexed. `deploy.sh` checks `/impressum` for it on every deploy.
+Two mitigations are in place:
+
+- **Ordering is closed** as of 2026-07-30 (`ORDERS_ENABLED` unset in
+  `/srv/peptides/.env`): the catalog is public, but add-to-cart and the checkout
+  form are not rendered and the API refuses cart completion with 503. So the
+  worst case above — an order nobody can pay for — is not reachable while §1 is
+  open. See [checkout.md](checkout.md).
+- The four legal pages keep a per-page `noindex` from the `draft` prop, so
+  unreviewed legal text is publicly reachable but not indexed. `deploy.sh` checks
+  `/impressum` for it on every deploy.
 
 ---
 
@@ -54,6 +61,9 @@ the IBAN must never be committed.
 
 - [ ] Business bank account opened
 - [ ] Four variables set and storefront rebuilt
+- [ ] `ORDERS_ENABLED=true` in `/srv/peptides/.env` — reopens add-to-cart, the
+      checkout form and cart completion. Do this **with** the four values above,
+      never before them
 - [ ] Test order shows real details and no warning
 
 ## 2. Company details — blocks the legal pages

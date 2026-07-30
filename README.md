@@ -42,6 +42,9 @@ PUBLIC_GOOGLE_SITE_VERIFICATION=       # Search Console meta-tag token; DNS TXT 
 
 # Optional — IndexNow. Unset = no key file, no submissions. See docs/indexnow.md.
 INDEXNOW_KEY=                          # 8-128 chars of [A-Za-z0-9-]; served at /<key>.txt
+
+# Ordering. UNSET = CLOSED; only the exact string `true` opens it.
+PUBLIC_ORDERS_ENABLED=true             # keep local dev open so checkout stays testable
 ```
 
 `PUBLIC_SITE_URL` drives every canonical URL, OpenGraph tag, JSON-LD `@id` and sitemap
@@ -58,6 +61,15 @@ before explicit consent either way — see [docs/analytics.md](docs/analytics.md
 the URLs whose HTML changed to Bing, Yandex and the other participants. Unset means no
 key file and no submissions. It is currently unset in production on purpose — see
 [docs/indexnow.md](docs/indexnow.md).
+
+**Ordering is closed in production.** The catalog is public, but add-to-cart, the
+checkout form and the `add_to_cart` WebMCP tool are not rendered, and the API refuses
+cart completion with 503 — because the business bank account does not exist yet, so an
+order could not be paid. One variable governs both apps: `ORDERS_ENABLED` in
+`/srv/peptides/.env`, which the Medusa service reads at runtime and from which
+`deploy.sh` derives the storefront's `PUBLIC_ORDERS_ENABLED`. Unset means closed. Set
+both to `true` locally (`storefront/.env` and `backend/apps/backend/.env`) to work on
+checkout. See [docs/specs/2026-07-30-orders-closed.md](docs/specs/2026-07-30-orders-closed.md).
 
 **`backend/apps/backend/.env`** — copy the template and fill in the blanks:
 

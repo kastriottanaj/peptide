@@ -9,6 +9,27 @@ This file is the operational picture.
 
 ---
 
+## Ordering is closed (2026-07-30)
+
+**No order can be placed right now, by design.** The site is public but cannot be
+paid, so `ORDERS_ENABLED` is unset in `/srv/peptides/.env`, which means:
+
+- add-to-cart, the "Zur Kasse" button and the whole checkout form are not
+  rendered — the pack sizes and prices still are;
+- the `add_to_cart` WebMCP tool is neither registered nor advertised in
+  `llms.txt`;
+- `POST /store/carts/:id/complete` answers **503** with a German message, so a
+  cart id left in a browser plus a direct API call cannot create an order either.
+
+Reopening is one value on the server — `ORDERS_ENABLED=true`, then deploy; the
+backend reads it at runtime and `deploy.sh` derives the storefront's
+`PUBLIC_ORDERS_ENABLED` from it, so the two cannot disagree. **Do it together with
+the bank details below, not before.** Design:
+[specs/2026-07-30-orders-closed.md](specs/2026-07-30-orders-closed.md).
+
+Everything described in the rest of this file is implemented and working; it is
+switched off, not missing.
+
 ## ⚠️ BLOCKER — real bank details are still missing
 
 Payment is **Banküberweisung (direct bank transfer)**: the customer places the

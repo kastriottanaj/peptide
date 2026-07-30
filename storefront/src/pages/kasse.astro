@@ -1,6 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import OrdersClosedNotice from "../components/OrdersClosedNotice.astro";
 import { listDeliveryCountries } from "../lib/medusa";
+import { ORDERS_ENABLED } from "../lib/shop";
 
 /**
  * Single-page checkout, mirroring the peptidebestellung.de flow: contact and
@@ -10,13 +12,30 @@ import { listDeliveryCountries } from "../lib/medusa";
  * The country list is resolved from the Medusa region at build time rather than
  * hard-coded: offering a country the region does not cover makes the order fail
  * on submit with a raw backend message, after the form is already filled in.
+ *
+ * While orders are closed the form is not rendered at all, so there is no
+ * country list to resolve and no reason to call Medusa at build time. The script
+ * below is already wrapped in `if (form)`, so it becomes inert on its own.
  */
-const countries = await listDeliveryCountries();
+const countries = ORDERS_ENABLED ? await listDeliveryCountries() : [];
 ---
 
 <BaseLayout title="Kasse" description="Bestellung abschließen." noindex>
 	<h1>Kasse</h1>
 
+	{
+		!ORDERS_ENABLED && (
+			<Fragment>
+				<OrdersClosedNotice />
+				<a class="btn btn--green" href="/produkte">
+					Sortiment ansehen
+				</a>
+			</Fragment>
+		)
+	}
+
+	{ORDERS_ENABLED && (
+	<Fragment>
 	<p data-checkout-loading>Warenkorb wird geladen …</p>
 
 	<div data-checkout-empty hidden>
@@ -112,6 +131,8 @@ const countries = await listDeliveryCountries();
 			<a class="checkout__back" href="/warenkorb">← Zurück zum Warenkorb</a>
 		</aside>
 	</form>
+	</Fragment>
+	)}
 
 	<script>
 		import {

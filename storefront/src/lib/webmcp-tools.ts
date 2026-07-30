@@ -14,6 +14,8 @@
  * storefront.
  */
 
+import { ORDERS_ENABLED } from "./shop";
+
 export type WebMcpToolDescriptor = {
 	name: string;
 	description: string;
@@ -63,8 +65,10 @@ export const WEBMCP_TOOLS = {
 		name: "get_product_details",
 		description:
 			"Get the purity, available pack sizes, prices and variant identifiers for " +
-			"one product, addressed by its handle or its name. Use the returned " +
-			"variant_id to add a specific pack size to the cart.",
+			"one product, addressed by its handle or its name." +
+			(ORDERS_ENABLED
+				? " Use the returned variant_id to add a specific pack size to the cart."
+				: " The shop is currently not accepting orders, so there is no way to buy."),
 		inputSchema: {
 			type: "object",
 			properties: {
@@ -117,8 +121,20 @@ export const WEBMCP_FORM_TOOL = {
 		"Submit the site search form to load the product listing filtered by a keyword.",
 } as const;
 
+/**
+ * The tools that are actually live. `add_to_cart` is withheld while orders are
+ * closed: handing an agentic browser a tool the page itself no longer offers
+ * would let it fill a cart that leads nowhere. Registration and llms.txt both go
+ * through this, so the advertised set and the registered set stay identical.
+ */
+export const ACTIVE_WEBMCP_TOOLS: WebMcpToolDescriptor[] = [
+	WEBMCP_TOOLS.search_site,
+	WEBMCP_TOOLS.get_product_details,
+	...(ORDERS_ENABLED ? [WEBMCP_TOOLS.add_to_cart] : []),
+];
+
 export const WEBMCP_TOOL_LIST: ReadonlyArray<{ name: string; description: string }> = [
-	...Object.values(WEBMCP_TOOLS).map(({ name, description }) => ({
+	...ACTIVE_WEBMCP_TOOLS.map(({ name, description }) => ({
 		name,
 		description,
 	})),

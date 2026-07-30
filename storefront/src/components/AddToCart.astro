@@ -6,6 +6,8 @@
  */
 import type { HttpTypes } from "@medusajs/types";
 import { formatEur } from "../lib/pricing";
+import { ORDERS_ENABLED } from "../lib/shop";
+import OrdersClosedNotice from "./OrdersClosedNotice.astro";
 
 export interface Props {
 	variants: HttpTypes.StoreProductVariant[];
@@ -26,52 +28,82 @@ const options = variants
 	.filter((option) => option.id);
 ---
 
-<div class="atc" data-add-to-cart>
-	{
-		options.length > 1 && (
-			<div class="atc__sizes" role="radiogroup" aria-label="Packgröße wählen">
-				{options.map((option, index) => (
-					<label class="atc__size">
-						<input
-							type="radio"
-							name="variant"
-							value={option.id}
-							checked={index === 0}
-						/>
+{
+	/*
+	 * Closed: the pack sizes and prices still render — they are the product's
+	 * substance and belong in the page and its JSON-LD either way — but as a
+	 * plain list. Radio buttons that lead nowhere are worse than no choice.
+	 */
+	!ORDERS_ENABLED && (
+		<div class="atc">
+			<ul class="atc__list">
+				{options.map((option) => (
+					<li>
 						<span class="atc__size-title">{option.title}</span>
 						{option.price && <span class="atc__size-price">{option.price}</span>}
-					</label>
+					</li>
 				))}
-			</div>
-		)
-	}
-	{
-		options.length === 1 && (
-			<input type="hidden" name="variant" value={options[0].id} checked />
-		)
-	}
-
-	<div class="atc__row">
-		<div class="atc__qty">
-			<button type="button" data-qty-step="-1" aria-label="Menge verringern">−</button>
-			<input
-				type="number"
-				name="quantity"
-				value="1"
-				min="1"
-				max="99"
-				aria-label="Menge"
-			/>
-			<button type="button" data-qty-step="1" aria-label="Menge erhöhen">+</button>
+			</ul>
+			<OrdersClosedNotice />
 		</div>
+	)
+}
 
-		<button class="btn btn--green atc__submit" type="button" data-add>
-			In den Warenkorb
-		</button>
-	</div>
+{
+	/*
+	 * Open: the interactive island. Nothing below is rendered while orders are
+	 * closed — hiding the button with CSS would leave it in the DOM for anything
+	 * that does not run stylesheets.
+	 */
+	ORDERS_ENABLED && (
+		<div class="atc" data-add-to-cart>
+			{options.length > 1 && (
+				<div class="atc__sizes" role="radiogroup" aria-label="Packgröße wählen">
+					{options.map((option, index) => (
+						<label class="atc__size">
+							<input
+								type="radio"
+								name="variant"
+								value={option.id}
+								checked={index === 0}
+							/>
+							<span class="atc__size-title">{option.title}</span>
+							{option.price && <span class="atc__size-price">{option.price}</span>}
+						</label>
+					))}
+				</div>
+			)}
+			{options.length === 1 && (
+				<input type="hidden" name="variant" value={options[0].id} checked />
+			)}
 
-	<p class="atc__status" data-status role="status" aria-live="polite"></p>
-</div>
+			<div class="atc__row">
+				<div class="atc__qty">
+					<button type="button" data-qty-step="-1" aria-label="Menge verringern">
+						−
+					</button>
+					<input
+						type="number"
+						name="quantity"
+						value="1"
+						min="1"
+						max="99"
+						aria-label="Menge"
+					/>
+					<button type="button" data-qty-step="1" aria-label="Menge erhöhen">
+						+
+					</button>
+				</div>
+
+				<button class="btn btn--green atc__submit" type="button" data-add>
+					In den Warenkorb
+				</button>
+			</div>
+
+			<p class="atc__status" data-status role="status" aria-live="polite" />
+		</div>
+	)
+}
 
 <script>
 	import { addLine } from "../lib/cart";
@@ -145,6 +177,22 @@ const options = variants
 		display: grid;
 		gap: 0.5rem;
 		margin-bottom: 1rem;
+	}
+	/* Closed-shop variant of .atc__sizes: same rows, nothing to click. */
+	.atc__list {
+		display: grid;
+		gap: 0.5rem;
+		margin: 0 0 1rem;
+		padding: 0;
+		list-style: none;
+	}
+	.atc__list li {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+		padding: 0.7rem 0.9rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius-sm);
 	}
 	.atc__size {
 		display: flex;

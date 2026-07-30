@@ -190,6 +190,12 @@ log "Building the storefront  (expect 2-4 min)"
 # The Astro build calls Medusa in getStaticPaths, so it runs only once the
 # backend is up. astro.config.mjs reads ./.env via process.loadEnvFile, so the
 # build values go into a file rather than the environment.
+#
+# PUBLIC_ORDERS_ENABLED is derived from ORDERS_ENABLED rather than being its own
+# variable: medusa.service reads ORDERS_ENABLED from this same env file at
+# runtime, and two variables for one question would eventually disagree — a
+# checkout the API refuses, or worse, the reverse.
+# See docs/specs/2026-07-30-orders-closed.md.
 if [[ -z "${PUBLIC_MEDUSA_PUBLISHABLE_KEY:-}" ]]; then
 	warn "PUBLIC_MEDUSA_PUBLISHABLE_KEY is empty — skipping the storefront build."
 	warn "This is expected on the FIRST deploy. Create an admin user and a"
@@ -207,6 +213,7 @@ else
 		PUBLIC_GA_MEASUREMENT_ID=${PUBLIC_GA_MEASUREMENT_ID:-}
 		PUBLIC_GOOGLE_SITE_VERIFICATION=${PUBLIC_GOOGLE_SITE_VERIFICATION:-}
 		INDEXNOW_KEY=${INDEXNOW_KEY:-}
+		PUBLIC_ORDERS_ENABLED=${ORDERS_ENABLED:-}
 	EOF
 	chmod 600 "${REPO_DIR}/storefront/.env"
 

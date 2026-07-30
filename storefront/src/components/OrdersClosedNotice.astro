@@ -1,0 +1,57 @@
+---
+/**
+ * Shown wherever ordering would have happened while the shop is closed —
+ * product page, cart, checkout. Copy comes from `lib/shop.ts` so all three read
+ * identically; see docs/specs/2026-07-30-orders-closed.md.
+ */
+import {
+	ORDERS_CLOSED_CONTACT,
+	ORDERS_CLOSED_HEADING,
+	ORDERS_CLOSED_TEXT,
+} from "../lib/shop";
+
+export interface Props {
+	/** Drop the contact line where a contact link is already right there. */
+	contact?: boolean;
+}
+
+const { contact = true } = Astro.props;
+---
+
+<div class="closed" role="note">
+	<p class="closed__heading">{ORDERS_CLOSED_HEADING}</p>
+	<p class="closed__text">{ORDERS_CLOSED_TEXT}</p>
+	{
+		contact && (
+			<p class="closed__text">
+				{ORDERS_CLOSED_CONTACT} <a href="/contact">Kontakt</a>
+			</p>
+		)
+	}
+</div>
+
+<style>
+	.closed {
+		background: var(--c-warn-bg);
+		color: var(--c-warn-ink);
+		border-radius: var(--radius-sm);
+		padding: 0.9rem 1.1rem;
+		margin: 0 0 1.25rem;
+	}
+	.closed__heading {
+		margin: 0 0 0.35rem;
+		font-weight: 700;
+	}
+	.closed__text {
+		margin: 0;
+		font-size: 0.9rem;
+		line-height: 1.55;
+	}
+	.closed__text + .closed__text {
+		margin-top: 0.4rem;
+	}
+	.closed a {
+		color: inherit;
+		font-weight: 600;
+	}
+</style>
