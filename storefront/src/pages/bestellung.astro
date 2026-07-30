@@ -55,6 +55,12 @@ const placeholderBank = bankDetailsArePlaceholder();
 					</div>
 				</dl>
 
+				<p class="pay__warning" data-reference-missing hidden>
+					<strong>Bitte noch nicht überweisen.</strong> Der Verwendungszweck zu
+					dieser Bestellung liegt uns gerade nicht vor. Wir senden ihn Ihnen per
+					E-Mail zu — ohne ihn können wir Ihre Zahlung nicht zuordnen.
+				</p>
+
 				<p class="pay__note">
 					Bitte geben Sie den Verwendungszweck exakt an — daran ordnen wir Ihre
 					Zahlung zu. Der Versand erfolgt nach Zahlungseingang.
@@ -106,7 +112,14 @@ const placeholderBank = bankDetailsArePlaceholder();
 
 				set("[data-order-number]", String(order.display_id ?? order.id));
 				set("[data-order-email]", order.email ?? "");
-				set("[data-order-reference]", paymentReference(order));
+				// A missing reference is surfaced, never substituted: a plausible
+				// but wrong Verwendungszweck sends the customer's money somewhere
+				// we cannot reconcile it.
+				const reference = paymentReference(order);
+				set("[data-order-reference]", reference ?? "—");
+				root
+					.querySelector<HTMLElement>("[data-reference-missing]")
+					?.toggleAttribute("hidden", reference !== null);
 				set("[data-order-total]", formatEur(order.total ?? 0, currency));
 				set("[data-order-total-2]", formatEur(order.total ?? 0, currency));
 				// `subtotal` on an order includes shipping; `item_subtotal` is

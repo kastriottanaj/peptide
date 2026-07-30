@@ -55,10 +55,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 	</div>
 
 	<script>
-		import { getCart, updateLine, removeLine, cartItemCount } from "../lib/cart";
+		import { getCart, updateLine, removeLine } from "../lib/cart";
 		import {
 			formatEur,
-			quantityDiscountRate,
+			bestLineDiscountRate,
 			nextQuantityTier,
 			FREE_SHIPPING_THRESHOLD_EUR,
 		} from "../lib/pricing";
@@ -154,16 +154,21 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 				}
 
 				// Display-only nudges; Medusa stays authoritative for what is charged.
-				const units = cartItemCount(cart);
-				const rate = quantityDiscountRate(units);
-				const next = nextQuantityTier(units);
+				//
+				// The tiers apply per position, not to the cart's total unit count:
+				// a cart of 2 × A + 1 × B has three units but no line that reaches
+				// the three-unit tier, so counting units across the cart promised a
+				// discount the order never applied.
+				const lineQuantities = (cart.items ?? []).map((item) => item.quantity ?? 0);
+				const rate = bestLineDiscountRate(lineQuantities);
+				const next = nextQuantityTier(lineQuantities);
 
 				if (discountHint) {
 					if (rate > 0) {
-						discountHint.textContent = `Mengenrabatt: ${Math.round(rate * 100)} % ab ${units} Stück.`;
+						discountHint.textContent = `Mengenrabatt: bis zu ${Math.round(rate * 100)} % auf Positionen mit mehreren Einheiten.`;
 						discountHint.removeAttribute("hidden");
 					} else if (next) {
-						discountHint.textContent = `Noch ${next.missing} Stück bis ${Math.round(next.rate * 100)} % Mengenrabatt.`;
+						discountHint.textContent = `Noch ${next.missing} × dieselbe Packgröße bis ${Math.round(next.rate * 100)} % Mengenrabatt.`;
 						discountHint.removeAttribute("hidden");
 					} else {
 						discountHint.setAttribute("hidden", "");

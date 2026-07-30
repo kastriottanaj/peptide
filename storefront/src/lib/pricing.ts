@@ -34,7 +34,15 @@ export const SHIPPING_FEE_EUR = 10;
 export const SHIPPING_FEE_OUTSIDE_GERMANY_EUR = 20;
 export const FREE_SHIPPING_THRESHOLD_EUR = 100;
 
-/** Discount rate for a given total item quantity across the cart. */
+/**
+ * Discount rate for the quantity of ONE cart line.
+ *
+ * The tiers are per line, not per cart. `seed-commerce-rules.ts` expresses them
+ * as promotion `target_rules` on `items.quantity`, which select the individual
+ * line items to discount — so a line of 3 gets 3 %, while three different
+ * products at one unit each get nothing. Passing the cart's total unit count
+ * here is what made the cart promise a discount the order did not honour.
+ */
 export function quantityDiscountRate(quantity: number): number {
 	for (const [minimum, rate] of QUANTITY_DISCOUNT_TIERS) {
 		if (quantity >= minimum) return rate;
@@ -42,14 +50,37 @@ export function quantityDiscountRate(quantity: number): number {
 	return 0;
 }
 
-/** The next tier the customer could reach, or null once at the top. */
+/**
+ * The best rate any single line in the cart has earned.
+ *
+ * Each qualifying line is discounted at its own tier, so this is the headline
+ * figure — "bis zu X %" — rather than a rate applied to the whole cart.
+ */
+export function bestLineDiscountRate(lineQuantities: readonly number[]): number {
+	return lineQuantities.reduce(
+		(best, quantity) => Math.max(best, quantityDiscountRate(quantity)),
+		0,
+	);
+}
+
+/**
+ * The next tier reachable by adding units to a single existing line, or null
+ * when some line is already at the top tier.
+ *
+ * `missing` counts units of the SAME position, because that is what moves a
+ * line into the next tier. Counting them across the cart overstated progress.
+ */
 export function nextQuantityTier(
-	quantity: number,
+	lineQuantities: readonly number[],
 ): { quantity: number; rate: number; missing: number } | null {
 	const ascending = [...QUANTITY_DISCOUNT_TIERS].sort((a, b) => a[0] - b[0]);
+	// The line closest to a tier is the one with the most units; zero lines is
+	// still a valid question ("what does the first tier need?").
+	const bestLine = lineQuantities.reduce((best, quantity) => Math.max(best, quantity), 0);
+
 	for (const [minimum, rate] of ascending) {
-		if (quantity < minimum) {
-			return { quantity: minimum, rate, missing: minimum - quantity };
+		if (bestLine < minimum) {
+			return { quantity: minimum, rate, missing: minimum - bestLine };
 		}
 	}
 	return null;

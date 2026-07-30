@@ -1,5 +1,9 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
+import {
+  displayIdForReference,
+  referenceForDisplayId,
+} from "../../../lib/bank-reference";
 
 /**
  * Guest order lookup by order number + email.
@@ -26,18 +30,43 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils";
 const GENERIC_ERROR =
   "Zu diesen Angaben wurde keine Bestellung gefunden. Bitte prüfen Sie Bestellnummer und E-Mail-Adresse.";
 
+/** An order number the customer read off the confirmation, e.g. `12` or `#12`. */
+const ORDER_NUMBER_PATTERN = /^#?\d{1,15}$/;
+
+/**
+ * Resolve whatever the customer typed into an order number.
+ *
+ * The only code most customers still have is the `PE-XXXXXX` payment reference
+ * from their bank transfer. Stripping non-digits from it — which this route used
+ * to do — reduces `PE-QK3M7P` to `37` and looks up a completely unrelated order,
+ * so a reference has to be inverted rather than scraped.
+ */
+function resolveDisplayId(input: string): number | null {
+  const normalized = input.trim();
+  if (normalized.length === 0 || normalized.length > 32) return null;
+
+  const fromReference = displayIdForReference(normalized);
+  if (fromReference !== null) return fromReference;
+
+  if (!ORDER_NUMBER_PATTERN.test(normalized)) return null;
+  const parsed = Number.parseInt(normalized.replace("#", ""), 10);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : null;
+}
+
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER);
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY);
 
   const body = (req.body ?? {}) as Record<string, unknown>;
-  const rawNumber = String(body.orderNumber ?? "").trim();
-  const email = String(body.email ?? "").trim().toLowerCase();
+  const rawNumber = typeof body.orderNumber === "string" ? body.orderNumber : "";
+  const rawEmail = typeof body.email === "string" ? body.email : "";
+  const email = rawEmail.trim().toLowerCase();
 
-  // Accept "1", "#1" or "PE-000001"-ish input; we only need the digits.
-  const displayId = Number.parseInt(rawNumber.replace(/[^0-9]/g, ""), 10);
+  const displayId = resolveDisplayId(rawNumber);
 
-  if (!Number.isFinite(displayId) || !email) {
+  // Length-bounded before anything reaches the database, so a large body cannot
+  // be used to make the query do work.
+  if (displayId === null || !email || email.length > 254) {
     return res.status(400).json({ error: GENERIC_ERROR });
   }
 
@@ -78,10 +107,15 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
         email: order.email,
         currency_code: order.currency_code,
         created_at: order.created_at,
+        // Derive when the subscriber has not written it yet, rather than
+        // returning null and leaving the customer without the code they need
+        // to pay. Both paths use the same definition, so they cannot disagree.
         bank_reference:
-          typeof metadata.bank_reference === "string"
+          typeof metadata.bank_reference === "string" && metadata.bank_reference
             ? metadata.bank_reference
-            : null,
+            : typeof order.display_id === "number"
+              ? referenceForDisplayId(order.display_id)
+              : null,
         item_subtotal: order.item_subtotal,
         item_total: order.item_total,
         shipping_total: order.shipping_total,

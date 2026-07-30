@@ -106,7 +106,7 @@ const countries = await listDeliveryCountries();
 
 			<p class="checkout__error" data-checkout-error role="alert" hidden></p>
 
-			<button class="btn btn--green checkout__submit" type="submit" data-submit>
+			<button class="btn btn--green checkout__submit" type="submit" data-submit disabled>
 				Zahlungspflichtig bestellen
 			</button>
 			<a class="checkout__back" href="/warenkorb">← Zurück zum Warenkorb</a>
@@ -140,6 +140,38 @@ const countries = await listDeliveryCountries();
 				if (!errorEl) return;
 				errorEl.textContent = message;
 				errorEl.toggleAttribute("hidden", !message);
+			};
+
+			/**
+			 * The submit button is the moment the customer agrees to a price, so it
+			 * stays disabled while the cart on the server and the total on screen can
+			 * disagree. Every shipping mutation is in flight for a moment during which
+			 * the visible total is stale; arming the button then is what allowed a
+			 * customer to approve one total and receive an order with a higher one.
+			 */
+			let pendingCartWrites = 0;
+			let submitting = false;
+			/**
+			 * The shipping option the server has actually accepted. The summary total
+			 * is only trustworthy while this matches the checked radio, so the button
+			 * stays disabled until a real option is bound.
+			 */
+			let boundShippingOptionId: string | null = null;
+			const syncSubmitState = () => {
+				if (!submit) return;
+				submit.disabled =
+					submitting || pendingCartWrites > 0 || boundShippingOptionId === null;
+			};
+
+			const withCartWrite = async <T,>(work: () => Promise<T>): Promise<T> => {
+				pendingCartWrites += 1;
+				syncSubmitState();
+				try {
+					return await work();
+				} finally {
+					pendingCartWrites -= 1;
+					syncSubmitState();
+				}
 			};
 
 			const paint = (cart: Awaited<ReturnType<typeof getCart>>) => {
@@ -184,7 +216,27 @@ const countries = await listDeliveryCountries();
 				}
 			};
 
+			const selectShipping = async (optionId: string) => {
+				boundShippingOptionId = null;
+				syncSubmitState();
+				try {
+					const cart = await withCartWrite(() => chooseShippingOption(optionId));
+					boundShippingOptionId = optionId;
+					paint(cart);
+					showError("");
+				} catch (error) {
+					console.error(error);
+					showError(
+						"Die Versandart konnte nicht gesetzt werden. Bitte erneut wählen.",
+					);
+				}
+			};
+
 			const loadShipping = async (cartId: string) => {
+				// Any reload invalidates the bound option: the country may have
+				// changed, so the previous option and its price no longer apply.
+				boundShippingOptionId = null;
+				syncSubmitState();
 				if (!shippingBox) return;
 				shippingBox.replaceChildren(el("p", "Versandarten werden geladen …", "muted"));
 
@@ -215,14 +267,7 @@ const countries = await listDeliveryCountries();
 						radio.name = "shipping_option";
 						radio.value = option.id;
 						radio.checked = index === 0;
-						radio.addEventListener("change", async () => {
-							try {
-								paint(await chooseShippingOption(radio.value));
-							} catch (error) {
-								console.error(error);
-								showError("Die Versandart konnte nicht gesetzt werden.");
-							}
-						});
+						radio.addEventListener("change", () => selectShipping(radio.value));
 
 						label.append(
 							radio,
@@ -232,6 +277,13 @@ const countries = await listDeliveryCountries();
 						return label;
 					}),
 				);
+
+				// Checking the first radio is only a visual default. Until the option
+				// is actually set on the cart, `shipping_total` is 0 and the summary
+				// understates what the order will cost, so bind it now rather than at
+				// submit time.
+				const preselected = options[0];
+				if (preselected) await selectShipping(preselected.id);
 			};
 
 			/**
@@ -302,7 +354,23 @@ const countries = await listDeliveryCountries();
 					return;
 				}
 
-				submit!.disabled = true;
+				// The total shown next to this button is only correct while the
+				// server-side cart carries the chosen option. Binding it here
+				// instead — the last step before completion — is what let a
+				// customer approve one total and receive an order with a higher
+				// one. Repaint and require a second, informed confirmation.
+				if (shippingOption !== boundShippingOptionId) {
+					await selectShipping(shippingOption);
+					if (shippingOption !== boundShippingOptionId) return;
+					showError(
+						"Der Versandpreis wurde aktualisiert. Bitte prüfen Sie die Summe und bestätigen Sie erneut.",
+					);
+					return;
+				}
+
+				if (submitting) return;
+				submitting = true;
+				syncSubmitState();
 				const original = submit!.textContent;
 				submit!.textContent = "Bestellung wird angelegt …";
 
@@ -322,7 +390,9 @@ const countries = await listDeliveryCountries();
 						value("vat_id"),
 					);
 
-					await chooseShippingOption(shippingOption);
+					// Shipping is already bound to the cart and reflected in the total
+					// the customer just approved; re-setting it here would reopen the
+					// window where the charged and displayed totals diverge.
 					const order = await completeOrder();
 
 					// Hand the order to the confirmation page so it renders instantly
@@ -336,8 +406,9 @@ const countries = await listDeliveryCountries();
 					window.location.href = `/bestellung?id=${encodeURIComponent(order.id)}`;
 				} catch (error) {
 					console.error(error);
-					submit!.disabled = false;
+					submitting = false;
 					submit!.textContent = original;
+					syncSubmitState();
 					showError(
 						error instanceof Error && error.message
 							? error.message

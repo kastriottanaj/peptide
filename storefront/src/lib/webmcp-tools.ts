@@ -126,9 +126,14 @@ export const WEBMCP_TOOL_LIST: ReadonlyArray<{ name: string; description: string
 ];
 
 /**
- * `navigator.modelContext` is not in lib.dom yet. Declared narrowly: only the
- * surface we actually call, so a future official type cannot silently disagree
- * with a broad guess.
+ * The WebMCP registry is not in lib.dom yet. Declared narrowly: only the surface
+ * we actually call, so a future official type cannot silently disagree with a
+ * broad guess.
+ *
+ * It moved from `navigator.modelContext` to `document.modelContext` during the
+ * proposal's development, and current Chrome exposes only the `document` form.
+ * Both are declared so the registration can prefer the current location and
+ * still work in a browser that shipped the earlier one.
  */
 declare global {
 	interface ModelContextTool {
@@ -139,10 +144,17 @@ declare global {
 		execute: (input: Record<string, never>) => Promise<string> | string;
 	}
 
+	interface ModelContextRegistry {
+		registerTool: (tool: ModelContextTool) => void;
+		getTools?: () => Promise<unknown[]>;
+	}
+
+	interface Document {
+		modelContext?: ModelContextRegistry;
+	}
+
 	interface Navigator {
-		modelContext?: {
-			registerTool: (tool: ModelContextTool) => void;
-			getTools?: () => Promise<unknown[]>;
-		};
+		/** @deprecated Superseded by `document.modelContext`. */
+		modelContext?: ModelContextRegistry;
 	}
 }

@@ -54,7 +54,33 @@ export function cartItemCount(cart: Cart | null): number {
 	return (cart?.items ?? []).reduce((sum, item) => sum + (item.quantity ?? 0), 0);
 }
 
-/** Fetch the existing cart, or null if there is none / it no longer exists. */
+/**
+ * Whether a failed cart read means the cart is really gone.
+ *
+ * Only 404/410 are terminal. Treating every failure as terminal — which this
+ * did — threw the customer's cart away on a dropped connection, a backend
+ * restart, a 500 or a rate-limit response, so a full basket vanished on a
+ * transient blip that a retry would have survived.
+ */
+function isMissingCart(error: unknown): boolean {
+	const status = (error as { status?: unknown; statusCode?: unknown } | null)?.status ??
+		(error as { statusCode?: unknown } | null)?.statusCode;
+	if (status === 404 || status === 410) return true;
+
+	// The SDK does not always surface a numeric status, so fall back to the
+	// message Medusa returns for an unknown id. Anything else is treated as
+	// transient on purpose: keeping a stale id costs one failed request, while
+	// dropping a live one costs the whole basket.
+	const message = error instanceof Error ? error.message : "";
+	return /\b(404|410)\b/.test(message) || /not found|was not found/i.test(message);
+}
+
+/**
+ * Fetch the existing cart, or null if there is none.
+ *
+ * Throws on a transient failure rather than reporting an empty cart, so callers
+ * can show "please reload" instead of silently presenting an empty basket.
+ */
 export async function getCart(): Promise<Cart | null> {
 	const id = readCartId();
 	if (!id) return null;
@@ -62,10 +88,13 @@ export async function getCart(): Promise<Cart | null> {
 	try {
 		const { cart } = await medusa.store.cart.retrieve(id, { fields: CART_FIELDS });
 		return cart;
-	} catch {
-		// Cart was completed or deleted server-side — start clean.
-		clearCartId();
-		return null;
+	} catch (error) {
+		if (isMissingCart(error)) {
+			// Cart was completed or deleted server-side — start clean.
+			clearCartId();
+			return null;
+		}
+		throw error;
 	}
 }
 
