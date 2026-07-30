@@ -1,10 +1,44 @@
 # Security and reliability remediation — implementation plan
 
 - **Date:** 2026-07-29
-- **Status:** In progress
+- **Status:** In progress — P0-A and P0-B done; P0-C partly done; blocked on a
+  merge decision (see "Upstream divergence" below)
 - **Spec:** [2026-07-29-security-reliability-remediation.md](../specs/2026-07-29-security-reliability-remediation.md)
 - **Branch:** `codex/security-remediation`
 - **Worktree:** `/private/tmp/peptides-security-remediation`
+
+## Upstream divergence — read before merging (2026-07-30)
+
+This branch is 4 commits ahead of, and 3 behind, `origin/main`. The three
+upstream commits are the Peptid-Rechner (`3a48dbd`), **removing the pre-launch
+gate** (`7ea6064`) and IndexNow submission (`163a7b3`).
+
+`7ea6064` opened the shop by explicit decision, ahead of the hard blockers in
+[go-live-checklist.md](../go-live-checklist.md). `https://peptideeinkaufen.de`
+now answers `200` with no basic auth and no site-wide `X-Robots-Tag`. Confirmed
+live on 2026-07-30.
+
+Two consequences:
+
+1. **Three fixes on this branch close *live* defects, not pre-launch ones.**
+   The checkout understated the binding total by the shipping cost, the bank
+   reference shown to customers could match no order, and order ids reached
+   Google Analytics. All three were reachable by a real customer while the site
+   was open. Getting this branch onto `main` and deployed is now time-sensitive.
+2. **The merge is not mechanical.** This branch's `deploy/Caddyfile` and its
+   244-assertion `deploy/tests/caddy-gate.test.sh` were written against a gated
+   site and assume `SITE_GATED`, a basic-auth challenge and a loopback gate
+   probe. Upstream deleted the gate block and inverted `deploy.sh`'s
+   verification from "expect 401" to "expect 200". Resolving that decides
+   whether the site stays open — which is the operator's call, not a conflict to
+   settle in a text editor. **Do not resolve it by whichever side happens to
+   apply cleanly.** `docs/deploy.md` also conflicts directly.
+
+   Whoever merges should decide the policy first, then adapt: if the site stays
+   open, the gate assertions become "no challenge is served, security headers
+   and the per-page legal `noindex` still apply" and the maintenance/candidate
+   routes stay as they are; if it is re-gated, upstream's inverted verification
+   has to come back the other way.
 
 ## Delivery rules
 
@@ -18,6 +52,52 @@
   integrating upstream work.
 - Production mutation, gate rotation, seed repair and deployment require
   separate explicit approval; repository implementation does not imply them.
+
+## Delivered ahead of order (2026-07-30)
+
+The site going public re-prioritised the customer-facing defects: several items
+scheduled inside Tasks 5–11 shipped early because they were reachable by a real
+customer. Committed in `d9cd564` and `c305ea2`, verified as noted:
+
+- **Task 7** — shipping bound to the cart before the submit button arms, so the
+  binding total includes it; the button is disabled while a cart write is in
+  flight or no option is bound; a late change repaints and requires a second
+  confirmation. *Reproduced against the local backend: 64,90 € shown vs 84,90 €
+  charged.*
+- **Task 7** — GA is never loaded on `/warenkorb`, `/kasse` or `/bestellung`
+  whatever the consent state, and every other page reports its path with the
+  query string and referrer stripped, so order ids cannot reach Google.
+  `datenschutz.astro` states the exclusion.
+- **Task 5/6** — the bank reference is derived from `display_id` by one
+  definition per app, pinned to identical fixed vectors; *verified
+  byte-identical across 50,000 order numbers*. The `PE-<zero-padded>` fallback,
+  which matched no order the backend ever issues, is gone from the confirmation
+  page and from recovery. Guest recovery now inverts a real reference instead of
+  scraping digits out of it.
+  Not done: the companion model, synchronous persistence at order creation, and
+  the pending-payment provider. The subscriber still persists asynchronously —
+  it is no longer what the customer's confirmation depends on.
+- **Task 8** — `projectConfig.redisUrl`/prefix set, so HTTP sessions leave
+  `MemoryStore`. *Verified the value reaches `projectConfig`.*
+- **Task 8** — `seed-peptides.ts` converges instead of skipping existing
+  handles, refuses any handle not marked `metadata.demo = "true"`, and seeds
+  variants `manage_inventory: true` with backorders refused.
+- **Task 9** — `npm run test` executes real tests: the app had no `test` script
+  and jest's `setupFiles` pointed at a file that never existed, so turbo
+  reported success while running nothing. 9 unit tests now run.
+- **Task 10** — cart ids are cleared only on terminal 404/410; transient
+  failures propagate to the "please reload" paths. Quantity-discount copy reads
+  the largest line rather than total cart units, matching the per-line
+  promotions. WebMCP registers on `document.modelContext`.
+- **Task 10** — availability governs the purchase UI, both price surfaces and
+  the JSON-LD offer. *Verified by building against catalog snapshots with a
+  variant marked out of stock.*
+
+Still open in Tasks 5–11, in rough priority order: the confirmation-token model
+that removes raw order ids from `/bestellung?id=`, rate limiting on the public
+order-lookup and cart endpoints, terms-acceptance evidence, admin MFA, real
+stock and analytical data, the dependency upgrades, CI, and the SEO
+trailing-slash/faceted-canonical work.
 
 ## Task 0 — record approval and commit the design
 
@@ -101,28 +181,28 @@
 
 **Steps**
 
-- [ ] Set `umask 077` before provisioning secrets; enforce `.env`
+- [x] Set `umask 077` before provisioning secrets; enforce `.env`
       `root:medusa 0640`, `caddy.env` `root:caddy 0640`, and repair existing
       ownership idempotently.
-- [ ] Create the non-login `peptides-build` user and its disposable build/cache
+- [x] Create the non-login `peptides-build` user and its disposable build/cache
       directories without granting runtime-secret access.
-- [ ] Make repository, releases and storefront artifacts root-owned and
+- [x] Make repository, releases and storefront artifacts root-owned and
       non-writable by `medusa`.
-- [ ] Replace the generic env exporter with strict named readers; set a fixed
+- [x] Replace the generic env exporter with strict named readers; set a fixed
       `PATH` and clear shell/loader/Git/Node/npm injection variables before any
       external command.
-- [ ] Run backend/storefront dependency lifecycle and build commands as
+- [x] Run backend/storefront dependency lifecycle and build commands as
       `peptides-build` in disposable space with a sanitized environment.
-- [ ] Resolve the generated Medusa server from a lock-backed dependency
+- [x] Resolve the generated Medusa server from a lock-backed dependency
       artifact; invoke installed CLIs directly and never run root `npx`.
-- [ ] Harden `medusa.service` with `ProtectSystem=strict`,
+- [x] Harden `medusa.service` with `ProtectSystem=strict`,
       `StateDirectoryMode=0700`, `UMask=0077` and no
       `ReadWritePaths=/srv/peptides`.
-- [ ] Add `medusa-migrate.service` using the candidate backend, runtime env and
+- [x] Add `medusa-migrate.service` using the candidate backend, runtime env and
       the local CLI as `medusa`.
-- [ ] Add adversarial env/path and permission fixture tests.
-- [ ] Run `bash -n`, focused deploy tests and a local systemd-unit syntax review.
-- [ ] Commit and push the trust-boundary unit.
+- [x] Add adversarial env/path and permission fixture tests.
+- [x] Run `bash -n`, focused deploy tests and a local systemd-unit syntax review.
+- [x] Commit and push the trust-boundary unit.
 
 No intermediate P0-B commit is production-deployable. The first eligible
 containment SHA is the one for which Tasks 2–4 all pass together.
@@ -154,26 +234,26 @@ containment SHA is the one for which Tasks 2–4 all pass together.
 
 **Steps**
 
-- [ ] Assemble backend, storefront and CSP into one immutable release before any
+- [x] Assemble backend, storefront and CSP into one immutable release before any
       production mutation.
-- [ ] Validate all candidate artifacts and Caddy configuration before
+- [x] Validate all candidate artifacts and Caddy configuration before
       maintenance.
-- [ ] Add an explicit deployment state machine and cleanup traps that
+- [x] Add an explicit deployment state machine and cleanup traps that
       distinguish pre-maintenance, maintenance, migrated and activated phases.
-- [ ] Enter maintenance, reject/drain writes and stop Medusa before
+- [x] Enter maintenance, reject/drain writes and stop Medusa before
       `pg_dump -Fc`; require non-empty output and `pg_restore --list`.
-- [ ] Migrate through the hardened candidate unit; never start old code after a
+- [x] Migrate through the hardened candidate unit; never start old code after a
       migration failure.
-- [ ] Activate backend while public maintenance remains, require local health
+- [x] Activate backend while public maintenance remains, require local health
       status/body, then activate the matching storefront.
-- [ ] Preserve current/previous/candidate/recovery-required releases from
+- [x] Preserve current/previous/candidate/recovery-required releases from
       pruning and make same-SHA deploys idempotent.
-- [ ] Add local release-snapshot retention and provider-neutral encrypted Restic
+- [x] Add local release-snapshot retention and provider-neutral encrypted Restic
       replication with root-only configuration, retention and `restic check`.
-- [ ] Document explicit restore/recovery and a disposable restore drill.
-- [ ] Add state-machine tests for build, backup, migration and health failures;
+- [x] Document explicit restore/recovery and a disposable restore drill.
+- [x] Add state-machine tests for build, backup, migration and health failures;
       run destructive failure injection only against fixtures/disposable data.
-- [ ] Commit and push the activation/backup unit.
+- [x] Commit and push the activation/backup unit.
 
 ## Task 4 — P0-B gated Caddy, CSP and authoritative verification
 
@@ -199,24 +279,31 @@ containment SHA is the one for which Tasks 2–4 all pass together.
 
 **Steps**
 
-- [ ] Make gated authenticated/unauthenticated HTML and assets
+- [x] Make gated authenticated/unauthenticated HTML and assets
       `private, no-store`; remove public immutable caching until launch.
-- [ ] Ensure 401 responses are zero-byte and include the challenge, HSTS,
+- [x] Ensure 401 responses are zero-byte and include the challenge, HSTS,
       robots, content-type, referrer, frame and permissions headers without
       `Server`.
-- [ ] Strip upstream `X-Powered-By`/server headers from the API.
-- [ ] Add root-controlled maintenance routing plus a loopback-only candidate
+- [x] Strip upstream `X-Powered-By`/server headers from the API.
+- [x] Add root-controlled maintenance routing plus a loopback-only candidate
       verification path.
-- [ ] Inventory built inline scripts/styles/JSON-LD, externalize executable code
+- [x] Inventory built inline scripts/styles/JSON-LD, externalize executable code
       where possible and generate exact SHA-256 CSP hashes with the release.
-- [ ] Exercise CSP report-only in browser tests, then enforce without
+- [x] Exercise CSP report-only in browser tests, then enforce without
       `unsafe-eval` or unrestricted `unsafe-inline`.
-- [ ] Replace deploy warnings with hard assertions for API body/status,
+- [x] Replace deploy warnings with hard assertions for API body/status,
       gate/body/headers/cache and gate-state expectations.
-- [ ] On external verification failure, immediately re-enter maintenance before
+- [x] On external verification failure, immediately re-enter maintenance before
       nonzero exit.
-- [ ] Validate through the fixture harness, not a bare unresolved Caddyfile.
-- [ ] Commit and push the gated-header/verification unit.
+- [x] Validate through the fixture harness, not a bare unresolved Caddyfile.
+- [x] Commit and push the gated-header/verification unit.
+
+**Premise contested.** Every step here was implemented and is covered by
+`deploy/tests/caddy-gate.test.sh` (244 behavioural assertions against a real
+`caddy`) and `deploy/tests/verify-release.test.sh`. But they were written for a
+*gated* site, and `origin/main` has since removed the gate — see "Upstream
+divergence" at the top. The mechanism is done; whether it should challenge for a
+password is now an open decision.
 
 ## Task 5 — P0-C backend foundations: secrets, Redis security and bank state
 
