@@ -3,10 +3,14 @@
 Runbook for IndexNow submission on `peptideeinkaufen.de`. Design decisions live in
 [specs/2026-07-30-indexnow.md](specs/2026-07-30-indexnow.md).
 
-IndexNow is a push protocol: instead of waiting to be crawled, the site tells
-Bing, Yandex, Naver, Seznam and the other participants which URLs changed, and
-they usually recrawl within minutes. One POST to `api.indexnow.org` reaches all of
-them — there is no per-engine call, no account and no API token.
+IndexNow is a push protocol: instead of waiting to be crawled, the site tells the
+participating engines which URLs were added, changed or deleted, and they
+prioritise recrawling them. One POST to `api.indexnow.org` reaches all of them —
+there is no per-engine call, no account and no API token.
+
+Participants, per [indexnow.org](https://www.indexnow.org/): **Microsoft Bing,
+Naver, Seznam.cz, Yandex, Yep.** Submitted URLs count against the site's normal
+crawl quota; IndexNow changes what gets crawled first, not how much.
 
 **Google does not participate.** Its discovery path stays Search Console plus the
 sitemaps ([analytics.md](analytics.md)). IndexNow adds Bing (and therefore
@@ -31,13 +35,24 @@ root controls the site. It is therefore **public by design and not a secret** �
 is committed to no file only because `.env` is where configuration belongs, not
 because it needs protecting.
 
-Bing Webmaster Tools → IndexNow will generate one for you, and its "Get Started"
-flow is a fine way to get a key plus a submission history view. A locally
-generated one is equally valid:
+**The key in use was generated in Bing Webmaster Tools → IndexNow → Get Started**
+(step 1 of its four-step flow: generate, host, submit, verify). Using the
+portal's key means the portal and the site cannot disagree about it, and the
+portal doubles as the submission-history view. Its exact value is in
+`CREDENTIALS.local.md`.
+
+Any self-hosted key is equally valid to the protocol, so a locally generated one
+works too — but do not introduce a second one while the first is live, since the
+served key file and the submitted key must match:
 
 ```bash
 node -e "console.log(require('crypto').randomUUID().replace(/-/g,''))"
 ```
+
+The protocol also allows hosting the key file somewhere other than the root and
+naming it freely, as long as `keyLocation` points at it. We host it at the root
+under its own name, which is the simpler contract and covers every URL on the
+host.
 
 Set it in `storefront/.env` for local work, and in `/srv/peptides/.env` for
 production:
@@ -127,12 +142,12 @@ The submitter prints its reason for every outcome. By HTTP status:
 
 | Status | Meaning | Fix |
 | --- | --- | --- |
-| `200` | Accepted | — |
+| `200` | URLs submitted successfully | — |
 | `202` | Accepted, key validation pending | Normal on a first submission |
-| `400` | Malformed request | Bug in the script, not configuration |
-| `403` | Key rejected | The served key file does not match the submitted key — deploy the current `INDEXNOW_KEY` |
-| `422` | URLs not on this host, or bad key format | `PUBLIC_SITE_URL` disagrees with the submitted host |
-| `429` | Rate limited | Back off; the next deploy retries |
+| `400` | Bad request — invalid format | Bug in the script, not configuration |
+| `403` | Key not valid: not found, or the file exists but does not contain the key | Deploy the current `INDEXNOW_KEY` so the served file matches what is submitted |
+| `422` | URLs do not belong to the host, or the key does not match the protocol schema | `PUBLIC_SITE_URL` disagrees with the submitted host |
+| `429` | Too many requests (potential spam) | Back off; the next deploy retries |
 
 **"skipped: key file … returned 404".** The key file is not deployed. Set
 `INDEXNOW_KEY` in `/srv/peptides/.env` and deploy.
