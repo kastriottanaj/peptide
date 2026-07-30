@@ -26,6 +26,35 @@ declare global {
 	}
 }
 
+/**
+ * Paths that are never measured, whatever the consent state.
+ *
+ * These carry order and cart identifiers in the URL. GA's default
+ * `page_location` is the full current URL, so measuring `/bestellung?id=<order>`
+ * would hand Google a reusable capability that reads the customer's email, full
+ * address and order lines. Consent does not make that acceptable: the visitor
+ * agreed to usage statistics, not to their order being identifiable to a third
+ * party. Excluding the whole funnel also keeps cart contents out of GA.
+ */
+const UNMEASURED_PATH_PREFIXES = ["/warenkorb", "/kasse", "/bestellung"];
+
+function isUnmeasuredPath(pathname: string): boolean {
+	return UNMEASURED_PATH_PREFIXES.some(
+		(prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+	);
+}
+
+/**
+ * The page URL to report, with the query string and fragment removed.
+ *
+ * Defence in depth behind the path exclusion above: any page reached with a
+ * tracking, search or identifier parameter would otherwise send it verbatim.
+ */
+function measuredLocation(): string {
+	const { origin, pathname } = window.location;
+	return `${origin}${pathname}`;
+}
+
 let injected = false;
 
 function gtag(..._args: unknown[]): void {
@@ -42,7 +71,14 @@ function inject(id: string): void {
 
 	window.dataLayer = window.dataLayer ?? [];
 	gtag("js", new Date());
-	gtag("config", id);
+	// A bare `gtag("config", id)` reports the full URL including the query
+	// string. Both overrides are needed: `page_location` for the initial
+	// page_view, and the referrer so a link out of the checkout does not carry
+	// an order id into the next page's report either.
+	gtag("config", id, {
+		page_location: measuredLocation(),
+		page_referrer: "",
+	});
 
 	const script = document.createElement("script");
 	script.async = true;
@@ -101,6 +137,15 @@ function apply(granted: boolean): void {
  */
 export function initAnalytics(): void {
 	if (!MEASUREMENT_ID) return;
+
+	// On an excluded page nothing is ever injected, and the kill switch is set
+	// so a tag loaded by anything else cannot transmit either. Consent changes
+	// are deliberately not observed here: there is no state in which this page
+	// becomes measurable.
+	if (isUnmeasuredPath(window.location.pathname)) {
+		setDisableFlag(MEASUREMENT_ID, true);
+		return;
+	}
 
 	apply(isGranted("statistics"));
 	onConsentChange((state) => apply(state.statistics));

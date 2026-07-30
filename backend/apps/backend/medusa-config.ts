@@ -25,17 +25,30 @@ const KNOWN_PLACEHOLDER = 'supersecret'
  */
 function signingSecret(name: 'JWT_SECRET' | 'COOKIE_SECRET'): string | undefined {
   const value = process.env[name]
+  const isWeak =
+    !value ||
+    value === KNOWN_PLACEHOLDER ||
+    Buffer.byteLength(value, 'utf8') < 32
 
-  if (isProduction && (!value || value === KNOWN_PLACEHOLDER)) {
+  if (isProduction && isWeak) {
     throw new MedusaError(
       MedusaError.Types.INVALID_ARGUMENT,
-      `${name} must be set to a unique value when NODE_ENV=production ` +
-        `(it is currently ${value ? 'the shared placeholder' : 'unset'}). Generate one with: ` +
+      `${name} must be a unique secret of at least 32 bytes when NODE_ENV=production. ` +
+        `Generate one with: ` +
         `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`
     )
   }
 
   return value
+}
+
+const jwtSecret = signingSecret('JWT_SECRET')
+const cookieSecret = signingSecret('COOKIE_SECRET')
+if (isProduction && jwtSecret === cookieSecret) {
+  throw new MedusaError(
+    MedusaError.Types.INVALID_ARGUMENT,
+    'JWT_SECRET and COOKIE_SECRET must be distinct in production.'
+  )
 }
 
 /**
@@ -112,16 +125,93 @@ function redisModules(): ConfigModule['modules'] {
   }
 }
 
+/**
+ * Keep uploaded product media outside immutable releases.
+ *
+ * The local provider defaults to process.cwd()/static. Production runs from a
+ * read-only generated server, so relying on that default makes every upload
+ * fail and would lose media on release replacement even if writes succeeded.
+ * The deploy creates a persistent state directory and exposes it through the
+ * generated server's `static` symlink.
+ */
+function fileModule(): NonNullable<ConfigModule['modules']> {
+  const uploadDir =
+    process.env.FILE_UPLOAD_DIR ||
+    (isProduction ? '/var/lib/peptides/static' : `${process.cwd()}/static`)
+  const backendUrl =
+    process.env.FILE_BACKEND_URL ||
+    (isProduction
+      ? 'https://api.peptideeinkaufen.de/static'
+      : 'http://localhost:9000/static')
+
+  if (isProduction && uploadDir !== '/var/lib/peptides/static') {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_ARGUMENT,
+      'FILE_UPLOAD_DIR must be /var/lib/peptides/static in production so media ' +
+        'stays in the backed-up runtime state directory.'
+    )
+  }
+  if (isProduction && backendUrl !== 'https://api.peptideeinkaufen.de/static') {
+    throw new MedusaError(
+      MedusaError.Types.INVALID_ARGUMENT,
+      'FILE_BACKEND_URL must be https://api.peptideeinkaufen.de/static in production.'
+    )
+  }
+
+  return {
+    [Modules.FILE]: {
+      resolve: '@medusajs/medusa/file',
+      options: {
+        providers: [
+          {
+            resolve: '@medusajs/medusa/file-local',
+            id: 'local',
+            options: {
+              upload_dir: uploadDir,
+              backend_url: backendUrl,
+            },
+          },
+        ],
+      },
+    },
+  }
+}
+
+/**
+ * HTTP session storage.
+ *
+ * `redisUrl` on `projectConfig` is a separate setting from the Redis *modules*
+ * below, and it is the only thing that moves admin/customer sessions out of
+ * express-session's `MemoryStore`. Configuring the modules alone leaves the
+ * store in process memory: every restart or deploy silently logs everyone out,
+ * and because `MemoryStore` never evicts, session records accumulate for the
+ * life of the process. Medusa logs `redisUrl not found. A fake redis instance
+ * will be used.` when this is missing, which is easy to read as a note about
+ * the modules rather than a warning about sessions.
+ */
+const sessionStorage = process.env.REDIS_URL
+  ? {
+      redisUrl: process.env.REDIS_URL,
+      // Namespaced so session keys cannot collide with the cache, event bus or
+      // workflow-engine keys sharing this Redis instance.
+      redisPrefix: process.env.REDIS_PREFIX || 'peptides:sess:',
+    }
+  : {}
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
+    ...sessionStorage,
     http: {
       storeCors: corsOrigins('STORE_CORS'),
       adminCors: corsOrigins('ADMIN_CORS'),
       authCors: corsOrigins('AUTH_CORS'),
-      jwtSecret: signingSecret('JWT_SECRET'),
-      cookieSecret: signingSecret('COOKIE_SECRET'),
+      jwtSecret,
+      cookieSecret,
     }
   },
-  modules: redisModules(),
+  modules: {
+    ...redisModules(),
+    ...fileModule(),
+  },
 })

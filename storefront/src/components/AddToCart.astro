@@ -8,6 +8,7 @@ import type { HttpTypes } from "@medusajs/types";
 import { formatEur } from "../lib/pricing";
 import { ORDERS_ENABLED } from "../lib/shop";
 import OrdersClosedNotice from "./OrdersClosedNotice.astro";
+import { isVariantAvailable } from "../lib/catalog";
 
 export interface Props {
 	variants: HttpTypes.StoreProductVariant[];
@@ -23,9 +24,17 @@ const options = variants
 			id: variant.id,
 			title: variant.title ?? "—",
 			price: typeof amount === "number" ? formatEur(amount, currency) : null,
+			available: isVariantAvailable(variant),
 		};
 	})
 	.filter((option) => option.id);
+
+// A sold-out pack size stays visible — it tells the customer the size exists —
+// but it cannot be selected, and the default selection is the first size that
+// can actually be ordered. Pre-checking a sold-out size meant the customer's
+// first click on "In den Warenkorb" failed with a Medusa error.
+const firstAvailableIndex = options.findIndex((option) => option.available);
+const anyAvailable = firstAvailableIndex !== -1;
 ---
 
 {
@@ -60,21 +69,33 @@ const options = variants
 			{options.length > 1 && (
 				<div class="atc__sizes" role="radiogroup" aria-label="Packgröße wählen">
 					{options.map((option, index) => (
-						<label class="atc__size">
+						<label
+							class={option.available ? "atc__size" : "atc__size atc__size--out"}
+						>
 							<input
 								type="radio"
 								name="variant"
 								value={option.id}
-								checked={index === 0}
+								checked={index === firstAvailableIndex}
+								disabled={!option.available}
 							/>
 							<span class="atc__size-title">{option.title}</span>
 							{option.price && <span class="atc__size-price">{option.price}</span>}
+							{!option.available && (
+								<span class="atc__size-note">Nicht verfügbar</span>
+							)}
 						</label>
 					))}
 				</div>
 			)}
-			{options.length === 1 && (
+			{options.length === 1 && options[0].available && (
 				<input type="hidden" name="variant" value={options[0].id} checked />
+			)}
+			{!anyAvailable && (
+				<p class="atc__sold-out">
+					Derzeit nicht verfügbar. Diese Packgrößen können momentan nicht
+					bestellt werden.
+				</p>
 			)}
 
 			<div class="atc__row">
@@ -95,7 +116,12 @@ const options = variants
 					</button>
 				</div>
 
-				<button class="btn btn--green atc__submit" type="button" data-add>
+				<button
+					class="btn btn--green atc__submit"
+					type="button"
+					data-add
+					disabled={!anyAvailable}
+				>
 					In den Warenkorb
 				</button>
 			</div>
@@ -104,6 +130,7 @@ const options = variants
 		</div>
 	)
 }
+
 
 <script>
 	import { addLine } from "../lib/cart";
@@ -131,7 +158,9 @@ const options = variants
 		submit?.addEventListener("click", async () => {
 			const selected =
 				root.querySelector<HTMLInputElement>('input[name="variant"]:checked') ??
-				root.querySelector<HTMLInputElement>('input[name="variant"]');
+				root.querySelector<HTMLInputElement>(
+					'input[name="variant"]:not(:disabled)',
+				);
 			const variantId = selected?.value;
 
 			if (!variantId) {
@@ -221,6 +250,34 @@ const options = variants
 		margin-left: auto;
 		font-weight: 700;
 		color: var(--c-navy);
+	}
+	/* A sold-out size stays listed so the customer knows it exists, but it must
+	   not read as a choice. */
+	.atc__size--out {
+		cursor: not-allowed;
+		opacity: 0.55;
+	}
+	.atc__size--out:hover {
+		border-color: var(--c-border);
+	}
+	.atc__size--out .atc__size-price {
+		text-decoration: line-through;
+	}
+	.atc__size-note {
+		margin-left: auto;
+		font-size: 0.78rem;
+		color: var(--c-muted);
+	}
+	.atc__size--out .atc__size-price + .atc__size-note {
+		margin-left: 0.6rem;
+	}
+	.atc__sold-out {
+		background: var(--c-warn-bg);
+		color: var(--c-warn-ink);
+		border-radius: var(--radius-sm);
+		padding: 0.7rem 0.9rem;
+		font-size: 0.85rem;
+		margin: 0 0 1rem;
 	}
 	.atc__row {
 		display: flex;

@@ -13,14 +13,20 @@ const placeholderBank = bankDetailsArePlaceholder();
 	<div class="lookup">
 		<h1>Bestellung suchen</h1>
 		<p class="lead">
-			Sie haben die Bestätigungsseite geschlossen? Geben Sie Bestellnummer und
+			Sie haben die Bestätigungsseite geschlossen? Geben Sie Ihre Bestellnummer
+			oder den Verwendungszweck aus Ihrer Überweisung zusammen mit Ihrer
 			E-Mail-Adresse ein, um Betrag und Verwendungszweck erneut anzuzeigen.
 		</p>
 
 		<form data-lookup-form>
 			<label>
-				Bestellnummer *
-				<input name="orderNumber" required inputmode="numeric" placeholder="z. B. 5" />
+				Bestellnummer oder Verwendungszweck *
+				<input
+					name="orderNumber"
+					required
+					autocapitalize="characters"
+					placeholder="z. B. 5 oder PE-QK3M7P"
+				/>
 			</label>
 			<label>
 				E-Mail-Adresse *
@@ -68,6 +74,7 @@ const placeholderBank = bankDetailsArePlaceholder();
 		import { medusa } from "../../lib/medusa";
 		import { formatEur } from "../../lib/pricing";
 		import { summaryLine } from "../../lib/dom";
+		import { referenceForDisplayId } from "../../lib/bank-reference";
 
 		const form = document.querySelector<HTMLFormElement>("[data-lookup-form]");
 		const result = document.querySelector<HTMLElement>("[data-result]");
@@ -136,7 +143,14 @@ const placeholderBank = bankDetailsArePlaceholder();
 					"[data-r-date]",
 					`Bestellt am ${new Intl.DateTimeFormat("de-DE", { dateStyle: "long" }).format(new Date(order.created_at))}`,
 				);
-				set("[data-r-reference]", order.bank_reference ?? `PE-${order.display_id}`);
+				// `PE-${display_id}` was never a format the backend produces, so the
+				// old fallback handed the customer a Verwendungszweck that matched no
+				// order. Derive it the same way both sides do, and show nothing at all
+				// rather than something wrong.
+				set(
+					"[data-r-reference]",
+					order.bank_reference ?? referenceForDisplayId(order.display_id) ?? "—",
+				);
 				set("[data-r-total]", formatEur(order.total ?? 0, currency));
 				set("[data-r-total2]", formatEur(order.total ?? 0, currency));
 				// Merchandise before discount, matching the confirmation page; the

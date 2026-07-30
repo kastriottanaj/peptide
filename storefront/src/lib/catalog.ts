@@ -1,4 +1,5 @@
 import type { HttpTypes } from "@medusajs/types";
+import { snapshotCategories, snapshotProducts } from "./build-catalog";
 import { medusa, getDefaultRegionId } from "./medusa";
 
 /**
@@ -7,7 +8,7 @@ import { medusa, getDefaultRegionId } from "./medusa";
  */
 
 const PRODUCT_FIELDS =
-	"id,title,handle,description,thumbnail,metadata,*variants,*variants.calculated_price,*categories";
+	"id,title,handle,description,thumbnail,metadata,updated_at,*variants,+variants.inventory_quantity,*variants.options,*variants.calculated_price,*categories";
 
 export type CatalogProduct = HttpTypes.StoreProduct;
 export type CatalogCategory = HttpTypes.StoreProductCategory;
@@ -48,9 +49,12 @@ export function sortPeptidesFirst(products: CatalogProduct[]): CatalogProduct[] 
 	);
 }
 
-export async function listProducts(
+export async function listProductsInSourceOrder(
 	params: { categoryId?: string; limit?: number } = {},
 ): Promise<CatalogProduct[]> {
+	const captured = await snapshotProducts(params);
+	if (captured) return captured;
+
 	const regionId = await getDefaultRegionId();
 	const { products } = await medusa.store.product.list({
 		region_id: regionId,
@@ -58,15 +62,26 @@ export async function listProducts(
 		limit: params.limit ?? 100,
 		...(params.categoryId ? { category_id: [params.categoryId] } : {}),
 	});
-	return sortPeptidesFirst(products);
+	return products;
+}
+
+export async function listProducts(
+	params: { categoryId?: string; limit?: number } = {},
+): Promise<CatalogProduct[]> {
+	return sortPeptidesFirst(await listProductsInSourceOrder(params));
 }
 
 export async function listCategories(): Promise<CatalogCategory[]> {
-	const { product_categories } = await medusa.store.category.list({
-		fields: "id,name,handle,description",
-		limit: 50,
-	});
-	return product_categories.sort((a, b) =>
+	const captured = await snapshotCategories();
+	const productCategories =
+		captured ??
+		(
+			await medusa.store.category.list({
+				fields: "id,name,handle,description",
+				limit: 50,
+			})
+		).product_categories;
+	return [...productCategories].sort((a, b) =>
 		(a.name ?? "").localeCompare(b.name ?? "", "de"),
 	);
 }

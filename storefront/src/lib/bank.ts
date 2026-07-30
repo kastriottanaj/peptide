@@ -8,6 +8,8 @@
  * page warn instead of showing a customer an IBAN that does not exist.
  */
 
+import { referenceForDisplayId } from "./bank-reference";
+
 const PLACEHOLDER = "PLATZHALTER";
 
 export const BANK_DETAILS = {
@@ -24,15 +26,24 @@ export function bankDetailsArePlaceholder(): boolean {
 }
 
 /**
- * Payment reference the customer types into their banking app. The backend
- * writes `metadata.bank_reference` on order.placed; this is the fallback so the
- * confirmation page always shows something usable.
+ * Payment reference the customer types into their banking app.
+ *
+ * The backend writes `metadata.bank_reference` from an `order.placed`
+ * subscriber, which is asynchronous — the confirmation page frequently renders
+ * first. This used to fall back to `PE-<zero-padded display_id>`, a format the
+ * backend never produces, so a customer who arrived before the subscriber ran
+ * was shown a reference that matched no order and transferred money against it.
+ *
+ * The reference is instead derived from the order number with the same
+ * definition the backend uses, so the stored value and this one always agree and
+ * there is nothing to wait for. Returns null when no reference can be derived —
+ * the page must then say so rather than invent one.
  */
 export function paymentReference(order: {
 	display_id?: number | string | null;
 	metadata?: Record<string, unknown> | null;
-}): string {
+}): string | null {
 	const stored = order.metadata?.bank_reference;
 	if (typeof stored === "string" && stored) return stored;
-	return `PE-${String(order.display_id ?? "").padStart(6, "0")}`;
+	return referenceForDisplayId(order.display_id);
 }

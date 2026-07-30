@@ -1,54 +1,18 @@
 import type { SubscriberArgs, SubscriberConfig } from "@medusajs/framework";
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
+import { referenceForDisplayId } from "../lib/bank-reference";
 
 /**
- * Assigns the payment reference the customer types into their banking app,
- * carried over from peptidebestellung.de's `generate_bank_reference()`.
+ * Persists the payment reference on the order so the admin and the recovery
+ * lookup can see it.
  *
- * The alphabet deliberately omits I, L, O, 0 and 1 — the code is transcribed by
- * hand, and those characters are the ones people get wrong.
+ * This subscriber is not what the customer's confirmation depends on. It runs
+ * asynchronously on `order.placed`, so the confirmation page can render before
+ * it has written anything — the page therefore derives the same reference from
+ * `display_id` itself, using the shared definition in `lib/bank-reference.ts`.
+ * Both sides producing one value is the whole point: a customer who quotes a
+ * reference we cannot match has paid into a void.
  */
-const ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-const LENGTH = 6;
-const PREFIX = "PE";
-
-// 31^6 — the number of distinct 6-character codes.
-const MODULUS = ALPHABET.length ** LENGTH;
-// Coprime to 31, so `displayId -> (displayId * MULTIPLIER + OFFSET) % MODULUS`
-// is a bijection: distinct orders can never collide.
-const MULTIPLIER = 1103515245;
-const OFFSET = 12345;
-
-/**
- * Derives the reference from the order's `display_id`.
- *
- * The template generated a random suffix and re-rolled on collision, which is
- * only safe behind a unique DB constraint — Medusa's order metadata has none,
- * so a random check here would be racy. Deriving it instead makes uniqueness
- * structural, and the bijective mix keeps consecutive orders from producing
- * adjacent-looking codes that would advertise order volume.
- */
-function referenceFor(displayId: number): string {
-  // BigInt rather than Number: `displayId * MULTIPLIER` crosses 2^53 at around
-  // order 8.2 million, and beyond that float rounding destroys the bijection
-  // the uniqueness claim above rests on — two orders could share a reference,
-  // which for a bank-transfer store means two payments we cannot tell apart.
-  const scrambled = Number(
-    (BigInt(Math.max(0, Math.floor(displayId))) * BigInt(MULTIPLIER) +
-      BigInt(OFFSET)) %
-      BigInt(MODULUS)
-  );
-
-  let n = scrambled;
-  let suffix = "";
-  for (let i = 0; i < LENGTH; i++) {
-    suffix = ALPHABET[n % ALPHABET.length] + suffix;
-    n = Math.floor(n / ALPHABET.length);
-  }
-
-  return `${PREFIX}-${suffix}`;
-}
-
 export default async function orderBankReferenceHandler({
   event: { data },
   container,
@@ -70,7 +34,13 @@ export default async function orderBankReferenceHandler({
     return;
   }
 
-  const reference = referenceFor(order.display_id);
+  let reference: string;
+  try {
+    reference = referenceForDisplayId(order.display_id);
+  } catch (error) {
+    logger.error(`Order ${data.id}: cannot derive a bank reference — ${error}`);
+    return;
+  }
 
   await orderModule.updateOrders(data.id, {
     metadata: { ...existing, bank_reference: reference },

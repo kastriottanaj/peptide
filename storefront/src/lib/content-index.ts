@@ -14,10 +14,10 @@
 import { getCollection } from "astro:content";
 import type { HttpTypes } from "@medusajs/types";
 import { absoluteUrl } from "./site";
-import { listCategories } from "./catalog";
-import { medusa, getDefaultRegionId } from "./medusa";
+import { listCategories, listProductsInSourceOrder } from "./catalog";
 import { WISSEN_CATEGORY_LABELS } from "../content.config";
 import type { ChangeFrequency, SitemapImage, SitemapUrl } from "./sitemap";
+import { buildDate } from "./build-time";
 
 export type IndexedEntry = {
 	/** Site-relative path, e.g. `/produkte/bpc-157`. */
@@ -128,7 +128,7 @@ const withTimestamp = (
 ): IndexedEntry[] => routes.map((route) => ({ ...route, lastModified }));
 
 /** Static routes belonging to the pages sitemap (everything but the Wissen indexes). */
-export function staticEntries(lastModified = new Date()): IndexedEntry[] {
+export function staticEntries(lastModified = buildDate()): IndexedEntry[] {
 	return withTimestamp(
 		STATIC_ROUTES.filter((route) => !WISSEN_INDEX_PATHS.has(route.path)),
 		lastModified,
@@ -145,12 +145,12 @@ export function wissenIndexEntries(): IndexedEntry[] {
 }
 
 /** Every static route, in declaration order — what llms.txt enumerates. */
-export function allStaticEntries(lastModified = new Date()): IndexedEntry[] {
+export function allStaticEntries(lastModified = buildDate()): IndexedEntry[] {
 	return withTimestamp(STATIC_ROUTES, lastModified);
 }
 
 export async function categoryEntries(
-	lastModified = new Date(),
+	lastModified = buildDate(),
 ): Promise<IndexedEntry[]> {
 	const categories = await listCategories();
 	return categories.map((category) => ({
@@ -183,12 +183,7 @@ function packSizes(product: HttpTypes.StoreProduct): string[] {
 }
 
 export async function productEntries(): Promise<IndexedEntry[]> {
-	const regionId = await getDefaultRegionId();
-	const { products } = await medusa.store.product.list({
-		region_id: regionId,
-		fields: "id,title,handle,description,thumbnail,metadata,updated_at,*variants",
-		limit: 1000,
-	});
+	const products = await listProductsInSourceOrder({ limit: 1000 });
 
 	return products.map((product) => {
 		const meta = (product.metadata ?? {}) as Record<string, unknown>;
@@ -215,7 +210,9 @@ export async function productEntries(): Promise<IndexedEntry[]> {
 			path: `/produkte/${product.handle}`,
 			title: product.title,
 			description,
-			lastModified: product.updated_at ? new Date(product.updated_at) : new Date(),
+			lastModified: product.updated_at
+				? new Date(product.updated_at)
+				: buildDate(),
 			changeFrequency: "weekly" as const,
 			priority: 0.9,
 			images: product.thumbnail

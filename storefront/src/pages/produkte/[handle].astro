@@ -2,19 +2,15 @@
 import type { HttpTypes } from "@medusajs/types";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import AddToCart from "../../components/AddToCart.astro";
-import { medusa, getDefaultRegionId } from "../../lib/medusa";
-import { isProductAvailable } from "../../lib/catalog";
+import {
+	isProductAvailable,
+	isVariantAvailable,
+	listProductsInSourceOrder,
+} from "../../lib/catalog";
 import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
 
 export async function getStaticPaths() {
-	const regionId = await getDefaultRegionId();
-
-	const { products } = await medusa.store.product.list({
-		region_id: regionId,
-		fields:
-			"id,title,handle,description,thumbnail,metadata,*variants,*variants.calculated_price,*variants.options",
-		limit: 1000,
-	});
+	const products = await listProductsInSourceOrder({ limit: 1000 });
 
 	return products.map((product) => ({
 		params: { handle: product.handle },
@@ -26,7 +22,7 @@ interface Props {
 	product: HttpTypes.StoreProduct;
 }
 
-const { product } = Astro.props;
+const { product } = Astro.props as Props;
 const meta = (product.metadata ?? {}) as Record<string, unknown>;
 const researchCode =
 	typeof meta.research_code === "string" ? meta.research_code : null;
@@ -44,7 +40,15 @@ const metaDescription =
 		packSizes ? `, Packgrößen ${packSizes}` : ""
 	}. Ausschließlich für Forschungs- und Laborzwecke.`;
 
-const prices = variants
+// The AggregateOffer describes what a customer can actually buy, so a sold-out
+// pack size must not set `lowPrice`: advertising a price nobody can order is a
+// Merchant Center mismatch and, in a search result, a promise the shop breaks.
+// Fall back to every variant only when nothing is orderable, so the range still
+// reflects the product rather than collapsing to no offer at all.
+const purchasableVariants = variants.filter(isVariantAvailable);
+const pricedVariants = purchasableVariants.length ? purchasableVariants : variants;
+
+const prices = pricedVariants
 	.map((v) => v.calculated_price?.calculated_amount)
 	.filter((a): a is number => typeof a === "number");
 

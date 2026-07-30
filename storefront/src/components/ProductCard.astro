@@ -1,6 +1,6 @@
 ---
 import type { HttpTypes } from "@medusajs/types";
-import { isProductAvailable } from "../lib/catalog";
+import { isProductAvailable, isVariantAvailable } from "../lib/catalog";
 
 interface Props {
 	product: HttpTypes.StoreProduct;
@@ -22,7 +22,11 @@ const variants = product.variants ?? [];
 const dosage = variants[0]?.title ?? null;
 
 function lowestPrice() {
-	const priced = variants
+	// The card advertises "ab <price>", so it must quote a pack size the customer
+	// can actually order. A sold-out cheaper size would otherwise set the
+	// headline price for a product that cannot be bought at it.
+	const purchasable = variants.filter(isVariantAvailable);
+	const priced = (purchasable.length ? purchasable : variants)
 		.map((v) => ({
 			amount: v.calculated_price?.calculated_amount,
 			currency: v.calculated_price?.currency_code ?? "eur",
