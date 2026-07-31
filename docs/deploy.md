@@ -260,6 +260,10 @@ Expected durations on a 2–4 vCPU box with a warm npm cache:
 | Storefront build | 2–4 min |
 | **Total** | **~8–17 min** |
 
+Most of that is the backend rebuild, which runs whether or not the commit
+touched `backend/`. [deploy-speed.md](deploy-speed.md) breaks down where the
+time goes and what can be cut.
+
 If output stalls well past these:
 
 ```bash
