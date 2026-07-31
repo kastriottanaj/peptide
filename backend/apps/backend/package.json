@@ -23,6 +23,7 @@
     "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit"
   },
   "dependencies": {
+    "@google-analytics/data": "^6.1.0",
     "@medusajs/admin-sdk": "2.18.0",
     "@medusajs/admin-shared": "2.18.0",
     "@medusajs/cache-redis": "2.18.0",
@@ -33,8 +34,8 @@
     "@medusajs/event-bus-redis": "2.18.0",
     "@medusajs/framework": "2.18.0",
     "@medusajs/medusa": "2.18.0",
-    "@medusajs/workflow-engine-redis": "2.18.0",
     "@medusajs/ui": "4.2.0",
+    "@medusajs/workflow-engine-redis": "2.18.0",
     "@tanstack/react-query": "5.64.2",
     "react-i18next": "13.5.0",
     "react-router-dom": "6.30.4",

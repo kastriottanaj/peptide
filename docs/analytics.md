@@ -4,6 +4,11 @@ Runbook for Google Analytics 4 and Google Search Console on
 `peptideeinkaufen.de`. Design decisions live in
 [specs/2026-07-29-analytics-and-search-console.md](specs/2026-07-29-analytics-and-search-console.md).
 
+This page covers **collection**: the consent-gated `gtag` on the storefront, and
+Search Console. For **reading reports back out** of GA4 — the backend's
+service-account credentials and the three admin endpoints that query the Data
+API — see [analytics-ga4-api.md](analytics-ga4-api.md).
+
 > **The gate came off on 2026-07-29.** Everything below that was blocked by the
 > 401 now works: Googlebot can fetch, the sitemap can be submitted, and GA4 sees
 > real traffic. The historical constraint is kept in the table because it
