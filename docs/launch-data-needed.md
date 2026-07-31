@@ -4,9 +4,10 @@ A worksheet, not a checklist. [go-live-checklist.md](go-live-checklist.md) is th
 canonical list of *what blocks launch and why*; this file is the concrete data to
 go and get, with somewhere to write it down as it arrives.
 
-**The site is live and gated at https://peptideeinkaufen.de.** Everything below
-is why the gate is still on. Fill these in, apply them, and the gate can come off
-— see "Opening the shop" in [deploy.md](deploy.md).
+**The site is live and public at https://peptideeinkaufen.de.** The gate came off
+on 2026-07-29 ahead of this list, so everything below is now a **live exposure**
+rather than a pre-launch task — most urgently the bank details, without which the
+shop can take an order that cannot be paid.
 
 Nothing here is a code change. It is all content and configuration.
 

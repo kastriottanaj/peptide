@@ -367,7 +367,8 @@ install_pinned_apt_source \
 
 if ! command -v caddy >/dev/null 2>&1; then
 	# The package normally starts its public default site immediately. Mask the
-	# unit across installation so no ungated page can appear even briefly.
+	# unit across installation so Caddy's placeholder page cannot answer on this
+	# domain even briefly.
 	systemctl mask caddy.service >/dev/null
 	apt-get update -qq
 	apt-get install -y -qq caddy
@@ -752,16 +753,13 @@ deploy_validate_app_secret_values \
 if [[ ! -f "${CADDY_ENV_FILE}" ]]; then
 	install -o root -g caddy -m 0640 \
 		"${OPS_SOURCE}/caddy.env.template" "${CADDY_ENV_FILE}"
-	warn "Created ${CADDY_ENV_FILE} — set ACME_EMAIL, GATE_USER and GATE_PASSWORD_HASH."
+	warn "Created ${CADDY_ENV_FILE} — set ACME_EMAIL."
 else
 	echo "${CADDY_ENV_FILE} already present — left untouched"
 fi
 chown root:caddy "${CADDY_ENV_FILE}"
 chmod 0640 "${CADDY_ENV_FILE}"
 
-if ! grep -q '^SITE_GATED=' "${CADDY_ENV_FILE}"; then
-	printf 'SITE_GATED=1\n' >>"${CADDY_ENV_FILE}"
-fi
 if ! grep -q '^MAINTENANCE_CONFIG=' "${CADDY_ENV_FILE}"; then
 	printf 'MAINTENANCE_CONFIG=%s/maintenance.caddy\n' \
 		"${APP_DIR}" >>"${CADDY_ENV_FILE}"
@@ -788,10 +786,9 @@ chmod 0600 "${BACKUP_ENV_FILE}"
 ) || die "${ENV_FILE} failed strict configuration validation."
 (
 	deploy_load_caddy_env_file "${CADDY_ENV_FILE}"
-	[[ "${SITE_GATED:-}" == "1" ]]
 	[[ "${MAINTENANCE_CONFIG:-}" == "${APP_DIR}/maintenance.caddy" ]]
 	[[ "${CSP_CONFIG:-}" == "${APP_DIR}/csp-current" ]]
-) || die "${CADDY_ENV_FILE} failed strict gated configuration validation."
+) || die "${CADDY_ENV_FILE} failed strict configuration validation."
 
 # ---------------------------------------------------------------------------
 log "systemd units"
@@ -831,7 +828,7 @@ install -o root -g caddy -m 0644 \
 	"${APP_DIR}/csp-current"
 unset control_name control_path control_quarantine
 
-# Caddy needs SITE_DOMAIN and the gate variables from caddy.env.
+# Caddy needs SITE_DOMAIN and the root-controlled import paths from caddy.env.
 install -d -o root -g root -m 0755 /etc/systemd/system/caddy.service.d
 caddy_override_temporary="$(
 	mktemp /etc/systemd/system/caddy.service.d/.override.XXXXXX
@@ -867,8 +864,8 @@ if [[ "${PROVISION_MODE}" == "fresh" ]]; then
 	systemctl enable medusa >/dev/null
 	systemctl enable --now peptides-backup.timer >/dev/null
 fi
-# Caddy and Medusa stay stopped. bootstrap-backend.sh starts them only after a
-# real gate credential and the reviewed fail-closed configuration validate.
+# Caddy and Medusa stay stopped. bootstrap-backend.sh starts them only after the
+# reviewed fail-closed configuration validates.
 # Repair mode instead restores and proves the legacy read-only runtime below.
 
 # ---------------------------------------------------------------------------
@@ -911,20 +908,12 @@ if [[ "${PROVISION_MODE}" == "repair" ]]; then
 	# backend/storefront pair.
 	deploy_load_caddy_env_file "${CADDY_ENV_FILE}"
 	: "${SITE_DOMAIN:?SITE_DOMAIN must be configured for repair verification.}"
-	: "${GATE_USER:?GATE_USER must be configured for repair verification.}"
-	: "${GATE_PASSWORD_HASH:?GATE_PASSWORD_HASH must be configured for repair verification.}"
 	[[ "${SITE_DOMAIN}" =~ ^[A-Za-z0-9.-]+$ ]] \
 		|| die "SITE_DOMAIN is malformed."
-	[[ "${GATE_USER}" =~ ^[A-Za-z0-9._-]{1,64}$ ]] \
-		|| die "GATE_USER is malformed."
-	[[ "${GATE_PASSWORD_HASH}" =~ ^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$ ]] \
-		|| die "GATE_PASSWORD_HASH is not a supported bcrypt hash."
-	[[ "${SITE_GATED:-}" == "1" ]] \
-		|| die "Repair mode requires SITE_GATED=1."
 
 	caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile \
 		>/dev/null \
-		|| die "Caddy rejected the repaired gated configuration."
+		|| die "Caddy rejected the repaired configuration."
 
 	systemctl reset-failed medusa.service >/dev/null 2>&1 || true
 	systemctl start medusa.service \
@@ -977,13 +966,10 @@ if [[ "${PROVISION_MODE}" == "repair" ]]; then
 
 	systemctl reset-failed caddy.service >/dev/null 2>&1 || true
 	systemctl start caddy.service \
-		|| die "The repaired gated Caddy service did not start."
+		|| die "The repaired Caddy service did not start."
 	"${OPS_SOURCE}/verify-release.sh" \
 		external "${SITE_DOMAIN}" \
-		|| die "The repaired public gate or legacy API failed verification."
-	"${OPS_SOURCE}/verify-release.sh" \
-		authenticated "${SITE_DOMAIN}" "${GATE_USER}" \
-		|| die "The configured gate credential failed repair verification."
+		|| die "The repaired public storefront or legacy API failed verification."
 
 	systemctl enable medusa.service caddy.service >/dev/null
 	systemctl enable --now peptides-backup.timer >/dev/null
@@ -1005,10 +991,9 @@ if [[ "${PROVISION_MODE}" == "fresh" ]]; then
 	  1. Point DNS at this box (A records for @, www and api) — Caddy cannot
 	     issue certificates until they resolve. See docs/deploy.md.
 
-	  2. Set ACME_EMAIL, GATE_USER and GATE_PASSWORD_HASH in:
+	  2. Set ACME_EMAIL in:
 	       ${CADDY_ENV_FILE}
-	     Generate the hash through the non-echoing prompt:
-	       caddy hash-password
+	     The storefront is public — there is no gate credential to configure.
 
 		  3. On a pristine database only:
 		       bash ${OPS_CURRENT}/deploy/bootstrap-backend.sh ${FULL_SHA}
@@ -1021,7 +1006,7 @@ else
 	cat <<-EOF
 
 	Repair complete. The legacy backend and storefront are root-owned,
-	read-only, gated and externally verified. Complete the immutable transition:
+	read-only and externally verified. Complete the immutable transition:
 
 	  /usr/bin/env -i PATH=${DEPLOY_TRUSTED_PATH} HOME=/root LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC /usr/bin/bash ${OPS_CURRENT}/deploy/deploy.sh ${FULL_SHA}
 

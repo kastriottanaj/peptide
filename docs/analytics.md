@@ -4,26 +4,25 @@ Runbook for Google Analytics 4 and Google Search Console on
 `peptideeinkaufen.de`. Design decisions live in
 [specs/2026-07-29-analytics-and-search-console.md](specs/2026-07-29-analytics-and-search-console.md).
 
-> **Read this first: the storefront is gated.** Caddy serves it behind HTTP
-> basic auth with `X-Robots-Tag: noindex`, and the `basic_auth` directive has no
-> matcher — so **every** request to the domain answers 401, Googlebot included.
-> That single fact decides how verification works and why there will be no data
-> until launch. See [deploy.md](deploy.md) and
+> **Read this first: the storefront is public.** The pre-launch gate — HTTP
+> basic auth plus a site-wide `X-Robots-Tag: noindex` — was removed on
+> 2026-07-29. Googlebot now gets a normal 200 for every URL, so verification,
+> sitemap submission and indexing all work. See [deploy.md](deploy.md) and
 > [go-live-checklist.md](go-live-checklist.md).
 
-## What works while gated, and what does not
+## What changed when the gate came off
 
-| | While gated | After un-gating |
+| | While gated (until 2026-07-29) | Now |
 | --- | --- | --- |
-| Search Console DNS TXT verification | ✅ works — DNS is answered by Hostinger, not by the gated server | ✅ keeps working, no action |
-| Search Console HTML file / meta tag | ❌ Googlebot gets 401 | ✅ possible |
-| Sitemap submission | ❌ fetch fails with 401 | ✅ submit `sitemap.xml` |
-| Indexing | ❌ blocked by `noindex` even if fetched | ✅ |
+| Search Console DNS TXT verification | ✅ worked — DNS is answered by Hostinger, not by the gated server | ✅ keeps working, no action |
+| Search Console HTML file / meta tag | ❌ Googlebot got 401 | ✅ possible |
+| Sitemap submission | ❌ fetch failed with 401 | ✅ submit `sitemap.xml` |
+| Indexing | ❌ blocked by the site-wide `noindex` | ✅ — except the four legal pages, which keep a per-page `noindex` from the `draft` prop in `LegalLayout` |
 | GA4 collection | ⚠️ only your own through-the-gate sessions | ✅ real traffic |
 
-Setting both up now is still the right order: the property, the consent flow and
-the Datenschutz text all have to exist and be verified *before* traffic arrives.
-An empty Search Console is the expected state, not a fault to debug.
+Submitting the sitemap and requesting indexing are now worth doing rather than
+guaranteed to fail. The consent flow and the Datenschutz text still have to be
+correct before traffic arrives — that has not changed.
 
 ## Google Search Console
 
@@ -160,13 +159,15 @@ of step 5. Until the gate is removed, that is the only traffic it will ever see.
 not `www`, and that the full `google-site-verification=` prefix is included.
 `dig +short TXT peptideeinkaufen.de` shows what is actually published.
 
-**Sitemap reports "Couldn't fetch".** Expected while gated — Google gets a 401.
-Re-submit after un-gating.
+**Sitemap reports "Couldn't fetch".** This was expected while the site was gated
+(Google got a 401) and is **not** expected now. Check the URL resolves publicly
+with `curl -sI https://peptideeinkaufen.de/sitemap.xml` before assuming Search
+Console is at fault.
 
 **No data in GA4.** In order: is `PUBLIC_GA_MEASUREMENT_ID` set *and* the
 storefront rebuilt since? Was statistics consent granted in this browser? Is an
 ad blocker suppressing `googletagmanager.com`? And is there any traffic at all —
-behind the gate there is not.
+the site is public now, but new and largely undiscovered.
 
 **Consent dialog does not appear.** It only renders when
 `PUBLIC_GA_MEASUREMENT_ID` is set, and only opens when no decision is stored.

@@ -95,13 +95,15 @@ assert_production_shape 'api.{$SITE_DOMAIN} {'
 assert_production_shape 'redir https://{$SITE_DOMAIN}{uri} permanent'
 assert_production_shape 'reverse_proxy 127.0.0.1:9000 {'
 assert_production_shape 'root * /srv/peptides/storefront-current'
-# The candidate tree is served by two distinct loopback-only routes: the
-# root verification bypass and the gate probe that exercises the real
-# basic-auth hash before a storefront exists.
-assert_production_shape 'root * /srv/peptides/storefront-candidate' 2
-assert_production_shape 'remote_ip 127.0.0.1 ::1' 2
+# One loopback-only route serves the candidate tree: the root verification
+# bypass. The second one, the gate probe that exercised the basic-auth hash
+# before a storefront existed, went with the gate on 2026-07-29.
+assert_production_shape 'root * /srv/peptides/storefront-candidate'
+assert_production_shape 'remote_ip 127.0.0.1 ::1'
 assert_production_shape 'header X-Peptides-Candidate 1'
-assert_production_shape 'header X-Peptides-Gate-Probe 1'
+# The site is public. A basic_auth block anywhere in the production config is a
+# regression — re-gating is a deliberate change that must update this test too.
+assert_production_shape 'basic_auth {' 0
 assert_production_shape 'admin unix//run/caddy/admin.sock'
 assert_production_shape 'persist_config off'
 
@@ -220,7 +222,7 @@ awk \
 	END {
 		if (global_block != 1 || apex != 1 || www != 1 || api != 1 \
 				|| redirect != 1 || upstream != 1 || storefront != 1 \
-				|| candidate != 2) {
+				|| candidate != 1) {
 			print "production Caddyfile adaptation was incomplete" > "/dev/stderr"
 			exit 90
 		}
@@ -238,11 +240,6 @@ awk \
 "${TEST_DIR}/validate-caddy.sh"
 "${TEST_DIR}/validate-caddy.sh" "${ADAPTED_CONFIG}"
 
-# Public, deterministic fixture credentials. The Authorization value encodes
-# "fixture:fixture-password" and is never used outside this localhost test.
-readonly FIXTURE_PASSWORD_HASH='$2a$14$soJXoyV01HtTGxlnhn.2YO0.ZSQ35t3IrNfFDJcNm9A14mGUViVem'
-readonly AUTHORIZATION_HEADER='Authorization: Basic Zml4dHVyZTpmaXh0dXJlLXBhc3N3b3Jk'
-
 start_caddy() {
 	local maintenance_config="$1"
 	: >"${CADDY_LOG}"
@@ -259,9 +256,6 @@ start_caddy() {
 		TMPDIR="${TEST_TMP}" \
 		ACME_EMAIL='fixture@example.invalid' \
 		SITE_DOMAIN='fixture.invalid' \
-		SITE_GATED='1' \
-		GATE_USER='fixture' \
-		GATE_PASSWORD_HASH="${FIXTURE_PASSWORD_HASH}" \
 		STOREFRONT_ROOT="${FIXTURE_DIR}/storefront" \
 		CANDIDATE_STOREFRONT_ROOT="${FIXTURE_DIR}/candidate" \
 		MAINTENANCE_CONFIG="${maintenance_config}" \
@@ -402,17 +396,22 @@ assert_security_headers() {
 	assert_header_absent 'X-Powered-By' "${context}"
 }
 
-assert_private_headers() {
+# The storefront is public as of 2026-07-29: no basic auth, no site-wide
+# noindex, and cacheable rather than `private, no-store`. A WWW-Authenticate
+# header or a noindex on these paths is now a regression.
+assert_public_headers() {
 	local context="$1"
-	assert_header_contains 'Cache-Control' 'private' "${context}"
-	assert_header_contains 'Cache-Control' 'no-store' "${context}"
-	assert_header_exact 'X-Robots-Tag' 'noindex, nofollow' "${context}"
+	assert_header_absent 'WWW-Authenticate' "${context}"
+	assert_header_absent 'X-Robots-Tag' "${context}"
 }
 
 assert_storefront_headers() {
 	local context="$1"
 	assert_security_headers "${context}"
-	assert_private_headers "${context}"
+	assert_public_headers "${context}"
+	# Pages revalidate on every request, or a deploy takes a day to show up.
+	assert_header_contains \
+		'Cache-Control' 'must-revalidate' "${context}"
 	assert_header_contains \
 		'Content-Security-Policy' \
 		"default-src 'none'" \
@@ -426,49 +425,20 @@ assert_api_headers() {
 	assert_header_exact 'X-Robots-Tag' 'noindex, nofollow' "${context}"
 }
 
-assert_unauthenticated_storefront_path() {
-	local name="$1"
-	local path="$2"
-	local context="$3"
-	request "${name}" GET "${STOREFRONT_URL}${path}"
-	assert_status 401 "${context}"
-	assert_body_empty "${context}"
-	assert_header_exact 'Content-Length' '0' "${context}"
-	assert_header_exact \
-		'WWW-Authenticate' \
-		'Basic realm="Private preview"' \
-		"${context}"
-	assert_storefront_headers "${context}"
-}
-
 start_caddy "${DEPLOY_DIR}/maintenance.off.caddy"
 
-assert_unauthenticated_storefront_path \
-	'unauthenticated' \
-	'/' \
-	'unauthenticated storefront'
-assert_unauthenticated_storefront_path \
-	'unauthenticated_asset' \
-	'/assets/app.js' \
-	'unauthenticated storefront asset'
-assert_unauthenticated_storefront_path \
-	'unauthenticated_missing' \
-	'/definitely-missing' \
-	'unauthenticated missing storefront path'
+request public GET "${STOREFRONT_URL}/"
+assert_status 200 'public storefront'
+assert_body_contains 'production storefront fixture' 'public storefront'
+assert_storefront_headers 'public storefront'
 
-request authenticated GET "${STOREFRONT_URL}/" \
-	--header "${AUTHORIZATION_HEADER}"
-assert_status 200 'authenticated storefront'
-assert_body_contains 'production storefront fixture' 'authenticated storefront'
-assert_storefront_headers 'authenticated storefront'
-
-request asset GET "${STOREFRONT_URL}/assets/app.js" \
-	--header "${AUTHORIZATION_HEADER}"
-assert_status 200 'authenticated asset'
+request public_asset GET "${STOREFRONT_URL}/assets/app.js"
+assert_status 200 'public asset'
 assert_body_contains \
 	'globalThis.caddyFixtureLoaded = true;' \
-	'authenticated asset'
-assert_storefront_headers 'authenticated asset'
+	'public asset'
+assert_security_headers 'public asset'
+assert_public_headers 'public asset'
 
 request candidate GET "${STOREFRONT_URL}/" \
 	--header 'X-Peptides-Candidate: 1'
@@ -476,23 +446,15 @@ assert_status 200 'loopback candidate bypass'
 assert_body_contains 'candidate storefront fixture' 'loopback candidate bypass'
 assert_storefront_headers 'loopback candidate bypass'
 
-request www_unauthenticated GET "${WWW_URL}/path?value=1"
-assert_status 401 'unauthenticated www redirect'
-assert_body_empty 'unauthenticated www redirect'
-assert_header_exact 'Content-Length' '0' 'unauthenticated www redirect'
-assert_private_headers 'unauthenticated www redirect'
-assert_security_headers 'unauthenticated www redirect'
-
-request www_authenticated GET "${WWW_URL}/path?value=1" \
-	--header "${AUTHORIZATION_HEADER}"
-assert_status 301 'authenticated www redirect'
+request www_redirect GET "${WWW_URL}/path?value=1"
+assert_status 301 'public www redirect'
 assert_header_exact \
 	'Location' \
 	"${STOREFRONT_URL}/path?value=1" \
-	'authenticated www redirect'
-assert_body_empty 'authenticated www redirect'
-assert_private_headers 'authenticated www redirect'
-assert_security_headers 'authenticated www redirect'
+	'public www redirect'
+assert_body_empty 'public www redirect'
+assert_public_headers 'public www redirect'
+assert_security_headers 'public www redirect'
 
 request api_read GET "${API_URL}/health"
 assert_status 200 'normal API read'
@@ -507,12 +469,21 @@ assert_api_headers 'normal API write'
 cleanup_caddy
 start_caddy "${DEPLOY_DIR}/maintenance.on.caddy"
 
+# A maintenance 503 must never be cached, so it keeps `private, no-store` even
+# though the storefront itself is now publicly cacheable.
+assert_maintenance_headers() {
+	local context="$1"
+	assert_header_contains 'Cache-Control' 'private' "${context}"
+	assert_header_contains 'Cache-Control' 'no-store' "${context}"
+	assert_header_exact 'Retry-After' '300' "${context}"
+	assert_public_headers "${context}"
+	assert_security_headers "${context}"
+}
+
 request maintenance_www GET "${WWW_URL}/"
 assert_status 503 'maintenance www'
 assert_body_empty 'maintenance www'
-assert_header_exact 'Retry-After' '300' 'maintenance www'
-assert_private_headers 'maintenance www'
-assert_security_headers 'maintenance www'
+assert_maintenance_headers 'maintenance www'
 
 request maintenance_candidate GET "${STOREFRONT_URL}/" \
 	--header 'X-Peptides-Candidate: 1'
@@ -540,18 +511,20 @@ done
 request maintenance_storefront GET "${STOREFRONT_URL}/"
 assert_status 503 'maintenance storefront'
 assert_body_empty 'maintenance storefront'
-assert_header_exact 'Retry-After' '300' 'maintenance storefront'
-assert_storefront_headers 'maintenance storefront'
+assert_maintenance_headers 'maintenance storefront'
 
 # Keep the custom error route last so a header regression there does not hide
 # independent gate, proxy or maintenance regressions in the same test run.
 cleanup_caddy
 start_caddy "${DEPLOY_DIR}/maintenance.off.caddy"
-request not_found GET "${STOREFRONT_URL}/definitely-missing" \
-	--header "${AUTHORIZATION_HEADER}"
-assert_status 404 'authenticated missing page'
-assert_body_contains 'fixture custom 404' 'authenticated missing page'
-assert_storefront_headers 'authenticated missing page'
+# A missing path serves the custom 404 page while KEEPING the 404 status.
+# Returning 200 here would be a soft 404 that search engines index as a real
+# page — the reason `file_server` is matched inside handle_errors, not bare.
+request not_found GET "${STOREFRONT_URL}/definitely-missing"
+assert_status 404 'public missing page'
+assert_body_contains 'fixture custom 404' 'public missing page'
+assert_security_headers 'public missing page'
+assert_public_headers 'public missing page'
 
 printf 'PASS: Caddy gate and maintenance behavior (%s assertions)\n' \
 	"${ASSERTION_COUNT}"

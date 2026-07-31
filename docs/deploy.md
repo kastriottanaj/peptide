@@ -4,13 +4,16 @@ Production is a single Hetzner VPS with DNS delegated from Hostinger. The domain
 is `peptideeinkaufen.de`. **No Docker** — Postgres, Redis, Node and Caddy come
 from apt, and Medusa runs as a systemd service.
 
-> **The site is currently gated.** The storefront sits behind HTTP basic auth and
-> `X-Robots-Tag: noindex`. This is deliberate: the legal pages still render
-> `[Platzhalter]` company data, bank details are placeholders and every purity
-> value in the catalog is fabricated. See
-> [go-live-checklist.md](go-live-checklist.md). Do not remove the gate before
-> those clear — [Opening the shop](#opening-the-shop) is the last step, not the
-> first.
+> **The site is public as of 2026-07-29.** The pre-launch gate — HTTP basic auth
+> plus a site-wide `X-Robots-Tag: noindex` — was removed by explicit decision,
+> before the hard blockers in [go-live-checklist.md](go-live-checklist.md) were
+> cleared. Bank details are still empty, the legal pages still render
+> `[Platzhalter]` company data and there is still no order confirmation email, so
+> **the shop can take an order it cannot be paid for.**
+>
+> The four legal pages remain `noindex` through the `draft` prop in
+> `LegalLayout`. That is per-page and independent of Caddy — leave it until the
+> real company data lands.
 
 ```
 Internet
@@ -98,12 +101,13 @@ overwrites an existing env file.
 nano /srv/peptides/caddy.env
 ```
 
-Set `ACME_EMAIL`, `GATE_USER`, and generate the hash on the box. The command
-prompts without echoing the password:
+Set `ACME_EMAIL`. There is no gate credential to configure — the storefront is
+public, and `deploy/Caddyfile` no longer references `GATE_USER` or
+`GATE_PASSWORD_HASH`.
 
-```bash
-caddy hash-password
-```
+If those keys are still present in an existing `caddy.env`, leave them or delete
+them; both are fine. They stay on the loader's allowlist precisely so a leftover
+copy does not fail a deploy, but nothing reads them.
 
 Paste it verbatim — it starts with `$2a$` and the `$` must not be quoted or
 escaped. systemd's `EnvironmentFile` does no shell expansion.
@@ -256,32 +260,41 @@ caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 
 ## Opening the shop
 
-**Only after every hard blocker in [go-live-checklist.md](go-live-checklist.md)
-is ticked** — real bank details, real company data on the legal pages, the
-B2B/B2C decision, and the order confirmation email.
+The gate itself is **already gone** — removed on 2026-07-29, ahead of the
+blockers below. What remains of this list is still open, and is now live
+exposure rather than pre-launch work:
 
-1. Set the four `PUBLIC_BANK_*` values in `/srv/peptides/.env`.
+1. Set the four `PUBLIC_BANK_*` values in `/srv/peptides/.env`. Until then the
+   shop can take an order that cannot be paid.
 2. Remove the `draft` prop from each legal page that is now final, so the "not
-   legally binding" banner goes and the page becomes indexable.
-3. Rate-limit `/store/order-lookup` before it is publicly reachable. It is an
-   unauthenticated endpoint taking an order number and an email; the generic
+   legally binding" banner goes and the page becomes indexable. Until then those
+   four pages carry their own `noindex` — the only thing keeping unreviewed
+   legal text out of the index.
+3. Rate-limit `/store/order-lookup`. It is publicly reachable now: an
+   unauthenticated endpoint taking an order number and an email. The generic
    error stops probing for which half was wrong, but nothing stops volume.
-4. Delete the `=== PRE-LAUNCH GATE ===` block in
-   [deploy/Caddyfile](../deploy/Caddyfile) — the `basic_auth` directive and the
-   `X-Robots-Tag` line.
-5. Deploy, then confirm:
+4. Submit `sitemap.xml` in Search Console and request indexing for the homepage
+   and the catalog listing. This works now that the site answers 200 —
+   previously Google got a 401 for every URL and the submission simply failed.
+   Steps in [analytics.md](analytics.md).
 
-   ```bash
-   curl -sI https://peptideeinkaufen.de | head -5   # 200, and no X-Robots-Tag
-   ```
+`verify-release.sh` asserts the public storefront answers 200 with no
+`WWW-Authenticate` header, so an accidental **re-gating** now fails the deploy
+rather than going unnoticed.
 
-6. Submit `sitemap.xml` in Search Console and request indexing for the homepage
-   and the catalog listing. Not before this point: while the gate is up Google
-   gets a 401 for every URL, so the submission simply fails. Steps in
-   [analytics.md](analytics.md).
+### Re-gating the site
 
-`deploy.sh` warns loudly if the storefront answers 200 without credentials, so an
-accidental un-gating is visible in the deploy output.
+Re-gating is a deliberate code change, not a variable to flip:
+
+1. Restore a `basic_auth` block in the storefront site in
+   [deploy/Caddyfile](../deploy/Caddyfile), with `{$GATE_USER}` and
+   `{$GATE_PASSWORD_HASH}`.
+2. Set both in `/srv/peptides/caddy.env` — they are still on the loader's
+   allowlist. Generate the hash on the box with `caddy hash-password`, which
+   prompts without echoing.
+3. Update the assertions that now require a public site:
+   `deploy/tests/caddy-gate.test.sh` (which asserts `basic_auth` appears zero
+   times) and `deploy/tests/verify-release.test.sh`.
 
 ## Still missing
 

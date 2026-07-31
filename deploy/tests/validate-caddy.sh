@@ -38,10 +38,6 @@ mkdir -p \
 	"${VALIDATE_TMP}/config" \
 	"${VALIDATE_TMP}/data"
 
-# This bcrypt hash is for the public test-only password "fixture-password".
-# It is deliberately fixed so the validation path never handles a real secret.
-readonly FIXTURE_PASSWORD_HASH='$2a$14$soJXoyV01HtTGxlnhn.2YO0.ZSQ35t3IrNfFDJcNm9A14mGUViVem'
-
 if ! /usr/bin/env -i \
 	PATH='/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/opt/homebrew/bin' \
 	HOME="${VALIDATE_TMP}/home" \
@@ -50,9 +46,6 @@ if ! /usr/bin/env -i \
 	TMPDIR="${VALIDATE_TMP}" \
 	ACME_EMAIL='fixture@example.invalid' \
 	SITE_DOMAIN='fixture.invalid' \
-	SITE_GATED='1' \
-	GATE_USER='fixture' \
-	GATE_PASSWORD_HASH="${FIXTURE_PASSWORD_HASH}" \
 	STOREFRONT_ROOT="${FIXTURE_DIR}/storefront" \
 	CANDIDATE_STOREFRONT_ROOT="${FIXTURE_DIR}/candidate" \
 	MAINTENANCE_CONFIG="${MAINTENANCE_CONFIG:-${DEPLOY_DIR}/maintenance.off.caddy}" \

@@ -40,8 +40,16 @@ DEPLOY_APP_ENV_ALLOWLIST=(
 	PUBLIC_BANK_NAME
 )
 
-# /srv/peptides/caddy.env. SITE_GATED is root-controlled and defaults to the
-# safe, gated state in provisioning; it is included here for the P0-B rollout.
+# /srv/peptides/caddy.env. GATE_USER, GATE_PASSWORD_HASH and SITE_GATED are
+# still accepted but nothing reads them: the pre-launch gate was removed on
+# 2026-07-29 and the Caddyfile no longer references them.
+#
+# They stay on the allowlist on purpose. An unknown key is a hard load failure,
+# and the live server's caddy.env still carries all three — dropping them here
+# would fail the next deploy until someone hand-edited a file on the box, which
+# is exactly the manual intervention the single scripted path exists to avoid.
+# They can be deleted from caddy.env whenever convenient; nothing breaks either
+# way. Removing them from this list is safe only once that has happened.
 DEPLOY_CADDY_ENV_ALLOWLIST=(
 	SITE_DOMAIN
 	ACME_EMAIL

@@ -181,10 +181,12 @@ Medusa runs as a systemd service from an atomically swapped release directory.
 bash /srv/peptides/repo/deploy/deploy.sh <commit-sha>
 ```
 
-The storefront is currently **gated** behind HTTP basic auth and `noindex` — the legal
-pages still show placeholder company data and the catalog carries fabricated purity
-values. Opening it up is the last step of
-[docs/go-live-checklist.md](docs/go-live-checklist.md), not a routine change.
+The storefront is **public**. The pre-launch gate (HTTP basic auth plus a site-wide
+`noindex`) was removed on 2026-07-29 by explicit decision, ahead of the blockers in
+[docs/go-live-checklist.md](docs/go-live-checklist.md) — the legal pages still show
+placeholder company data, bank details are empty and the catalog carries fabricated
+purity values. Those are live exposures now, not pre-launch tasks. The four legal
+pages keep their own per-page `noindex` until their real company data lands.
 
 Note that the storefront is a static build that fetches the catalog at build time, so a
 product edited in the admin only appears on the site after a redeploy.

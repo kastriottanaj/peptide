@@ -9,8 +9,10 @@
 # separate from /srv/peptides/.env: Caddy runs as the `caddy` user and has no
 # business reading the database password or the Medusa signing secrets.
 #
-# GATE_PASSWORD_HASH is a bcrypt hash containing `$`. systemd's EnvironmentFile
-# does no shell expansion, so paste it verbatim — unquoted, unescaped.
+# The pre-launch gate (basic auth plus a site-wide X-Robots-Tag) was removed on
+# 2026-07-29 by explicit decision: the storefront is public and indexable. The
+# four legal pages keep their own `noindex` from the `draft` prop in
+# LegalLayout — that is per-page and owned by the storefront, not by Caddy.
 {
 	email {$ACME_EMAIL}
 	# The default localhost:2019 endpoint is unauthenticated. Medusa and build
@@ -42,20 +44,14 @@ import {$MAINTENANCE_CONFIG}
 	}
 }
 
-(private_gate_error) {
+# Only 404s get the custom page. The matcher has to gate `file_server` too, not
+# just the rewrite: a bare `file_server` here runs for EVERY error and would
+# serve the requested page out of the error handler, masking the real status.
+# That is what once turned the pre-launch basic auth into a suggestion — a 401
+# that still returned the page body. Anything that is not a 404 falls through to
+# Caddy's default error response, which preserves the status.
+(storefront_errors) {
 	handle_errors {
-		@unauthorized expression {err.status_code} == 401
-		handle @unauthorized {
-			import security_headers
-			header {
-				Cache-Control "private, no-store"
-				Content-Length "0"
-				WWW-Authenticate "Basic realm=\"Private preview\""
-				X-Robots-Tag "noindex, nofollow"
-			}
-			respond "" 401
-		}
-
 		@not_found expression {err.status_code} == 404
 		handle @not_found {
 			import security_headers
@@ -72,15 +68,24 @@ import {$MAINTENANCE_CONFIG}
 	route {
 		import security_headers
 		import {$CSP_CONFIG}
-		header {
-			Cache-Control "private, no-store"
-			X-Robots-Tag "noindex, nofollow"
-		}
 		encode zstd gzip
 
-		# Root-only loopback verification reaches the candidate without a gate
-		# password. Both conditions are required, so an Internet client cannot
-		# opt into the bypass by forging the header.
+		# Astro fingerprints everything under /_astro/, so those URLs are
+		# immutable and can be cached hard.
+		@immutable path /_astro/*
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+
+		# Everything else must revalidate, or a deploy takes a day to become
+		# visible. Matching by negation rather than *.html on purpose: almost
+		# every page here is served as a directory index (/produkte/,
+		# /wissen/lexikon/), whose request path does not end in .html and would
+		# miss a *.html matcher.
+		@revalidate not path /_astro/*
+		header @revalidate Cache-Control "public, max-age=0, must-revalidate"
+
+		# Root-only loopback verification reaches the candidate release before it
+		# is published. Both conditions are required, so an Internet client
+		# cannot opt into the bypass by forging the header.
 		@candidate {
 			remote_ip 127.0.0.1 ::1
 			header X-Peptides-Candidate 1
@@ -90,38 +95,12 @@ import {$MAINTENANCE_CONFIG}
 			file_server
 		}
 
-		# During first-install maintenance there is no prior storefront on which
-		# to test the gate. This loopback-only route exercises the real
-		# basic-auth hash against the candidate without reopening the public
-		# storefront or any state-changing API route.
-		@gate_probe {
-			remote_ip 127.0.0.1 ::1
-			header X-Peptides-Gate-Probe 1
-		}
-		handle @gate_probe {
-			route {
-				basic_auth {
-					{$GATE_USER} {$GATE_PASSWORD_HASH}
-				}
-				root * /srv/peptides/storefront-candidate
-				file_server
-			}
-		}
-
 		handle {
 			# `handle` sorts its children by directive order unless they are
-			# wrapped in a route. Keep maintenance ahead of authentication so
-			# a deploy can prove the public apex is actually fail-closed.
+			# wrapped in a route. Maintenance stays first so a deploy can prove
+			# the public apex is actually fail-closed while a release swaps.
 			route {
 				import storefront_maintenance
-
-				# === PRE-LAUNCH GATE ========================================
-				# Removal is a separately approved launch change. SITE_GATED
-				# must remain 1 while this committed block is present.
-				basic_auth {
-					{$GATE_USER} {$GATE_PASSWORD_HASH}
-				}
-				# === END GATE ===============================================
 
 				root * /srv/peptides/storefront-current
 				file_server
@@ -129,33 +108,26 @@ import {$MAINTENANCE_CONFIG}
 		}
 	}
 
-	import private_gate_error
+	import storefront_errors
 }
 
 www.{$SITE_DOMAIN} {
 	route {
 		import security_headers
-		header {
-			Cache-Control "private, no-store"
-			X-Robots-Tag "noindex, nofollow"
-		}
 		import storefront_maintenance
-		basic_auth {
-			{$GATE_USER} {$GATE_PASSWORD_HASH}
-		}
 		redir https://{$SITE_DOMAIN}{uri} permanent
 	}
 
-	import private_gate_error
+	import storefront_errors
 }
 
 # ---------------------------------------------------------------------------
 # Medusa — store API and the admin dashboard at /app
 # ---------------------------------------------------------------------------
-# Deliberately NOT behind basic auth: the storefront calls this cross-origin
-# from the browser, and a cross-origin XHR will not carry basic-auth
-# credentials. The store API requires a publishable key and the admin has its
-# own login. noindex keeps it out of search results either way.
+# The store API requires a publishable key and the admin has its own login, so
+# this hostname carries no site-level authentication of its own. Unlike the
+# storefront it stays `noindex, no-store`: an API surface has nothing to gain
+# from being indexed or cached by intermediaries.
 api.{$SITE_DOMAIN} {
 	route {
 		import security_headers

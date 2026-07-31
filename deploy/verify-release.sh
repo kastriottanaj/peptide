@@ -12,7 +12,6 @@ deploy_sanitize_environment
 MODE=""
 SITE_DOMAIN=""
 ASSET_PATH=""
-GATE_USERNAME=""
 VERIFY_TMP=""
 REQUEST_STATUS=""
 REQUEST_HEADERS=""
@@ -126,81 +125,29 @@ assert_common_security_headers() {
 	assert_header_absent X-Powered-By "${description}"
 }
 
-verify_unauthenticated_gate_path() {
-	local path="$1" description="$2"
+# The storefront is public as of 2026-07-29. These assertions are the inverse of
+# the pre-launch ones: a 401 here now means the site has been accidentally
+# re-gated, which is a regression rather than the expected state.
+verify_public_path() {
+	local path="$1" description="$2" expected_status="${3:-200}"
 
-	request "gate-${ASSERTIONS}" "https://${SITE_DOMAIN}${path}"
-	assert_status 401 "${description}"
-	assert_empty_body "${description}"
-	assert_header_contains WWW-Authenticate '^Basic ' "${description}"
-	assert_header_contains Cache-Control \
-		'(^|,|[[:space:]])private([,;]|$).*no-store|no-store.*private' \
-		"${description}"
-	assert_header_contains X-Robots-Tag '^noindex, nofollow$' "${description}"
-	assert_common_security_headers "${description}"
-}
-
-require_interactive_authentication() {
-	[[ -t 0 ]] \
-		|| fail 'authenticated gate verification requires an interactive terminal so curl can prompt securely'
-}
-
-assert_authenticated_storefront() {
-	local description="$1"
-
-	assert_status 200 "${description}"
+	request "public-${ASSERTIONS}" "https://${SITE_DOMAIN}${path}"
+	assert_status "${expected_status}" "${description}"
 	assert_body_contains '<!doctype|<html' "${description}"
 	assert_header_contains Content-Type \
 		'^text/html([[:space:]]*;|$)' \
 		"${description}"
-	assert_header_contains Cache-Control \
-		'(^|,|[[:space:]])private([,;]|$).*no-store|no-store.*private' \
-		"${description}"
-	assert_header_contains Content-Security-Policy \
-		'default-src' "${description}"
-	assert_header_contains X-Robots-Tag \
-		'^noindex, nofollow$' "${description}"
+	assert_header_absent WWW-Authenticate "${description}"
 	assert_common_security_headers "${description}"
-}
-
-verify_authenticated_gate() {
-	require_interactive_authentication
-
-	# Supplying only the username makes curl prompt for the password on the
-	# terminal. The password never enters this shell, an argument, or a file.
-	if [[ "${MODE}" == "authenticated-candidate" ]]; then
-		request authenticated-candidate-index "https://${SITE_DOMAIN}/" \
-			--resolve "${SITE_DOMAIN}:443:127.0.0.1" \
-			--noproxy '*' \
-			--header 'X-Peptides-Gate-Probe: 1' \
-			--basic \
-			--user "${GATE_USERNAME}"
-		assert_authenticated_storefront \
-			'authenticated loopback candidate storefront'
-	else
-		request authenticated-index "https://${SITE_DOMAIN}/" \
-			--basic \
-			--user "${GATE_USERNAME}"
-		assert_authenticated_storefront 'authenticated public storefront'
-	fi
 }
 
 verify_main() {
 	MODE="${1:-}"
 	SITE_DOMAIN="${2:-}"
 	ASSET_PATH=""
-	GATE_USERNAME=""
 	ASSERTIONS=0
 
 	case "${MODE}" in
-		authenticated | authenticated-candidate)
-			if [[ "$#" -ne 3 ]]; then
-				deploy_error \
-					'usage: verify-release.sh authenticated|authenticated-candidate DOMAIN GATE_USERNAME'
-				return 2
-			fi
-			GATE_USERNAME="${3}"
-			;;
 		backend | candidate | maintenance | external)
 			if [[ "$#" -lt 2 || "$#" -gt 3 ]]; then
 				deploy_error \
@@ -211,7 +158,7 @@ verify_main() {
 			;;
 		*)
 			deploy_error \
-				'usage: verify-release.sh authenticated|authenticated-candidate DOMAIN GATE_USERNAME | backend|candidate|maintenance|external DOMAIN [ASSET_PATH]'
+				'usage: verify-release.sh backend|candidate|maintenance|external DOMAIN [ASSET_PATH]'
 			return 2
 			;;
 	esac
@@ -226,12 +173,6 @@ verify_main() {
 		deploy_error 'verification asset path is malformed'
 		return 2
 	fi
-	if [[ "${MODE}" =~ ^authenticated(-candidate)?$ \
-		&& ! "${GATE_USERNAME}" =~ ^[A-Za-z0-9._-]{1,64}$ ]]; then
-		deploy_error 'gate username is malformed'
-		return 2
-	fi
-
 	VERIFY_TMP="$(mktemp -d "${TMPDIR:-/tmp}/peptides-verify.XXXXXX")"
 	trap 'rm -rf -- "${VERIFY_TMP}"' EXIT
 
@@ -247,9 +188,9 @@ verify_main() {
 				--header 'X-Peptides-Candidate: 1'
 			assert_status 200 'loopback candidate storefront'
 			assert_body_contains '<!doctype|<html' 'loopback candidate storefront'
+			# Pages must revalidate, or a deploy takes a day to become visible.
 			assert_header_contains Cache-Control \
-				'(^|,|[[:space:]])private([,;]|$).*no-store|no-store.*private' \
-				'loopback candidate storefront'
+				'must-revalidate' 'loopback candidate storefront'
 			assert_header_contains Content-Security-Policy \
 				'default-src' 'loopback candidate storefront'
 			assert_common_security_headers 'loopback candidate storefront'
@@ -260,9 +201,9 @@ verify_main() {
 					--resolve "${SITE_DOMAIN}:443:127.0.0.1" \
 					--header 'X-Peptides-Candidate: 1'
 				assert_status 200 'loopback candidate asset'
+				# Fingerprinted under /_astro/, so cacheable forever.
 				assert_header_contains Cache-Control \
-					'(^|,|[[:space:]])private([,;]|$).*no-store|no-store.*private' \
-					'loopback candidate asset'
+					'immutable' 'loopback candidate asset'
 			fi
 			;;
 		maintenance)
@@ -281,21 +222,25 @@ verify_main() {
 			assert_header_contains Retry-After '^300$' \
 				'maintenance state-changing API'
 			;;
-		authenticated | authenticated-candidate)
-			verify_authenticated_gate
-			;;
 		external)
 			request public-health "https://api.${SITE_DOMAIN}/health"
 			assert_status 200 'public backend health'
 			assert_body_exact OK 'public backend health'
 			assert_common_security_headers 'public backend health'
 
-			verify_unauthenticated_gate_path / 'public storefront gate'
-			verify_unauthenticated_gate_path /__deploy_missing__ \
-				'public missing-path gate'
+			verify_public_path / 'public storefront'
+			# The custom 404 page is HTML and must keep the 404 status: a 200
+			# here would be a soft 404 that search engines index as a real page.
+			verify_public_path /__deploy_missing__ \
+				'public missing path' 404
+
 			if [[ -n "${ASSET_PATH}" ]]; then
-				verify_unauthenticated_gate_path "${ASSET_PATH}" \
-					'public asset gate'
+				request public-asset "https://${SITE_DOMAIN}${ASSET_PATH}"
+				assert_status 200 'public asset'
+				assert_header_absent WWW-Authenticate 'public asset'
+				assert_header_contains Cache-Control \
+					'immutable' 'public asset'
+				assert_common_security_headers 'public asset'
 			fi
 			;;
 	esac

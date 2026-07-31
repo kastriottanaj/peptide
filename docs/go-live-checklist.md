@@ -188,18 +188,20 @@ These can be done at any time:
       `CREDENTIALS.local.md`, do not delete it. Verification worked while gated
       precisely because DNS is not served by the gated box.
 
-      - [ ] Submit `sitemap.xml` — **blocked until the gate is off**, since
-            Google gets a 401 for every URL. Step 6 of "Opening the shop" in
-            [deploy.md](deploy.md).
+      - [ ] Submit `sitemap.xml` — **no longer blocked.** The gate came off on
+            2026-07-29, so Google now gets a 200 for every URL. See "Opening the
+            shop" in [deploy.md](deploy.md).
 - [x] ~~Deployment~~ — done 2026-07-28. Hetzner VPS, no Docker: Postgres, Redis,
       Node and Caddy from apt, Medusa as a systemd service. DNS from Hostinger,
       TLS via Let's Encrypt. See [deploy.md](deploy.md).
 
-      **The storefront is deployed gated** — HTTP basic auth plus
-      `X-Robots-Tag: noindex` — precisely because §1–§6 above are still open.
-      Nothing is publicly reachable and no one can place an order. Un-gating is
-      a deliberate step ("Opening the shop" in `deploy.md`) that must not happen
-      until the hard blockers are ticked.
+      **The storefront is deployed public.** The gate — HTTP basic auth plus
+      `X-Robots-Tag: noindex` — was removed on 2026-07-29 by explicit decision,
+      *before* §1–§6 above were closed. Everything on this page is therefore a
+      live exposure rather than a pre-launch task. The four legal pages keep
+      their own per-page `noindex` until their real company data lands, and
+      ordering is closed at the application layer, but nothing else stands
+      between an unfinished item here and a real visitor.
 - [ ] Automated database backups. None exist; `pg_dump` is manual today. Must be
       in place before real orders arrive.
 - [ ] Monitoring / uptime alerting. Nothing currently reports that the box is

@@ -68,11 +68,16 @@ assert_fixed "${DEPLOY_SCRIPT}" \
 	'[[ "${release_name}" =~ ^[0-9a-f]{40}-[0-9a-f]{64}-[0-9a-f]{64}$ ]]' \
 	"release pruning must accept only canonical source-plus-identity names"
 assert_fixed "${DEPLOY_SCRIPT}" \
-	'authenticated "${SITE_DOMAIN_VALUE}" "${GATE_USER_VALUE}"' \
-	"deploy must exercise the configured gate credential"
+	'external "${SITE_DOMAIN_VALUE}" "${ASSET_PATH}"' \
+	"deploy must verify the public storefront from outside the box"
+# The pre-launch gate was removed on 2026-07-29. Deploy must not reacquire a
+# basic-auth credential by any route — neither a hash nor a plaintext password.
 assert_absent "${DEPLOY_SCRIPT}" \
 	'(GATE_PASSWORD|password)[[:space:]]*=' \
-	"deploy must never obtain or store the plaintext gate password"
+	"deploy must never obtain or store a gate password"
+assert_absent "${DEPLOY_SCRIPT}" \
+	'verify-release\.sh.*authenticated|authenticated-candidate' \
+	"deploy must not perform authenticated gate verification"
 assert_absent "${DEPLOY_SCRIPT}" \
 	'PGDATABASE="\\$\\{DATABASE_URL\\}"' \
 	"database credentials must never be placed in a child argument vector"

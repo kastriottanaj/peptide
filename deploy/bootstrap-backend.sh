@@ -7,7 +7,7 @@
 # and deliberately leaves the storefront in maintenance. The operator then
 # runs deploy.sh with the same reviewed SHA to publish a complete release.
 #
-# Usage (root, after provision.sh and Caddy gate configuration):
+# Usage (root, after provision.sh and Caddy configuration):
 #
 #   /usr/bin/env -i PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin HOME=/root LANG=C.UTF-8 LC_ALL=C.UTF-8 TZ=UTC /usr/bin/bash /srv/peptides/ops-current/deploy/bootstrap-backend.sh <commit-sha>
 #
@@ -133,7 +133,6 @@ reload_caddy() {
 	(
 		deploy_sanitize_environment
 		deploy_load_caddy_env_file "${CADDY_ENV_FILE}"
-		[[ "${SITE_GATED:-}" == "1" ]]
 		caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile \
 			>/dev/null 2>&1
 	) || return 1
@@ -336,24 +335,15 @@ done
 
 deploy_load_caddy_env_file "${CADDY_ENV_FILE}"
 : "${SITE_DOMAIN:?SITE_DOMAIN must be set in ${CADDY_ENV_FILE}}"
-: "${GATE_USER:?GATE_USER must be set in ${CADDY_ENV_FILE}}"
-: "${GATE_PASSWORD_HASH:?GATE_PASSWORD_HASH must be set in ${CADDY_ENV_FILE}}"
-[[ "${GATE_USER}" =~ ^[A-Za-z0-9._-]{1,64}$ ]] \
-	|| die "GATE_USER is malformed."
-[[ "${GATE_PASSWORD_HASH}" =~ ^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$ ]] \
-	|| die "GATE_PASSWORD_HASH is not a supported bcrypt hash."
-[[ "${SITE_GATED:-}" == "1" ]] \
-	|| die "SITE_GATED must remain 1."
 [[ "${MAINTENANCE_CONFIG:-}" == "${APP_DIR}/maintenance.caddy" ]] \
 	|| die "MAINTENANCE_CONFIG is outside the root-controlled contract."
 [[ "${CSP_CONFIG:-}" == "${APP_DIR}/csp-current" ]] \
 	|| die "CSP_CONFIG is outside the root-controlled contract."
 [[ "${PUBLIC_SITE_URL}" == "https://${SITE_DOMAIN}" ]] \
-	|| die "PUBLIC_SITE_URL does not match the gated production domain."
+	|| die "PUBLIC_SITE_URL does not match the production domain."
 [[ "${PUBLIC_MEDUSA_BACKEND_URL}" == "https://api.${SITE_DOMAIN}" ]] \
 	|| die "PUBLIC_MEDUSA_BACKEND_URL does not match the production API domain."
 SITE_DOMAIN_VALUE="${SITE_DOMAIN}"
-GATE_USER_VALUE="${GATE_USER}"
 unset ACME_EMAIL GATE_USER GATE_PASSWORD_HASH SITE_GATED SITE_DOMAIN \
 	MAINTENANCE_CONFIG CSP_CONFIG
 
@@ -694,15 +684,12 @@ install -m 0644 "${SCRIPT_DIR}/medusa-candidate@.service" \
 	sync -f /etc/caddy
 	sync -f /etc/systemd/system
 	systemctl daemon-reload
-reload_caddy || die "The gated Caddy configuration is invalid."
+reload_caddy || die "The Caddy configuration is invalid."
 if [[ "${RESUME_MODE}" -eq 0 ]]; then
 	set_deploy_phase "${PHASE_MAINTENANCE}"
 fi
 "${SCRIPT_DIR}/verify-release.sh" maintenance "${SITE_DOMAIN_VALUE}" \
 	|| die "First-install maintenance verification failed."
-"${SCRIPT_DIR}/verify-release.sh" \
-	authenticated-candidate "${SITE_DOMAIN_VALUE}" "${GATE_USER_VALUE}" \
-	|| die "The configured first-install gate credential failed."
 
 deploy_stop_and_prove_unit medusa.service \
 	|| die "Medusa did not drain completely during first-install bootstrap."

@@ -94,7 +94,6 @@ CONTROLS_INSTALLED=0
 MAINTENANCE_ENTERED=0
 MIGRATION_STARTED=0
 DEPLOY_SUCCEEDED=0
-AUTHENTICATED_GATE_VERIFIED=0
 CANDIDATE_UNIT=""
 DEPLOY_GUARD_UNIT=""
 ACTIVATION_WATCHDOG_UNIT=""
@@ -300,20 +299,15 @@ done
 
 deploy_load_caddy_env_file "${CADDY_ENV_FILE}"
 : "${SITE_DOMAIN:?SITE_DOMAIN must be set in ${CADDY_ENV_FILE}}"
-: "${GATE_USER:?GATE_USER must be set in ${CADDY_ENV_FILE}}"
-: "${GATE_PASSWORD_HASH:?GATE_PASSWORD_HASH must be set in ${CADDY_ENV_FILE}}"
-[[ "${GATE_USER}" =~ ^[A-Za-z0-9._-]{1,64}$ ]] \
-	|| die "GATE_USER must contain only letters, digits, dot, underscore or dash."
-[[ "${GATE_PASSWORD_HASH}" =~ ^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$ ]] \
-	|| die "GATE_PASSWORD_HASH is not a supported bcrypt hash."
-[[ "${SITE_GATED:-}" == "1" ]] \
-	|| die "SITE_GATED must remain 1 until the separately approved launch."
 [[ "${MAINTENANCE_CONFIG:-}" == "${APP_DIR}/maintenance.caddy" ]] \
 	|| die "MAINTENANCE_CONFIG must be ${APP_DIR}/maintenance.caddy."
 [[ "${CSP_CONFIG:-}" == "${APP_DIR}/csp-current" ]] \
 	|| die "CSP_CONFIG must be ${APP_DIR}/csp-current."
 SITE_DOMAIN_VALUE="${SITE_DOMAIN}"
-GATE_USER_VALUE="${GATE_USER}"
+# GATE_USER, GATE_PASSWORD_HASH and SITE_GATED may still be present in
+# caddy.env on an existing server. Nothing reads them since the gate was
+# removed on 2026-07-29; they are unset here with the rest so no later stage
+# can accidentally start depending on them again.
 unset ACME_EMAIL GATE_USER GATE_PASSWORD_HASH SITE_GATED SITE_DOMAIN \
 	MAINTENANCE_CONFIG CSP_CONFIG
 
@@ -803,7 +797,6 @@ validate_caddy_config() {
 	(
 		deploy_sanitize_environment
 		deploy_load_caddy_env_file "${CADDY_ENV_FILE}"
-		[[ "${SITE_GATED:-}" == "1" ]] || exit 1
 		CSP_CONFIG="${csp_file}"
 		export CSP_CONFIG
 		caddy validate --config "${caddyfile}" --adapter caddyfile \
@@ -1271,18 +1264,11 @@ if [[ -n "${ASSET_FILE}" ]]; then
 	ASSET_PATH="/_astro/$(basename "${ASSET_FILE}")"
 fi
 
-# A routine deploy proves the operator still knows the live gate credential
-# before migrations make rollback an operator action. The first complete
-# release follows the explicit backend bootstrap and has no storefront to
-# authenticate against yet; it performs the same prompt immediately after
-# activation while the database remains fail-closed behind maintenance.
-if [[ -L "${STOREFRONT_CURRENT}" ]]; then
-	log "Verifying the current gate credential before production mutation"
-	"${SCRIPT_DIR}/verify-release.sh" \
-		authenticated "${SITE_DOMAIN_VALUE}" "${GATE_USER_VALUE}" \
-		|| die "Authenticated gate verification failed before maintenance."
-	AUTHENTICATED_GATE_VERIFIED=1
-else
+# With no live storefront this is the first complete release, following the
+# explicit backend bootstrap. Prove the backend pointer really is an approved,
+# immutable first-install artifact before migrations make rollback an operator
+# action. A routine deploy has a published storefront and skips this.
+if [[ ! -L "${STOREFRONT_CURRENT}" ]]; then
 	[[ -L "${BACKEND_CURRENT}" ]] \
 		|| die "No active storefront exists. Run bootstrap-backend.sh first."
 	BOOTSTRAP_BACKEND="$(readlink -f "${BACKEND_CURRENT}")"
@@ -1313,12 +1299,6 @@ set_deploy_phase "${PHASE_MAINTENANCE}"
 "${SCRIPT_DIR}/verify-release.sh" \
 	candidate "${SITE_DOMAIN_VALUE}" "${ASSET_PATH}" \
 	|| die "Candidate storefront failed while maintenance was active."
-log "Verifying the target gate while public maintenance remains active"
-"${SCRIPT_DIR}/verify-release.sh" \
-	authenticated-candidate \
-	"${SITE_DOMAIN_VALUE}" "${GATE_USER_VALUE}" \
-	|| die "Target gate verification failed under maintenance."
-AUTHENTICATED_GATE_VERIFIED=1
 
 MAINTENANCE_BUILD_IDENTITY="$(compute_build_identity)" \
 	|| die "Could not re-check build inputs under maintenance."
@@ -1414,12 +1394,6 @@ PUBLIC_VERIFICATION_FAILED=0
 "${SCRIPT_DIR}/verify-release.sh" \
 	external "${SITE_DOMAIN_VALUE}" "${ASSET_PATH}" \
 	|| PUBLIC_VERIFICATION_FAILED=1
-if [[ "${PUBLIC_VERIFICATION_FAILED}" -eq 0 \
-	&& "${AUTHENTICATED_GATE_VERIFIED}" -eq 0 ]]; then
-	"${SCRIPT_DIR}/verify-release.sh" \
-		authenticated "${SITE_DOMAIN_VALUE}" "${GATE_USER_VALUE}" \
-		|| PUBLIC_VERIFICATION_FAILED=1
-fi
 if [[ "${PUBLIC_VERIFICATION_FAILED}" -ne 0 ]]; then
 	set_maintenance on >/dev/null 2>&1 || true
 	MAINTENANCE_ENTERED=1
