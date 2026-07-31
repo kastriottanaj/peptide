@@ -19,6 +19,9 @@ dist/
 
 # Editor / local tooling
 .claude/settings.local.json
+# Claude Code worktrees live inside the repo. Git sees each one as a gitlink
+# (mode 160000) and will happily stage it as a broken submodule ref.
+.claude/worktrees/
 .vscode/
 .idea/
 .playwright-mcp/
