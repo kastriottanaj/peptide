@@ -75,7 +75,7 @@ assert_fixed "${DEPLOY_SCRIPT}" \
 	'"${BACKEND_SOURCE}/package-lock.json"' \
 	'production backend assembly must consume the committed lockfile'
 assert_contains "${DEPLOY_SCRIPT}" \
-	'/usr/bin/npm ci --omit=dev --no-audit --no-fund' \
+	'/usr/bin/npm ci --omit=dev --prefer-offline --no-audit --no-fund' \
 	'production dependencies must use npm ci with dev dependencies omitted'
 assert_fixed "${DEPLOY_SCRIPT}" \
 	'cmp -s "${BACKEND_APP_SOURCE}/package.json"' \

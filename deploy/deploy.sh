@@ -676,8 +676,15 @@ install -d -o "${BUILD_USER}" -g "${BUILD_USER}" -m 0700 \
 
 BACKEND_SOURCE="${BUILD_WORKSPACE}/source/backend"
 BACKEND_APP_SOURCE="${BACKEND_SOURCE}/apps/backend"
+# --prefer-offline on all three installs: serve from the local npm cache and go
+# to the registry only for genuinely missing packages. registry.npmjs.org is
+# behind Cloudflare, which rate-limits this box by request volume, and a deploy
+# runs three installs back to back — the burst is what trips E429, not the total.
+# This complements the maxsockets/retry settings provision.sh sets; it does not
+# replace them. Not --offline: a new dependency is still fetched, so a lockfile
+# change cannot silently install stale packages.
 run_as_build "${BACKEND_SOURCE}" \
-	/usr/bin/npm ci --no-audit --no-fund
+	/usr/bin/npm ci --prefer-offline --no-audit --no-fund
 run_as_build "${BACKEND_SOURCE}" \
 	/usr/bin/env NODE_ENV=development \
 	"${BACKEND_SOURCE}/node_modules/.bin/turbo" \
@@ -703,12 +710,12 @@ run_as_build "${ARTIFACT}" /usr/bin/cp -a "${BUILD_OUTPUT}" \
 [[ ! -e "${ARTIFACT}/backend/apps/backend/.medusa/server/static" ]] \
 	|| die "Generated server unexpectedly contains a static path."
 run_as_build "${ARTIFACT}/backend" \
-	/usr/bin/npm ci --omit=dev --no-audit --no-fund
+	/usr/bin/npm ci --omit=dev --prefer-offline --no-audit --no-fund
 
 STOREFRONT_SOURCE="${BUILD_WORKSPACE}/source/storefront"
 write_storefront_build_env "${STOREFRONT_SOURCE}/.env"
 run_as_build "${STOREFRONT_SOURCE}" \
-	/usr/bin/npm ci --no-audit --no-fund
+	/usr/bin/npm ci --prefer-offline --no-audit --no-fund
 run_as_build "${STOREFRONT_SOURCE}" \
 	/usr/bin/env \
 		SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH}" \
