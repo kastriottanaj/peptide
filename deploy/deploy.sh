@@ -103,7 +103,15 @@ RELEASE_DIR="${RELEASES_DIR}/${FULL_SHA}"
 log "Building Medusa  (expect 4-9 min)"
 # ---------------------------------------------------------------------------
 cd "${REPO_DIR}/backend"
-npm ci --no-audit --no-fund
+# --prefer-offline on all three installs: serve from the local npm cache and go
+# to the registry only for genuinely missing packages. registry.npmjs.org is
+# behind Cloudflare, which rate-limits this box by request volume, and a deploy
+# runs three installs back to back — the burst is what trips E429, not the
+# total, which is why waiting between deploys never helped. This complements the
+# maxsockets/retry settings provision.sh sets rather than replacing them.
+# Not --offline: a new dependency is still fetched, so a lockfile change cannot
+# silently install stale packages. See docs/deploy-speed.md.
+npm ci --prefer-offline --no-audit --no-fund
 
 # NODE_ENV must not be production for the build: medusa-config.ts refuses to
 # load a production config without the runtime secrets, and `medusa build` loads
@@ -122,7 +130,7 @@ cp -a "${BUILD_OUTPUT}/." "${RELEASE_DIR}/"
 
 # The build output is a self-contained app with its own package.json.
 cd "${RELEASE_DIR}"
-npm install --omit=dev --no-audit --no-fund
+npm install --omit=dev --prefer-offline --no-audit --no-fund
 
 chown -R "${SERVICE_USER}:${SERVICE_USER}" "${RELEASE_DIR}"
 
@@ -218,7 +226,7 @@ else
 	chmod 600 "${REPO_DIR}/storefront/.env"
 
 	cd "${REPO_DIR}/storefront"
-	npm ci --no-audit --no-fund
+	npm ci --prefer-offline --no-audit --no-fund
 	npm run build
 
 	[[ -f "${REPO_DIR}/storefront/dist/index.html" ]] \
