@@ -1,0 +1,113 @@
+---
+/**
+ * The card grid of trust and legal links shared by `/about/` and `/contact/`.
+ *
+ * One component rather than two copies so the set cannot drift: if a legal page
+ * is added or renamed, both trust pages follow from a single edit. Every href is
+ * passed through `internalHref` so a hand-written slashless path here cannot
+ * reintroduce an internal redirect — see `lib/links.ts`.
+ *
+ * Cards are plain anchors with the label as their accessible name; the
+ * description sits inside the same anchor, so there is no icon-only or empty
+ * link and nothing to tab past.
+ */
+import { internalHref } from "../lib/links";
+
+export interface TrustLink {
+	href: string;
+	label: string;
+	description: string;
+}
+
+export interface Props {
+	links: TrustLink[];
+	/** Rendered as the section heading; omit when the caller supplies its own. */
+	heading?: string;
+	/** Heading level, so the component fits the page's outline. */
+	headingLevel?: "h2" | "h3";
+	id?: string;
+}
+
+const { links, heading, headingLevel = "h2", id } = Astro.props;
+const Heading = headingLevel;
+---
+
+<section class="trust" id={id}>
+	{heading && <Heading class="trust__heading">{heading}</Heading>}
+	<ul class="trust__grid">
+		{
+			links.map((link) => (
+				<li>
+					<a href={internalHref(link.href)}>
+						<span class="trust__label">{link.label}</span>
+						<span class="trust__desc">{link.description}</span>
+					</a>
+				</li>
+			))
+		}
+	</ul>
+</section>
+
+<style>
+	.trust {
+		margin-top: 2.5rem;
+	}
+	.trust__heading {
+		font-size: 1.25rem;
+		margin-bottom: 1rem;
+	}
+	.trust__grid {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 0.9rem;
+	}
+	.trust__grid a {
+		display: flex;
+		flex-direction: column;
+		gap: 0.3rem;
+		height: 100%;
+		background: var(--c-white);
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius);
+		padding: 1rem 1.15rem;
+		text-decoration: none;
+		color: inherit;
+		transition: border-color 0.15s ease;
+	}
+	.trust__grid a:hover {
+		border-color: var(--c-green);
+	}
+	.trust__grid a:focus-visible {
+		outline: 2px solid var(--c-green);
+		outline-offset: 2px;
+	}
+	.trust__label {
+		font-weight: 700;
+		font-size: 0.95rem;
+	}
+	.trust__label::after {
+		content: " →";
+		color: var(--c-green-dark);
+	}
+	.trust__desc {
+		font-size: 0.85rem;
+		color: var(--c-muted);
+		/* Without this a grid item cannot shrink below its longest word, which is
+		   how a long German compound scrolls a phone sideways. */
+		overflow-wrap: break-word;
+	}
+
+	@media (max-width: 900px) {
+		.trust__grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+	@media (max-width: 560px) {
+		.trust__grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

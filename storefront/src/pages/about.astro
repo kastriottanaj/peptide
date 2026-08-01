@@ -1,22 +1,460 @@
 ---
+/**
+ * Über uns — the company and trust page.
+ *
+ * Every statement here has to be traceable to something in this repository: the
+ * configured shipping zones, the payment method the checkout actually
+ * implements, the consent gate in `lib/analytics.ts`. Nothing about founding
+ * year, team, premises, laboratory, certifications, customer numbers or
+ * response times appears, because none of it exists to cite — see
+ * docs/go-live-checklist.md and docs/launch-data-needed.md for what is still
+ * outstanding.
+ *
+ * The two state-dependent blocks below are rendered from the same switches the
+ * rest of the site reads (`ORDERS_ENABLED`, `CONTACT`), so this page cannot go
+ * on describing a shop that has moved on without it.
+ */
 import BaseLayout from "../layouts/BaseLayout.astro";
+import TrustLinks from "../components/TrustLinks.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+import { ORDERS_ENABLED } from "../lib/shop";
+import { CONTACT } from "../lib/company";
+import {
+	FREE_SHIPPING_THRESHOLD_EUR,
+	SHIPPING_FEE_EUR,
+	SHIPPING_FEE_OUTSIDE_GERMANY_EUR,
+	formatEur,
+} from "../lib/pricing";
+
+const TITLE = "Über uns";
+const DESCRIPTION =
+	"Wer den Shop betreibt, wofür die Forschungspeptide bestimmt sind und wie " +
+	"Bestellung, Zahlung und Versand ablaufen — nachvollziehbar dargestellt.";
+
+const principles = [
+	{
+		title: "Transparenz vor Superlativen",
+		body: "Angaben, die noch nicht vorliegen, sind auf den betreffenden Seiten sichtbar als offen gekennzeichnet, statt durch eine Formulierung ersetzt zu werden, die nach einer Antwort klingt.",
+	},
+	{
+		title: "Klare Produktangaben",
+		body: "Jede Produktseite nennt Packgröße, angegebene Reinheit und den Zertifikatsstatus. Fehlt eine Angabe, bleibt das Feld leer — es wird nicht mit einem Näherungswert gefüllt.",
+	},
+	{
+		title: "Nachvollziehbare Preise",
+		body: "Preise, Mengenrabatte und Versandkosten werden vor dem Absenden der Bestellung vollständig ausgewiesen. Es gibt keine Gebühren, die erst danach sichtbar werden.",
+	},
+	{
+		title: "Zahlung ohne Zahlungsdienstleister",
+		body: "Bezahlt wird per Vorkasse durch Banküberweisung. Wir erheben keine Karten- oder Kontodaten, und es ist kein Zahlungsdienstleister zwischengeschaltet.",
+	},
+	{
+		title: "Sachliche Kommunikation",
+		body: "Keine Dosierungs-, Anwendungs- oder Gesundheitsaussagen — weder auf den Produktseiten noch im Wissensbereich. Die Produkte sind ausschließlich für Forschungs-, Analyse- und Laborzwecke bestimmt.",
+	},
+	{
+		title: "Datenschutz als Voreinstellung",
+		body: "Ohne Ihre ausdrückliche Einwilligung wird keine Analyse geladen: kein Skript, keine Verbindung, kein Cookie. Externe Schriftarten, Karten oder eingebettete Inhalte Dritter setzen wir nicht ein.",
+	},
+];
+
+const steps = [
+	{
+		title: "1. Produkt prüfen",
+		body: "Auf der Produktseite finden Sie die verfügbaren Packgrößen, die angegebene Reinheit, den Zertifikatsstatus und den Preis je Packgröße. Der Peptid-Rechner unterstützt bei Rekonstitution und Aliquotierung.",
+	},
+	{
+		title: "2. Bestellung",
+		body: "Packgröße und Menge wählen, in den Warenkorb legen und die Bestellung über die Kasse abschließen. Mengenrabatte von 3 % bis 15 % werden je Position automatisch anhand der Stückzahl berechnet und im Warenkorb ausgewiesen.",
+	},
+	{
+		title: "3. Zahlung",
+		body: "Nach dem Absenden der Bestellung erhalten Sie unsere Bankverbindung, den Betrag und einen Verwendungszweck im Format PE-XXXXXX. Diesen Verwendungszweck geben Sie bei der Überweisung an, damit die Zahlung Ihrer Bestellung zugeordnet werden kann.",
+	},
+	{
+		title: "4. Versand",
+		body: `Versendet wird nach vollständigem Zahlungseingang, neutral verpackt. Der Versand kostet innerhalb Deutschlands ${formatEur(SHIPPING_FEE_EUR)} und in das übrige Europa ${formatEur(SHIPPING_FEE_OUTSIDE_GERMANY_EUR)}; ab ${formatEur(FREE_SHIPPING_THRESHOLD_EUR)} Warenwert nach Rabatt entfällt er.`,
+	},
+	{
+		title: "5. Rückfragen",
+		body: "Bestellnummer oder Verwendungszweck zusammen mit Ihrer E-Mail-Adresse genügen, um Betrag und Verwendungszweck jederzeit erneut aufzurufen — auch wenn Sie die Bestätigungsseite geschlossen haben.",
+	},
+];
+
+const trustLinks = [
+	{
+		href: "/contact/",
+		label: "Kontakt",
+		description: "Kontaktwege, Abruf Ihrer Bestelldaten sowie Versand- und Zahlungsbedingungen.",
+	},
+	{
+		href: "/impressum/",
+		label: "Impressum",
+		description: "Angaben zum Anbieter nach § 5 DDG.",
+	},
+	{
+		href: "/datenschutz/",
+		label: "Datenschutz",
+		description: "Welche Daten wir verarbeiten, auf welcher Rechtsgrundlage und wie lange.",
+	},
+	{
+		href: "/agb/",
+		label: "AGB",
+		description: "Vertragsbedingungen zu Bestellung, Preisen, Zahlung, Lieferung und Haftung.",
+	},
+	{
+		href: "/widerruf/",
+		label: "Widerruf",
+		description: "Widerrufsrecht, Fristen und das Muster-Widerrufsformular.",
+	},
+	{
+		href: "/wissen/reinheit-und-coa/",
+		label: "Reinheit & COA",
+		description: "Was ein Analysezertifikat aussagt und wie Reinheitsangaben zu lesen sind.",
+	},
+];
+
+// --- SEO ---------------------------------------------------------------
+// AboutPage `about` the one Organization entity `Seo.astro` already emits,
+// referenced by @id rather than restated — a second Organization node with the
+// same identity is the duplicate this pattern exists to avoid.
+const jsonLd = [
+	{
+		"@type": "AboutPage",
+		"@id": `${canonicalUrl("/about")}#webpage`,
+		url: canonicalUrl("/about"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		about: { "@id": ORGANIZATION_ID },
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Über uns", "/about"],
+	]),
+];
 ---
 
-<BaseLayout
-	title="Über uns"
-	description="Über Peptide Einkaufen – Anbieter von Forschungspeptiden für wissenschaftliche Zwecke."
->
-	<h1>Über uns</h1>
-	<p>
-		Peptide Einkaufen beliefert Forschungseinrichtungen und
-		Laborpersonal mit Peptiden für den ausschließlichen Einsatz in
-		wissenschaftlicher Forschung.
-		<!-- TODO: replace with real company background, founding year, location, and team details -->
-	</p>
+<BaseLayout title={TITLE} description={DESCRIPTION} wide jsonLd={jsonLd}>
+	<section class="hero">
+		<div class="container hero__inner">
+			<span class="eyebrow">Über den Shop</span>
+			<h1>Über uns</h1>
+			<p class="hero__lead">
+				Peptide Einkaufen ist ein deutschsprachiger Onlineshop für
+				Forschungspeptide. Angeboten werden lyophilisierte Peptide in
+				definierten Packgrößen, mit Lieferung nach Deutschland und in das
+				übrige Europa —
+				<strong>ausschließlich für Forschungs-, Analyse- und Laborzwecke</strong>.
+			</p>
+			<p class="hero__note">
+				Die angebotenen Produkte sind keine Arzneimittel, Lebensmittel,
+				Nahrungsergänzungs- oder Kosmetikprodukte. Sie sind weder für die
+				Anwendung am noch im menschlichen oder tierischen Körper zugelassen oder
+				geeignet.
+			</p>
+		</div>
+	</section>
 
-	<h2>Unser Anspruch</h2>
-	<p>
-		<!-- TODO: replace with real, verifiable claims about sourcing, quality control, and testing process -->
-		Qualität und Nachvollziehbarkeit stehen im Mittelpunkt unseres Angebots.
-	</p>
+	<div class="container page">
+		<section class="section" id="anbieter">
+			<h2>Anbieterangaben</h2>
+			{/* This page states no company identity of its own. Nothing in the
+			    repository establishes one, the Impressum is the page that carries
+			    it, and it marks its own open fields — so pointing there is both
+			    true today and still true once the fields are filled. */}
+			<p>
+				Angaben zum Anbieter nach § 5 DDG finden Sie im{" "}
+				<a href="/impressum/">Impressum</a>. Welche Angaben dort bereits
+				vollständig vorliegen, ist auf der Seite selbst gekennzeichnet. Wir
+				wiederholen sie hier bewusst nicht, damit es genau eine Stelle gibt,
+				die verbindlich ist.
+			</p>
+			<p>
+				Die Vertragssprache ist Deutsch, abgerechnet wird in Euro. Geliefert
+				wird nach Deutschland und in das übrige Europa.
+			</p>
+
+			{/* `ORDERS_ENABLED` establishes exactly one thing: whether the shop
+			    takes orders. It says nothing about who runs it or what state that
+			    business is in, so this notice may not either. */}
+			{
+				!ORDERS_ENABLED && (
+					<aside class="notice" role="note">
+						<p class="notice__heading">Derzeit keine Bestellmöglichkeit</p>
+						<p>
+							Der Bestellvorgang ist zurzeit nicht verfügbar. Sortiment,
+							Packgrößen und Preise können Sie weiterhin einsehen; Artikel
+							lassen sich derzeit nicht bestellen.
+						</p>
+					</aside>
+				)
+			}
+		</section>
+
+		<section class="section" id="grundsaetze">
+			<h2>Woran wir uns halten</h2>
+			<p class="section__lead">
+				Sechs Grundsätze, die sich an dem messen lassen, was auf dieser Website
+				tatsächlich passiert.
+			</p>
+			<ul class="cards">
+				{
+					principles.map((principle) => (
+						<li class="card">
+							<h3>{principle.title}</h3>
+							<p>{principle.body}</p>
+						</li>
+					))
+				}
+			</ul>
+		</section>
+
+		<section class="section" id="ablauf">
+			<h2>So läuft eine Bestellung ab</h2>
+			<p class="section__lead">
+				Von der Produktseite bis zum Versand — fünf Schritte, ohne
+				Zwischenschritte, die erst später sichtbar werden.
+			</p>
+			<ol class="steps">
+				{
+					steps.map((step) => (
+						<li>
+							<h3>{step.title}</h3>
+							<p>{step.body}</p>
+						</li>
+					))
+				}
+			</ol>
+			<p class="section__note">
+				Die vollständigen Bedingungen zu Vertragsschluss, Preisen, Lieferung und
+				Haftung stehen in den <a href="/agb/">AGB</a>; die Bedingungen für
+				Rücksendungen in der <a href="/widerruf/">Widerrufsbelehrung</a>.
+			</p>
+		</section>
+
+		<section class="section" id="dokumentation">
+			<h2>Produktangaben und Dokumentation</h2>
+			<p>
+				Zu jedem Produkt weisen wir Packgröße, die angegebene Reinheit und den
+				Zertifikatsstatus aus. Was ein Analysezertifikat (COA) aussagt, wie
+				Reinheitsangaben nach HPLC zu lesen sind und wo ihre Grenzen liegen,
+				erklärt der Beitrag{" "}
+				<a href="/wissen/reinheit-und-coa/">Reinheit und COA</a> im
+				Wissensbereich. Hinweise zur sachgerechten Lagerung lyophilisierter
+				Peptide finden Sie{" "}
+				<a href="/wissen/lagerung-lyophilisierter-peptide/">ebenfalls dort</a>.
+			</p>
+			<p>
+				Der Wissensbereich ist wissenschaftlicher Hintergrund und ausdrücklich
+				keine Anwendungsanleitung. Er enthält keine Dosierungsangaben und keine
+				gesundheitsbezogenen Aussagen.
+			</p>
+		</section>
+
+		<TrustLinks heading="Rechtliches und Service" links={trustLinks} id="rechtliches" />
+
+		<section class="cta">
+			<div>
+				<h2>Sortiment ansehen oder Frage stellen</h2>
+				<p>
+					Der vollständige Katalog mit Packgrößen und Preisen ist frei
+					einsehbar. {
+						CONTACT.any
+							? "Für Rückfragen zu Produkten, Verfügbarkeit oder einer Bestellung erreichen Sie uns über die Kontaktseite."
+							: "Welche Kontaktwege derzeit offenstehen, steht auf der Kontaktseite."
+					}
+				</p>
+			</div>
+			<div class="cta__actions">
+				<a href="/produkte/" class="btn btn--green">Peptide ansehen</a>
+				<a href="/contact/" class="btn btn--outline">Zum Kontakt</a>
+			</div>
+		</section>
+	</div>
+
+	<style>
+		/* Hero — the soft surface rather than the navy gradient of the homepage:
+		   same tokens, less shout, which is what a trust page needs. */
+		.hero {
+			background: var(--c-blue-tint);
+			border-bottom: 1px solid var(--c-border);
+		}
+		.hero__inner {
+			padding-block: 3rem 3.25rem;
+			max-width: 900px;
+			margin-inline: auto;
+		}
+		.hero h1 {
+			font-size: clamp(1.9rem, 4vw, 2.75rem);
+			font-weight: 800;
+			margin: 0 0 1rem;
+		}
+		.hero__lead {
+			font-size: 1.05rem;
+			max-width: 62ch;
+			margin: 0 0 1rem;
+		}
+		.hero__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+			max-width: 68ch;
+			margin: 0;
+		}
+
+		.page {
+			padding-block: 2.5rem 1rem;
+		}
+		.section {
+			padding-block: 1.5rem;
+			max-width: 68ch;
+		}
+		/* The card and link grids need the full measure; the prose does not. */
+		.section:has(.cards) {
+			max-width: none;
+		}
+		.section h2 {
+			font-size: clamp(1.35rem, 2.2vw, 1.7rem);
+			margin-bottom: 0.75rem;
+		}
+		.section p {
+			margin: 0 0 1rem;
+		}
+		.section__lead {
+			color: var(--c-muted);
+			max-width: 62ch;
+		}
+		.section__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+		.section a,
+		.notice a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.section a:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+
+		.notice {
+			background: var(--c-warn-bg);
+			color: var(--c-warn-ink);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.15rem;
+			margin-top: 1.5rem;
+		}
+		.notice__heading {
+			font-weight: 700;
+			margin: 0 0 0.35rem;
+		}
+		.notice p:last-child {
+			margin: 0;
+			font-size: 0.92rem;
+		}
+
+		.cards {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: grid;
+			grid-template-columns: repeat(3, 1fr);
+			gap: 0.9rem;
+		}
+		.card {
+			background: var(--c-white);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius);
+			padding: 1.1rem 1.25rem;
+		}
+		.card h3 {
+			font-size: 1rem;
+			margin: 0 0 0.4rem;
+		}
+		.card p {
+			margin: 0;
+			font-size: 0.88rem;
+			color: var(--c-muted);
+			overflow-wrap: break-word;
+		}
+
+		.steps {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: grid;
+			gap: 0.75rem;
+		}
+		.steps li {
+			border-left: 3px solid var(--c-green);
+			background: var(--c-cream-soft);
+			border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+			padding: 0.9rem 1.15rem;
+		}
+		.steps h3 {
+			font-size: 0.98rem;
+			margin: 0 0 0.3rem;
+		}
+		.steps p {
+			margin: 0;
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+
+		.cta {
+			background: var(--c-cream);
+			border-radius: 18px;
+			padding: 1.9rem 2.1rem;
+			margin: 2.5rem 0 1rem;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 1.5rem;
+			flex-wrap: wrap;
+		}
+		.cta h2 {
+			margin: 0 0 0.5rem;
+			font-size: 1.3rem;
+		}
+		.cta p {
+			margin: 0;
+			font-size: 0.92rem;
+			color: var(--c-gold-ink-soft);
+			max-width: 52ch;
+		}
+		.cta__actions {
+			display: flex;
+			gap: 0.7rem;
+			flex-wrap: wrap;
+		}
+		/* The ghost button is white-on-navy; on cream it needs an ink outline. */
+		.btn--outline {
+			background: transparent;
+			color: var(--c-navy);
+			box-shadow: inset 0 0 0 1.5px var(--c-navy);
+		}
+		.btn--outline:hover {
+			background: var(--c-white);
+		}
+		.btn:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+
+		@media (max-width: 900px) {
+			.cards {
+				grid-template-columns: repeat(2, 1fr);
+			}
+		}
+		@media (max-width: 560px) {
+			.cards {
+				grid-template-columns: 1fr;
+			}
+			.cta {
+				padding: 1.5rem 1.4rem;
+			}
+		}
+	</style>
 </BaseLayout>

@@ -20,6 +20,7 @@
  */
 
 import { PRODUCTION_ORIGIN, buildCanonicalUrl, normalizeOrigin } from "./canonical";
+import { CONTACT } from "./company";
 
 export const SITE_URL = normalizeOrigin(
 	import.meta.env.PUBLIC_SITE_URL ?? PRODUCTION_ORIGIN,
@@ -53,13 +54,23 @@ export function canonicalUrl(input: string | URL): string {
 	return buildCanonicalUrl(input, SITE_URL);
 }
 
-/** The Organization node, emitted once per page and referenced by @id. */
+/**
+ * The Organization node, emitted once per page and referenced by @id.
+ *
+ * Contact details belong here and only here — this is the single Organization
+ * entity the whole site references, so `/contact/` describes it rather than
+ * introducing a second one. Both properties are omitted entirely when no
+ * channel is configured: an empty `email` is a worse signal than no email, and
+ * there is no address in this repository to fall back to (see `contact.ts`).
+ */
 export function organizationNode() {
 	return {
 		"@type": "Organization",
 		"@id": ORGANIZATION_ID,
 		name: SITE_NAME,
 		url: SITE_URL,
+		...(CONTACT.email ? { email: CONTACT.email } : {}),
+		...(CONTACT.phone ? { telephone: CONTACT.phone } : {}),
 	};
 }
 

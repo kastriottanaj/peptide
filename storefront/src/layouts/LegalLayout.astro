@@ -3,8 +3,25 @@
  * Shared shell for the legal pages (Impressum, Datenschutz, AGB, Widerruf):
  * narrow measure, consistent heading rhythm, and a visible banner while the
  * page still contains placeholders.
+ *
+ * `draft` is the only thing keeping unreviewed legal text out of the index — it
+ * sets `noindex` on the page, and `content-index.ts` leaves these routes out of
+ * the sitemap for the same reason. Do not remove it from a page until that
+ * page's real company data is in place; see docs/go-live-checklist.md §2.
+ *
+ * Pages that pass `sections` get a table of contents. The section list is the
+ * page's own constant, and the page renders its `<h2 id>` from the same objects,
+ * so a heading and its entry in the contents cannot drift apart — an anchor
+ * pointing at nothing is the usual way a long legal page rots.
  */
 import BaseLayout from "./BaseLayout.astro";
+
+export interface LegalSection {
+	/** Fragment id, also used as the `<h2 id>` on the page. */
+	id: string;
+	/** Heading text, reused verbatim as the contents entry. */
+	heading: string;
+}
 
 export interface Props {
 	title: string;
@@ -16,9 +33,11 @@ export interface Props {
 	 * review. Renders a visible warning so it cannot be mistaken for final text.
 	 */
 	draft?: boolean;
+	/** Renders a table of contents when non-empty. */
+	sections?: LegalSection[];
 }
 
-const { title, description, updated, draft = false } = Astro.props;
+const { title, description, updated, draft = false, sections = [] } = Astro.props;
 ---
 
 <BaseLayout title={title} description={description} noindex={draft}>
@@ -37,12 +56,36 @@ const { title, description, updated, draft = false } = Astro.props;
 			)
 		}
 
+		{
+			sections.length > 0 && (
+				<nav class="legal__toc" aria-labelledby="legal-toc-heading">
+					<h2 id="legal-toc-heading">Inhalt</h2>
+					<ol>
+						{sections.map((section) => (
+							<li>
+								<a href={`#${section.id}`}>{section.heading}</a>
+							</li>
+						))}
+					</ol>
+				</nav>
+			)
+		}
+
 		<slot />
 	</article>
 
 	<style>
 		.legal {
 			max-width: 68ch;
+		}
+		/* German legal headings are long compound nouns with no break
+		   opportunity: "Geschäftsbedingungen" alone is 339px at the UA default
+		   2em, which scrolled `/agb/` sideways on a 360px phone. The clamp tops
+		   out at that same 2em, so nothing changes on a desktop. */
+		.legal h1 {
+			font-size: clamp(1.5rem, 6vw, 2rem);
+			overflow-wrap: break-word;
+			hyphens: auto;
 		}
 		.legal__updated {
 			margin: -0.25rem 0 1.5rem;
@@ -57,13 +100,57 @@ const { title, description, updated, draft = false } = Astro.props;
 			font-size: 0.88rem;
 			margin-bottom: 2rem;
 		}
+
+		/* Table of contents. An ordered list because the sections are numbered
+		   (§ 1, § 2 …) and their order is part of what the reader is navigating. */
+		.legal__toc {
+			background: var(--c-surface);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius);
+			padding: 1.1rem 1.35rem;
+			margin-bottom: 2.25rem;
+		}
+		.legal__toc h2 {
+			font-size: 0.78rem;
+			text-transform: uppercase;
+			letter-spacing: 0.06em;
+			color: var(--c-muted);
+			margin: 0 0 0.6rem;
+		}
+		.legal__toc ol {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+			display: grid;
+			gap: 0.15rem;
+		}
+		.legal__toc a {
+			display: block;
+			padding: 0.2rem 0;
+			font-size: 0.9rem;
+			color: var(--c-green-dark);
+			text-decoration: none;
+			overflow-wrap: break-word;
+		}
+		.legal__toc a:hover {
+			text-decoration: underline;
+		}
+		.legal__toc a:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+			border-radius: 3px;
+		}
+
 		.legal :global(h2) {
 			font-size: 1.15rem;
 			margin-top: 2.25rem;
+			/* The header is sticky, so an anchored heading would land underneath it. */
+			scroll-margin-top: 5.5rem;
 		}
 		.legal :global(h3) {
 			font-size: 1rem;
 			margin-top: 1.5rem;
+			scroll-margin-top: 5.5rem;
 		}
 		.legal :global(p),
 		.legal :global(li) {
@@ -88,6 +175,13 @@ const { title, description, updated, draft = false } = Astro.props;
 			margin: 0.1rem 0 0;
 			font-size: 0.95rem;
 		}
+		.legal :global(a) {
+			color: var(--c-green-dark);
+		}
+		.legal :global(a:focus-visible) {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
 		/* Inline markers for data that still has to be supplied. */
 		.legal :global(.todo) {
 			background: var(--c-crit-bg);
@@ -103,6 +197,75 @@ const { title, description, updated, draft = false } = Astro.props;
 			padding: 1rem 1.2rem;
 			background: var(--c-cream-soft);
 			font-size: 0.9rem;
+		}
+		/* A short definition list used for facts inside a section (Empfänger,
+		   Rechtsgrundlage) that should read as a table rather than as prose. */
+		.legal :global(.legal-facts) {
+			border-left: 3px solid var(--c-border);
+			padding-left: 1rem;
+		}
+	</style>
+
+	{/* Print styles are global because the chrome they hide (announcement bar,
+	    header, footer, consent dialog) is rendered by BaseLayout and is out of
+	    reach of a scoped rule. Only the legal pages use this layout, so nothing
+	    else in the site picks these up. Legal text is the one thing on this site
+	    people genuinely print or file, and a printed page carrying a sticky
+	    header and a cookie dialog is unusable as a record. */}
+	<style is:global>
+		@media print {
+			.announce,
+			.header,
+			.footer,
+			.legal__toc,
+			dialog {
+				display: none !important;
+			}
+			body {
+				background: var(--c-white);
+				color: var(--c-ink);
+			}
+			main {
+				padding: 0 !important;
+			}
+			.legal {
+				max-width: none;
+			}
+			.legal h1 {
+				font-size: 18pt;
+			}
+			.legal h2 {
+				font-size: 13pt;
+				/* Keep a heading with the text it introduces. */
+				break-after: avoid;
+				page-break-after: avoid;
+			}
+			.legal p,
+			.legal li,
+			.legal dd {
+				font-size: 10.5pt;
+			}
+			.legal p,
+			.legal li,
+			.legal dl,
+			.legal .muster {
+				break-inside: avoid;
+				page-break-inside: avoid;
+			}
+			/* Link targets are worth nothing on paper unless they are spelled out. */
+			.legal a[href^="http"]::after {
+				content: " (" attr(href) ")";
+				font-size: 9pt;
+				word-break: break-all;
+			}
+			/* The red placeholder highlight does not survive a greyscale printer,
+			   and a placeholder that reads as ordinary text on paper is exactly the
+			   way an unfilled field gets signed off. An outline survives. */
+			.legal .todo {
+				border: 1px solid var(--c-ink);
+				background: transparent;
+				color: var(--c-ink);
+			}
 		}
 	</style>
 </BaseLayout>

@@ -1,40 +1,84 @@
 ---
+/**
+ * Informationspflichten nach Art. 13/14 DSGVO.
+ *
+ * WICHTIG: Dieser Text beschreibt bewusst nur die Verarbeitungen, die im Shop
+ * tatsächlich stattfinden. Sections branch on `ANALYTICS_ENABLED` and on the
+ * configured contact channels: a build without `PUBLIC_GA_MEASUREMENT_ID` loads
+ * no Google script at all, and a privacy policy claiming otherwise would be
+ * wrong in the direction that matters. Any further service added here needs its
+ * own section and its own consent category — see `src/lib/consent.ts`.
+ *
+ * The page stays `draft` (and therefore `noindex`) while the controller's
+ * identity, the hosting processing agreement and the shipping provider are
+ * open. Do not remove the flag to satisfy an SEO audit — see
+ * docs/go-live-checklist.md §2 and §4.
+ */
 import LegalLayout from "../layouts/LegalLayout.astro";
+import type { LegalSection } from "../layouts/LegalLayout.astro";
 import { ANALYTICS_ENABLED } from "../lib/analytics";
+import { CONTACT } from "../lib/company";
 
-// Informationspflichten nach Art. 13/14 DSGVO.
-//
-// WICHTIG: Dieser Text beschreibt bewusst nur die Verarbeitungen, die im Shop
-// tatsächlich stattfinden. Sections 6 and 8 therefore branch on
-// ANALYTICS_ENABLED: a build without PUBLIC_GA_MEASUREMENT_ID loads no Google
-// script at all, and a privacy policy claiming otherwise would be wrong in the
-// direction that matters. Any further service added here needs its own section
-// and its own consent category — see src/lib/consent.ts.
+/**
+ * The storage keys named in section 3, so a reader can find and delete them.
+ * Defined in `lib/cart.ts` (`CART_ID_KEY`) and `lib/consent.ts` (`STORAGE_KEY`,
+ * versioned by `CONSENT_VERSION`); repeated here as the visible values.
+ */
+const CART_STORAGE_KEY = "peptide_cart_id";
+const CONSENT_STORAGE_KEY = "pe_consent_v1";
+
+// One object per section, used both for the table of contents and for the
+// heading itself, so an anchor cannot outlive the heading it points at.
+const S = {
+	controller: { id: "verantwortlicher", heading: "1. Verantwortlicher" },
+	hosting: { id: "hosting", heading: "2. Aufruf der Website und Hosting" },
+	storage: { id: "lokale-speicherung", heading: "3. Warenkorb und lokale Speicherung" },
+	account: { id: "kein-kundenkonto", heading: "4. Kein Kundenkonto" },
+	order: { id: "bestellung", heading: "5. Bestellung und Vertragsabwicklung" },
+	payment: { id: "zahlung", heading: "6. Zahlung per Banküberweisung" },
+	lookup: { id: "bestellungssuche", heading: "7. Bestellungssuche" },
+	support: { id: "kontaktaufnahme", heading: "8. Kontaktaufnahme" },
+	recipients: { id: "empfaenger", heading: "9. Empfänger und Drittlandsübermittlung" },
+	retention: { id: "speicherdauer", heading: "10. Speicherdauer" },
+	analytics: { id: "analyse", heading: "11. Analyse und Tracking" },
+	rights: { id: "rechte", heading: "12. Ihre Rechte" },
+	complaint: { id: "beschwerde", heading: "13. Beschwerderecht" },
+	required: { id: "erforderlichkeit", heading: "14. Erforderlichkeit der Angaben" },
+} as const satisfies Record<string, LegalSection>;
+
+const SECTIONS: LegalSection[] = Object.values(S);
 ---
 
 <LegalLayout
 	title="Datenschutzerklärung"
-	description="Informationen zur Verarbeitung personenbezogener Daten nach Art. 13 DSGVO."
+	description="Informationen zur Verarbeitung personenbezogener Daten nach Art. 13 DSGVO — Hosting, Bestellung, Zahlung, Analyse und Ihre Rechte."
+	sections={SECTIONS}
 	draft
 >
-	<h2>1. Verantwortlicher</h2>
-	<p>
-		Verantwortlich für die Datenverarbeitung auf dieser Website ist:
-	</p>
+	<h2 id={S.controller.id}>{S.controller.heading}</h2>
+	<p>Verantwortlich für die Datenverarbeitung auf dieser Website ist:</p>
 	<dl>
 		<dt>Anbieter</dt>
 		<dd><span class="todo">[Firmierung inkl. Rechtsform]</span></dd>
 		<dt>Anschrift</dt>
 		<dd><span class="todo">[Anschrift wie im Impressum]</span></dd>
 		<dt>E-Mail</dt>
-		<dd><span class="todo">[E-Mail-Adresse]</span></dd>
+		<dd>
+			{
+				CONTACT.email ? (
+					<a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+				) : (
+					<span class="todo">[E-Mail-Adresse]</span>
+				)
+			}
+		</dd>
 	</dl>
 	<p class="todo">
 		[Prüfen, ob ein Datenschutzbeauftragter benannt werden muss (Art. 37 DSGVO,
 		§ 38 BDSG) — falls ja, Kontaktdaten hier ergänzen.]
 	</p>
 
-	<h2>2. Aufruf der Website</h2>
+	<h2 id={S.hosting.id}>{S.hosting.heading}</h2>
 	<p>
 		Beim Aufruf unserer Seiten verarbeitet der Hosting-Anbieter technisch
 		notwendige Verbindungsdaten (IP-Adresse, Datum und Uhrzeit, aufgerufene
@@ -42,25 +86,58 @@ import { ANALYTICS_ENABLED } from "../lib/analytics";
 		Verarbeitung ist zum sicheren und stabilen Betrieb der Website erforderlich.
 	</p>
 	<p>
+		Die Website wird auf einem Server der <strong>Hetzner Online GmbH</strong> in
+		einem Rechenzentrum in Deutschland betrieben. Eine Übermittlung dieser
+		Verbindungsdaten außerhalb der Europäischen Union findet dabei nicht statt.
+	</p>
+	<p>
 		<strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. f DSGVO (berechtigtes
-		Interesse am technisch fehlerfreien Betrieb).
+		Interesse am technisch fehlerfreien Betrieb).{" "}
 		<span class="todo"
-			>[Hosting-Anbieter benennen und Auftragsverarbeitungsvertrag abschließen.]</span
+			>[Vollständige Anschrift der Hetzner Online GmbH aus deren Impressum
+			übernehmen und den Auftragsverarbeitungsvertrag nach Art. 28 DSGVO
+			abschließen, bevor diese Seite veröffentlicht wird.]</span
 		>
 	</p>
 
-	<h2>3. Warenkorb</h2>
+	<h2 id={S.storage.id}>{S.storage.heading}</h2>
 	<p>
-		Für den Warenkorb speichern wir eine zufällige Kennung Ihres Warenkorbs im
-		lokalen Speicher (localStorage) Ihres Browsers. Diese Kennung enthält keine
-		personenbezogenen Daten und ist technisch erforderlich, damit Ihr Warenkorb
-		beim Seitenwechsel erhalten bleibt. Sie können sie jederzeit über die
-		Einstellungen Ihres Browsers löschen.
+		Diese Website setzt <strong>keine Cookies zu Werbe- oder Trackingzwecken</strong
+		>. Im lokalen Speicher (localStorage) Ihres Browsers legen wir lediglich zwei
+		Einträge ab:
 	</p>
-	<p><strong>Rechtsgrundlage:</strong> § 25 Abs. 2 Nr. 2 TDDDG (unbedingt
-		erforderlich), Art. 6 Abs. 1 lit. f DSGVO.</p>
+	<dl class="legal-facts">
+		<dt><code>{CART_STORAGE_KEY}</code></dt>
+		<dd>
+			eine zufällige Kennung Ihres Warenkorbs, damit dieser beim Seitenwechsel
+			erhalten bleibt. Sie enthält keine personenbezogenen Daten.
+		</dd>
+		<dt><code>{CONSENT_STORAGE_KEY}</code></dt>
+		<dd>
+			Ihre Entscheidung über die Statistik-Einwilligung samt Zeitpunkt, damit wir
+			sie beachten und Sie nicht bei jedem Aufruf erneut fragen.
+		</dd>
+	</dl>
+	<p>
+		Beide Einträge verbleiben in Ihrem Browser, werden nicht an uns übertragen und
+		können jederzeit über die Einstellungen Ihres Browsers gelöscht werden.
+	</p>
+	<p>
+		<strong>Rechtsgrundlage:</strong> § 25 Abs. 2 Nr. 2 TDDDG (unbedingt
+		erforderlich), Art. 6 Abs. 1 lit. f DSGVO. Für die Speicherung Ihrer
+		Einwilligungsentscheidung besteht zudem eine Nachweispflicht nach Art. 7
+		Abs. 1 DSGVO.
+	</p>
 
-	<h2>4. Bestellung und Vertragsabwicklung</h2>
+	<h2 id={S.account.id}>{S.account.heading}</h2>
+	<p>
+		Der Shop führt <strong>keine Kundenkonten</strong>. Es gibt keine
+		Registrierung, keine Anmeldung und kein Passwort, das wir speichern könnten.
+		Bestellt wird als Gast; die dabei angegebenen Daten verarbeiten wir
+		ausschließlich für die jeweilige Bestellung.
+	</p>
+
+	<h2 id={S.order.id}>{S.order.heading}</h2>
 	<p>
 		Zur Bearbeitung Ihrer Bestellung verarbeiten wir die von Ihnen angegebenen
 		Daten: Vor- und Nachname, E-Mail-Adresse, Rechnungs- und Lieferanschrift,
@@ -69,20 +146,67 @@ import { ANALYTICS_ENABLED } from "../lib/analytics";
 	</p>
 	<p>
 		<strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO (Erfüllung des
-		Vertrags bzw. vorvertragliche Maßnahmen).
+		Vertrags bzw. vorvertragliche Maßnahmen). Für die anschließende Aufbewahrung
+		der Rechnungsdaten zusätzlich Art. 6 Abs. 1 lit. c DSGVO (handels- und
+		steuerrechtliche Pflichten).
 	</p>
 
-	<h2>5. Zahlung per Banküberweisung</h2>
+	<h2 id={S.payment.id}>{S.payment.heading}</h2>
 	<p>
-		Die Zahlung erfolgt ausschließlich per Vorkasse durch Banküberweisung. Wir
-		erhalten dabei von Ihrer Bank die zur Zuordnung der Zahlung erforderlichen
-		Angaben, insbesondere Name des Kontoinhabers, Betrag und den von uns
-		vergebenen Verwendungszweck. Kreditkarten- oder sonstige Zahlungsdaten
-		verarbeiten wir nicht.
+		Die Zahlung erfolgt ausschließlich per Vorkasse durch Banküberweisung. Ein
+		Zahlungsdienstleister ist nicht zwischengeschaltet. Wir erhalten von Ihrer
+		Bank die zur Zuordnung der Zahlung erforderlichen Angaben, insbesondere Name
+		des Kontoinhabers, Betrag und den von uns vergebenen Verwendungszweck.
+		Kreditkarten- oder sonstige Zahlungsdaten verarbeiten wir nicht und erheben
+		sie auch nicht im Bestellvorgang.
 	</p>
 	<p><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO.</p>
 
-	<h2>6. Empfänger</h2>
+	<h2 id={S.lookup.id}>{S.lookup.heading}</h2>
+	<p>
+		Über die Seite <a href="/bestellung/suchen/">Bestellung suchen</a> können Sie
+		Betrag und Verwendungszweck einer bereits aufgegebenen Bestellung erneut
+		abrufen. Dazu übermitteln Sie Ihre Bestellnummer bzw. den Verwendungszweck
+		zusammen mit der bei der Bestellung angegebenen E-Mail-Adresse. Beide Angaben
+		werden nur zum Abgleich mit dem vorhandenen Bestelldatensatz verwendet, nicht
+		gesondert gespeichert und nicht für andere Zwecke ausgewertet. Stimmen sie
+		nicht überein, erhalten Sie eine allgemeine Fehlermeldung, die keine
+		Rückschlüsse darauf zulässt, welche der beiden Angaben abweicht.
+	</p>
+	<p>
+		<strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO
+		(Vertragsabwicklung).
+	</p>
+
+	<h2 id={S.support.id}>{S.support.heading}</h2>
+	{
+		CONTACT.any ? (
+			<Fragment>
+				<p>
+					Wenn Sie uns über die auf der <a href="/contact/">Kontaktseite</a>{" "}
+					genannten Wege schreiben oder anrufen, verarbeiten wir Ihre Angaben
+					ausschließlich zur Bearbeitung Ihres Anliegens und für den Fall von
+					Anschlussfragen. Ein Kontaktformular setzen wir nicht ein; es gibt
+					daher auch keine Übermittlung an einen Formulardienst.
+				</p>
+				<p>
+					<strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO, soweit
+					Ihr Anliegen einen Vertrag betrifft, sonst Art. 6 Abs. 1 lit. f DSGVO
+					(berechtigtes Interesse an der Beantwortung von Anfragen).
+				</p>
+			</Fragment>
+		) : (
+			<p>
+				Ein Kontaktformular setzen wir nicht ein, und es sind derzeit keine
+				Kontaktwege für den Kundenkontakt veröffentlicht. Es findet daher
+				gegenwärtig keine Verarbeitung von Daten aus einer Kontaktaufnahme
+				statt. Sobald Kontaktwege veröffentlicht werden, wird die Verarbeitung
+				der dort eingehenden Nachrichten an dieser Stelle beschrieben.
+			</p>
+		)
+	}
+
+	<h2 id={S.recipients.id}>{S.recipients.heading}</h2>
 	<p>Personenbezogene Daten geben wir weiter an:</p>
 	<ul>
 		<li>
@@ -91,12 +215,16 @@ import { ANALYTICS_ENABLED } from "../lib/analytics";
 		</li>
 		<li>
 			das mit dem Versand beauftragte Logistikunternehmen, soweit dies zur
-			Lieferung erforderlich ist
+			Lieferung erforderlich ist{" "}
 			<span class="todo">[Versanddienstleister benennen]</span>,
 		</li>
 		<li>
-			Dienstleister, die uns weisungsgebunden im Rahmen einer
-			Auftragsverarbeitung nach Art. 28 DSGVO unterstützen (Hosting).
+			die Hetzner Online GmbH als Hosting-Anbieterin, weisungsgebunden im Rahmen
+			einer Auftragsverarbeitung nach Art. 28 DSGVO,
+		</li>
+		<li>
+			Steuerberatung und Finanzbehörden, soweit wir gesetzlich zur Vorlage
+			verpflichtet sind.
 		</li>
 		{
 			ANALYTICS_ENABLED && (
@@ -104,18 +232,23 @@ import { ANALYTICS_ENABLED } from "../lib/analytics";
 					die Google Ireland Limited als Anbieterin von Google Analytics,
 					weisungsgebunden im Rahmen einer Auftragsverarbeitung nach
 					Art. 28 DSGVO — aber nur, wenn Sie in die Statistik-Auswertung
-					eingewilligt haben (siehe Abschnitt 8).
+					eingewilligt haben (siehe Abschnitt 11).
 				</li>
 			)
 		}
 	</ul>
+	<p>
+		Eine Weitergabe zu Werbezwecken findet nicht statt. Adresshandel, Scoring und
+		eine automatisierte Entscheidungsfindung einschließlich Profiling setzen wir
+		nicht ein.
+	</p>
 	{
 		ANALYTICS_ENABLED ? (
 			<p>
 				Im Rahmen von Google Analytics können Daten auch an die Google LLC in
 				den USA übermittelt werden. Diese Übermittlung findet ausschließlich
 				auf Grundlage Ihrer Einwilligung statt und unterbleibt vollständig,
-				solange Sie nicht eingewilligt haben.
+				solange Sie nicht eingewilligt haben.{" "}
 				<span class="todo">
 					[Aktuelle Übermittlungsgrundlage zum Zeitpunkt des Launch prüfen und
 					hier benennen — Angemessenheitsbeschluss EU-US Data Privacy Framework
@@ -129,7 +262,7 @@ import { ANALYTICS_ENABLED } from "../lib/analytics";
 		)
 	}
 
-	<h2>7. Speicherdauer</h2>
+	<h2 id={S.retention.id}>{S.retention.heading}</h2>
 	<p>
 		Wir speichern Ihre Daten, solange dies zur Vertragsabwicklung erforderlich
 		ist. Darüber hinaus bewahren wir Bestell- und Rechnungsdaten aufgrund
@@ -137,8 +270,13 @@ import { ANALYTICS_ENABLED } from "../lib/analytics";
 		die Aufbewahrungsfristen betragen dort sechs bzw. zehn Jahre. Nach Ablauf
 		dieser Fristen löschen wir die Daten.
 	</p>
+	<p>
+		Ihre Einwilligungsentscheidung verbleibt bis zu einem Widerruf oder bis zum
+		Löschen des lokalen Speichers in Ihrem Browser; die Einträge aus Abschnitt 3
+		werden nicht an uns übertragen.
+	</p>
 
-	<h2>8. Analyse und Tracking</h2>
+	<h2 id={S.analytics.id}>{S.analytics.heading}</h2>
 	{
 		ANALYTICS_ENABLED ? (
 			<Fragment>
@@ -199,6 +337,13 @@ import { ANALYTICS_ENABLED } from "../lib/analytics";
 					automatisch.
 				</p>
 				<p>
+					Die so entstandenen Auswertungen rufen wir ausschließlich als
+					zusammengefasste Berichte über die Berichtsschnittstelle von Google
+					ab. Der dafür verwendete technische Zugang liegt auf unserem Server
+					und ist nicht Bestandteil dieser Website; über ihn werden keine
+					weiteren Daten von Ihnen erhoben.
+				</p>
+				<p>
 					Mit Google haben wir einen Vertrag über die Auftragsverarbeitung
 					nach Art. 28 DSGVO geschlossen. Google verarbeitet die im Rahmen
 					von Google Analytics erhobenen Daten danach weisungsgebunden für
@@ -230,16 +375,23 @@ import { ANALYTICS_ENABLED } from "../lib/analytics";
 				</p>
 			</Fragment>
 		) : (
-			<p>
-				Wir setzen derzeit <strong>keine</strong> Analyse-, Tracking- oder
-				Marketing-Dienste ein und binden keine externen Schriftarten, Karten
-				oder sonstigen Inhalte Dritter ein. Es werden ausschließlich die oben
-				beschriebenen, technisch erforderlichen Daten verarbeitet.
-			</p>
+			<Fragment>
+				<p>
+					Wir setzen derzeit <strong>keine</strong> Analyse-, Tracking- oder
+					Marketing-Dienste ein und binden keine externen Schriftarten, Karten
+					oder sonstigen Inhalte Dritter ein. Es werden ausschließlich die oben
+					beschriebenen, technisch erforderlichen Daten verarbeitet.
+				</p>
+				<p>
+					Sollte künftig ein Analysedienst eingesetzt werden, geschieht dies
+					erst nach Ihrer ausdrücklichen Einwilligung und wird zuvor an dieser
+					Stelle beschrieben.
+				</p>
+			</Fragment>
 		)
 	}
 
-	<h2>9. Ihre Rechte</h2>
+	<h2 id={S.rights.id}>{S.rights.heading}</h2>
 	<p>Sie haben uns gegenüber das Recht auf:</p>
 	<ul>
 		<li>Auskunft über die zu Ihnen gespeicherten Daten (Art. 15 DSGVO),</li>
@@ -252,20 +404,41 @@ import { ANALYTICS_ENABLED } from "../lib/analytics";
 			(Art. 21 DSGVO).
 		</li>
 	</ul>
+	{
+		ANALYTICS_ENABLED && (
+			<p>
+				Eine erteilte Einwilligung können Sie jederzeit mit Wirkung für die
+				Zukunft widerrufen (Art. 7 Abs. 3 DSGVO), ohne dass dies Nachteile für
+				Sie hat.
+			</p>
+		)
+	}
 	<p>
-		Zur Ausübung genügt eine Nachricht an die oben genannte E-Mail-Adresse.
+		{
+			CONTACT.email ? (
+				<Fragment>
+					Zur Ausübung genügt eine Nachricht an{" "}
+					<a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>.
+				</Fragment>
+			) : (
+				<Fragment>
+					Zur Ausübung genügt eine Nachricht an die in Abschnitt 1 genannte
+					Adresse des Verantwortlichen.
+				</Fragment>
+			)
+		}
 	</p>
 
-	<h2>10. Beschwerderecht</h2>
+	<h2 id={S.complaint.id}>{S.complaint.heading}</h2>
 	<p>
 		Sie haben das Recht, sich bei einer Datenschutz-Aufsichtsbehörde über die
 		Verarbeitung Ihrer personenbezogenen Daten zu beschweren, insbesondere in dem
 		Mitgliedstaat Ihres Aufenthaltsorts oder des Orts des mutmaßlichen Verstoßes
-		(Art. 77 DSGVO).
+		(Art. 77 DSGVO).{" "}
 		<span class="todo">[Zuständige Landesbehörde nach Firmensitz ergänzen.]</span>
 	</p>
 
-	<h2>11. Erforderlichkeit der Angaben</h2>
+	<h2 id={S.required.id}>{S.required.heading}</h2>
 	<p>
 		Die im Bestellvorgang als Pflichtfelder gekennzeichneten Angaben benötigen
 		wir zum Abschluss und zur Abwicklung des Vertrags. Ohne diese Angaben können

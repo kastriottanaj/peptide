@@ -107,14 +107,18 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 	{
 		path: "/about",
 		title: "Über uns",
-		description: "Wer hinter dem Shop steht und wofür die Produkte bestimmt sind.",
+		description:
+			"Wer den Shop betreibt, wofür die Forschungspeptide bestimmt sind und wie Bestellung, Zahlung und Versand ablaufen.",
+		keywords: ["Über uns", "Anbieter", "Grundsätze", "Bestellablauf"],
 		changeFrequency: "monthly",
 		priority: 0.5,
 	},
 	{
 		path: "/contact",
 		title: "Kontakt",
-		description: "Kontaktmöglichkeiten für Rückfragen zu Produkten und Bestellungen.",
+		description:
+			"Kontaktwege, Bestellsupport sowie die Bedingungen zu Versand und Zahlung.",
+		keywords: ["Kontakt", "Support", "Versand", "Zahlung", "Versandkosten"],
 		changeFrequency: "monthly",
 		priority: 0.45,
 	},

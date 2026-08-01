@@ -35,12 +35,42 @@ Source: your commercial register entry (Handelsregister) or trade registration
 | Supervisory authority (follows from company seat) | |
 | Shipping provider (DHL / DPD / …) | |
 
+**The contact email and phone are also configuration, not page edits.** `/contact/`,
+the Datenschutz controller block and the `Organization` JSON-LD all read them from
+the storefront environment, so filling these two in makes the shop contactable
+without touching a page:
+
+| Variable | Value |
+|---|---|
+| `PUBLIC_CONTACT_EMAIL` | `info@peptideeinkaufen.de` — supplied 2026-08-01, **not yet configured anywhere** |
+| `PUBLIC_CONTACT_PHONE` (only if publicly offered) | |
+| `PUBLIC_CONTACT_HOURS` (optional, needs a phone) | |
+
+The email address above is known but is **not** set in any `.env`, so every
+build still renders the "no contact channel" state. Before deployment: confirm
+the mailbox actually receives mail, add
+`PUBLIC_CONTACT_EMAIL=info@peptideeinkaufen.de` to `/srv/peptides/.env`, and
+redeploy — it is baked into the static build, so a restart is not enough. Add
+the same line to `storefront/.env` for local work.
+
+Until one of them is set, `/contact/` states plainly that the channels are being
+set up rather than printing a placeholder — it is a public, indexable page. Set
+them in `/srv/peptides/.env` and redeploy, the same way as the bank details below.
+
 **Hosting provider** — this one is already known and needs an Art. 28 DSGVO
 processing agreement (AVV) in place:
 
 > Hetzner Online GmbH, Industriestr. 25, 91710 Gundelfingen, Germany.
 > Server located in Falkenstein, Germany. Request the AVV from the Hetzner
 > console under Legal / Data Protection.
+
+⚠️ **Do not copy that postal address into the Datenschutz page without checking
+it against Hetzner's own Impressum.** The town looks wrong (Hetzner's registered
+seat is Gunzenhausen, not Gundelfingen), and naming a processor at an address it
+does not have is a defect in the privacy policy rather than a typo in a note.
+`datenschutz.astro` therefore names *Hetzner Online GmbH* and a data centre in
+Germany — both verifiable from [deploy.md](deploy.md) — and carries a
+`[Platzhalter]` for the full address until it is confirmed.
 
 **How to apply:** edit the four pages, then remove the `draft` prop from
 `LegalLayout` on each page that is final. That drops the banner and makes it

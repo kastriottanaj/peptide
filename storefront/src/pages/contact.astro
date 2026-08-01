@@ -1,18 +1,422 @@
 ---
+/**
+ * Kontakt — the customer support page.
+ *
+ * There is deliberately **no contact form**. The storefront is a static build
+ * with no form endpoint, and the backend has no notification provider and no
+ * mail transport configured (docs/go-live-checklist.md §6), so any form here
+ * would accept a message and silently drop it — worse than no form, because the
+ * customer believes they have been in touch.
+ *
+ * The channels themselves come from `lib/company.ts`, which reads them from the
+ * environment and refuses anything unfilled. Until one is configured this page
+ * says so plainly and routes people to the self-service lookup that does work,
+ * rather than printing a placeholder address on an indexable page.
+ */
 import BaseLayout from "../layouts/BaseLayout.astro";
+import TrustLinks from "../components/TrustLinks.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+import { CONTACT, mailtoHref, telHref } from "../lib/company";
+import { ORDERS_ENABLED } from "../lib/shop";
+import {
+	FREE_SHIPPING_THRESHOLD_EUR,
+	SHIPPING_FEE_EUR,
+	SHIPPING_FEE_OUTSIDE_GERMANY_EUR,
+	formatEur,
+} from "../lib/pricing";
+
+const TITLE = "Kontakt";
+const DESCRIPTION =
+	"Kontaktwege, Abruf Ihrer Bestelldaten sowie die Bedingungen zu Versand und " +
+	"Zahlung bei Peptide Einkaufen.";
+
+const topics = [
+	"Fragen zu einem Produkt, zu Packgrößen oder zur Verfügbarkeit",
+	"Angaben zu Reinheit, Charge und Analysezertifikat",
+	"Status, Änderung oder Stornierung einer Bestellung",
+	"Rückfragen zu Zahlung, Verwendungszweck oder Rechnung",
+	"Widerruf, Rücksendung sowie beschädigte oder falsch gelieferte Ware",
+	"Auskunft, Berichtigung oder Löschung Ihrer Daten nach DSGVO",
+];
+
+const trustLinks = [
+	{
+		href: "/widerruf/",
+		label: "Widerruf",
+		description: "Widerrufsrecht, Fristen und das Muster-Widerrufsformular.",
+	},
+	{
+		href: "/agb/",
+		label: "AGB",
+		description: "Vertragsbedingungen zu Bestellung, Preisen, Lieferung und Haftung.",
+	},
+	{
+		href: "/datenschutz/",
+		label: "Datenschutz",
+		description: "Welche Daten wir verarbeiten und wie Sie Ihre Rechte ausüben.",
+	},
+	{
+		href: "/impressum/",
+		label: "Impressum",
+		description: "Angaben zum Anbieter nach § 5 DDG.",
+	},
+	{
+		href: "/bestellung/suchen/",
+		label: "Bestellung suchen",
+		description: "Betrag und Verwendungszweck zu einer bestehenden Bestellung abrufen.",
+	},
+	{
+		href: "/about/",
+		label: "Über uns",
+		description: "Wer den Shop betreibt und wie eine Bestellung abläuft.",
+	},
+];
+
+// --- SEO ---------------------------------------------------------------
+// ContactPage describing the single Organization entity that `Seo.astro`
+// already emits; the address itself lives on that node (see `site.ts`) so it is
+// stated exactly once in the graph.
+const jsonLd = [
+	{
+		"@type": "ContactPage",
+		"@id": `${canonicalUrl("/contact")}#webpage`,
+		url: canonicalUrl("/contact"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		about: { "@id": ORGANIZATION_ID },
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Kontakt", "/contact"],
+	]),
+];
 ---
 
-<BaseLayout
-	title="Kontakt"
-	description="Kontaktieren Sie Peptide Einkaufen."
->
-	<h1>Kontakt</h1>
-	<p>Für Fragen zu unserem Sortiment oder Ihrer Bestellung erreichen Sie uns wie folgt:</p>
+<BaseLayout title={TITLE} description={DESCRIPTION} jsonLd={jsonLd}>
+	<div class="contact">
+		<h1>Kontakt</h1>
+		{/* The lead may not promise that anyone is answering: with no channel
+		    configured there is no support to offer, and saying otherwise is the
+		    same unsupported claim as inventing an address. */}
+		<p class="lead">
+			{
+				CONTACT.any
+					? "Fragen zu einem Produkt, zu einer Bestellung oder zu Ihren Daten beantworten wir gern. Auf dieser Seite finden Sie die verfügbaren Kontaktwege, den Direktzugriff auf Ihre Bestelldaten sowie die Bedingungen für Versand und Zahlung."
+					: "Auf dieser Seite finden Sie den aktuellen Stand der Kontaktwege, den Direktzugriff auf Ihre Bestelldaten sowie die Bedingungen für Versand und Zahlung."
+			}
+		</p>
 
-	<ul>
-		<!-- TODO: replace with real email, phone, address, and support hours -->
-		<li>E-Mail: [Platzhalter – bitte echte E-Mail-Adresse ergänzen]</li>
-		<li>Telefon: [Platzhalter – bitte echte Telefonnummer ergänzen]</li>
-		<li>Anschrift: [Platzhalter – bitte echte Anschrift ergänzen]</li>
-	</ul>
+		<section class="section" id="kontaktwege">
+			<h2>Kontaktwege</h2>
+
+			{
+				CONTACT.any ? (
+					<>
+						<dl class="channels">
+							{CONTACT.email && (
+								<div>
+									<dt>E-Mail</dt>
+									<dd>
+										<a href={mailtoHref(CONTACT.email)}>{CONTACT.email}</a>
+									</dd>
+								</div>
+							)}
+							{CONTACT.phone && (
+								<div>
+									<dt>Telefon</dt>
+									<dd>
+										<a href={telHref(CONTACT.phone)}>{CONTACT.phone}</a>
+										{CONTACT.hours && <span class="channels__hours">{CONTACT.hours}</span>}
+									</dd>
+								</div>
+							)}
+							<div>
+								<dt>Anschrift</dt>
+								<dd>
+									Angaben zum Anbieter nach § 5 DDG finden Sie im{" "}
+									<a href="/impressum/">Impressum</a>.
+								</dd>
+							</div>
+						</dl>
+						<p class="privacy-note">
+							<strong>Hinweis zum Datenschutz:</strong> Ihre Nachricht und die
+							darin enthaltenen Angaben verarbeiten wir ausschließlich zur
+							Bearbeitung Ihres Anliegens (Art. 6 Abs. 1 lit. b bzw. lit. f
+							DSGVO). Bitte senden Sie uns keine Gesundheitsdaten oder sonstigen
+							Angaben besonderer Kategorien nach Art. 9 DSGVO — für die
+							Bearbeitung sind sie nicht erforderlich. Einzelheiten stehen in
+							der <a href="/datenschutz/">Datenschutzerklärung</a>.
+						</p>
+					</>
+				) : (
+					<>
+						{/* States only what the configuration establishes: no channel is
+						    published. It draws no conclusion about who runs the shop or
+						    what state that business is in — neither is knowable from an
+						    unset variable. */}
+						<aside class="notice" role="note">
+							<p class="notice__heading">
+								Derzeit keine direkten Kontaktwege verfügbar
+							</p>
+							<p>
+								Für den Kundenkontakt sind zurzeit weder eine E-Mail-Adresse
+								noch eine Rufnummer veröffentlicht. Wir nennen hier bewusst
+								keine Angaben, die nicht erreichbar sind — eine Adresse, die
+								niemand liest, ist kein Kontaktweg. Sobald Kontaktdaten
+								veröffentlicht werden, stehen sie an dieser Stelle und im{" "}
+								<a href="/impressum/">Impressum</a>.
+							</p>
+						</aside>
+						<p>
+							Ihre Bestelldaten können Sie unabhängig davon jederzeit selbst über
+							die <a href="/bestellung/suchen/">Bestellungssuche</a> abrufen.
+							Produktangaben, Packgrößen und Preise stehen vollständig auf den{" "}
+							<a href="/produkte/">Produktseiten</a>.
+						</p>
+					</>
+				)
+			}
+		</section>
+
+		<section class="section" id="anliegen">
+			{/* Not "wobei wir helfen können": that asserts someone is helping, which
+			    is only true once a channel exists. */}
+			<h2>Wofür der Kontakt gedacht ist</h2>
+			<ul class="topics">
+				{topics.map((topic) => <li>{topic}</li>)}
+			</ul>
+			<p class="section__note">
+				Zu Anwendung, Dosierung oder gesundheitlichen Wirkungen können und dürfen
+				wir keine Auskunft geben. Alle Produkte sind ausschließlich für
+				Forschungs-, Analyse- und Laborzwecke bestimmt und nicht für die
+				Anwendung am Menschen oder am Tier zugelassen.
+			</p>
+		</section>
+
+		<section class="section" id="bestellsupport">
+			<h2>Bestelldaten erneut abrufen</h2>
+			<p>
+				Bezahlt wird per Vorkasse durch Banküberweisung. Betrag und
+				Verwendungszweck stehen auf der Bestätigungsseite — und lassen sich
+				jederzeit erneut abrufen, falls Sie die Seite geschlossen haben.
+			</p>
+			<p>Halten Sie dafür bitte bereit:</p>
+			<ul class="topics">
+				<li>Ihre Bestellnummer (z.&nbsp;B. <code>5</code>) oder den Verwendungszweck aus Ihrer Überweisung (Format <code>PE-XXXXXX</code>)</li>
+				<li>die E-Mail-Adresse, mit der Sie bestellt haben</li>
+			</ul>
+			<p>
+				<a href="/bestellung/suchen/" class="btn btn--green">Bestellung suchen</a>
+			</p>
+			{
+				!ORDERS_ENABLED && (
+					<aside class="notice" role="note">
+						<p class="notice__heading">Derzeit keine Bestellmöglichkeit</p>
+						<p>
+							Der Bestellvorgang ist zurzeit nicht verfügbar. Sortiment,
+							Packgrößen und Preise können Sie weiterhin einsehen. Bereits
+							aufgegebene Bestellungen lassen sich über die Bestellungssuche
+							unverändert abrufen.
+						</p>
+					</aside>
+				)
+			}
+		</section>
+
+		<section class="section" id="versand-zahlung">
+			<h2>Versand und Zahlung</h2>
+			<dl class="facts">
+				<div>
+					<dt>Zahlungsart</dt>
+					<dd>
+						Ausschließlich Vorkasse per Banküberweisung. Es ist kein
+						Zahlungsdienstleister zwischengeschaltet; Karten- oder sonstige
+						Zahlungsdaten verarbeiten wir nicht.
+					</dd>
+				</div>
+				<div>
+					<dt>Verwendungszweck</dt>
+					<dd>
+						Sechsstelliger Code im Format <code>PE-XXXXXX</code>. Bitte
+						vollständig und unverändert angeben, damit die Zahlung Ihrer
+						Bestellung zugeordnet werden kann.
+					</dd>
+				</div>
+				<div>
+					<dt>Liefergebiet</dt>
+					<dd>Deutschland und das übrige Europa.</dd>
+				</div>
+				<div>
+					<dt>Versandkosten</dt>
+					<dd>
+						{formatEur(SHIPPING_FEE_EUR)} innerhalb Deutschlands,
+						{" "}{formatEur(SHIPPING_FEE_OUTSIDE_GERMANY_EUR)} in das übrige
+						Europa. Ab {formatEur(FREE_SHIPPING_THRESHOLD_EUR)} Warenwert nach
+						Rabatt entfallen sie.
+					</dd>
+				</div>
+				<div>
+					<dt>Mengenrabatt</dt>
+					<dd>
+						3 % bis 15 %, je Position automatisch anhand der bestellten Stückzahl
+						berechnet und im Warenkorb ausgewiesen.
+					</dd>
+				</div>
+				<div>
+					<dt>Versandzeitpunkt</dt>
+					<dd>
+						Nach vollständigem Zahlungseingang, neutral verpackt. Die
+						maßgeblichen Fristen stehen in den <a href="/agb/">AGB</a>.
+					</dd>
+				</div>
+			</dl>
+		</section>
+
+		<TrustLinks
+			heading="Weiterführende Seiten"
+			links={trustLinks}
+			id="weiterfuehrend"
+		/>
+	</div>
+
+	<style>
+		.contact {
+			max-width: 900px;
+		}
+		.contact h1 {
+			font-size: clamp(1.9rem, 4vw, 2.5rem);
+			font-weight: 800;
+		}
+		.lead {
+			font-size: 1.05rem;
+			color: var(--c-muted);
+			max-width: 64ch;
+			margin: 0 0 1rem;
+		}
+
+		.section {
+			padding-block: 1.5rem;
+			max-width: 68ch;
+		}
+		.section h2 {
+			font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+			margin-bottom: 0.75rem;
+			scroll-margin-top: 5rem;
+		}
+		.section p {
+			margin: 0 0 1rem;
+		}
+		.section__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+		.section a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.section a:focus-visible,
+		.btn:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+		.section code {
+			font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+			font-size: 0.88em;
+			background: var(--c-field);
+			border-radius: 4px;
+			padding: 0.05rem 0.3rem;
+		}
+
+		/* Contact channels and the versand/zahlung facts share one definition-list
+		   treatment so the page reads as one table of facts, not two. */
+		.channels,
+		.facts {
+			margin: 0 0 1rem;
+			display: grid;
+			gap: 0.9rem;
+		}
+		.channels {
+			background: var(--c-cream-soft);
+			border: 1px solid var(--c-cream-border);
+			border-radius: var(--radius);
+			padding: 1.2rem 1.4rem;
+		}
+		.channels dt,
+		.facts dt {
+			font-size: 0.74rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+			color: var(--c-muted);
+		}
+		.channels dd,
+		.facts dd {
+			margin: 0.2rem 0 0;
+			font-size: 0.95rem;
+		}
+		.channels dd a {
+			font-weight: 700;
+			overflow-wrap: anywhere;
+		}
+		.channels__hours {
+			display: block;
+			font-size: 0.85rem;
+			color: var(--c-muted);
+			font-weight: 400;
+		}
+		.facts > div {
+			border-bottom: 1px solid var(--c-border);
+			padding-bottom: 0.75rem;
+		}
+		.facts > div:last-child {
+			border-bottom: none;
+			padding-bottom: 0;
+		}
+
+		.privacy-note {
+			font-size: 0.88rem;
+			color: var(--c-muted);
+			background: var(--c-surface);
+			border-radius: var(--radius-sm);
+			padding: 0.9rem 1.1rem;
+		}
+
+		.notice {
+			background: var(--c-warn-bg);
+			color: var(--c-warn-ink);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.15rem;
+			margin: 0 0 1rem;
+		}
+		.notice__heading {
+			font-weight: 700;
+			margin: 0 0 0.35rem;
+		}
+		.notice p:last-child {
+			margin: 0;
+			font-size: 0.92rem;
+		}
+		.notice a {
+			color: inherit;
+			font-weight: 700;
+		}
+
+		.topics {
+			margin: 0 0 1rem;
+			padding-left: 1.2rem;
+			display: grid;
+			gap: 0.3rem;
+		}
+		.topics li {
+			font-size: 0.95rem;
+		}
+
+		@media (max-width: 560px) {
+			.channels {
+				padding: 1rem 1.1rem;
+			}
+		}
+	</style>
 </BaseLayout>

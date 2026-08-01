@@ -45,6 +45,11 @@ INDEXNOW_KEY=                          # 8-128 chars of [A-Za-z0-9-]; served at 
 
 # Ordering. UNSET = CLOSED; only the exact string `true` opens it.
 PUBLIC_ORDERS_ENABLED=true             # keep local dev open so checkout stays testable
+
+# Optional — contact channels shown on /contact/. Unset = channel not offered.
+PUBLIC_CONTACT_EMAIL=                  # e.g. kontakt@peptideeinkaufen.de
+PUBLIC_CONTACT_PHONE=                  # printed verbatim; formatting is yours
+PUBLIC_CONTACT_HOURS=                  # e.g. Mo–Fr 9–16 Uhr; ignored without a phone
 ```
 
 `PUBLIC_SITE_URL` drives every canonical URL, OpenGraph tag, JSON-LD `@id` and sitemap
@@ -56,6 +61,16 @@ builds off the production origin.
 off switch: no Google script, no consent dialog, no "Cookie-Einstellungen" footer entry,
 and the Datenschutz page keeps its "no tracking in use" wording. Analytics never loads
 before explicit consent either way — see [docs/analytics.md](docs/analytics.md).
+
+`PUBLIC_CONTACT_EMAIL` and `PUBLIC_CONTACT_PHONE` are the only contact details the
+storefront will ever print. They are configuration rather than source for the same
+reason the bank details are: no address exists in this repository, and inventing one
+puts a dead contact route on an indexable page. `src/lib/contact.ts` refuses anything
+empty, bracketed or carrying a placeholder marker, so a half-filled `.env` shows no
+channel instead of a broken `mailto:`. With none set, `/contact/` says the channels are
+being set up and routes people to the order lookup; the Datenschutz controller block and
+the `Organization` JSON-LD pick up the address as soon as it is configured. See
+[docs/launch-data-needed.md](docs/launch-data-needed.md) §1.
 
 `INDEXNOW_KEY` switches IndexNow on: the build emits `/<key>.txt` and a deploy pushes
 the URLs whose HTML changed to Bing, Yandex and the other participants. Unset means no

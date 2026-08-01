@@ -146,7 +146,10 @@ const {
 					<h3>Hinweise</h3>
 					<a href="/contact/">Kontakt / Support</a>
 					<a href="/bestellung/suchen/">Bestellung suchen</a>
-					<a href="/contact/">Versand &amp; Zahlung</a>
+					{/* Same page as the link above, so it points at the section that
+					    answers it rather than repeating the bare URL — two identical
+					    hrefs under different labels read as two destinations. */}
+					<a href="/contact/#versand-zahlung">Versand &amp; Zahlung</a>
 				</div>
 				<div class="footer__col">
 					<h3>Rechtliches</h3>

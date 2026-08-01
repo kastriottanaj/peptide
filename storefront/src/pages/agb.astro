@@ -1,20 +1,79 @@
 ---
+/**
+ * Allgemeine Geschäftsbedingungen.
+ *
+ * The operational clauses are written from what the shop actually does — the
+ * shipping tariff comes from `lib/pricing.ts`, the quantity tiers and the
+ * payment reference format from docs/checkout.md, the order button label from
+ * `kasse.astro`. Where the code cannot answer the question (VAT treatment,
+ * delivery times, destination countries, choice of forum) the placeholder
+ * stays: an invented term is a term the business would be held to.
+ *
+ * TODO (anwaltlich prüfen lassen):
+ * - Zielgruppe festlegen. § 2 unten geht davon aus, dass ausschließlich an
+ *   Unternehmer, Forschungseinrichtungen und Behörden verkauft wird. Wird auch
+ *   an Verbraucher verkauft, ändern sich Widerrufsrecht, Gewährleistung
+ *   (§ 476 BGB) und die Pflichtinformationen erheblich.
+ * - Umsatzsteuerausweis in § 4 nach der Entscheidung zur
+ *   Kleinunternehmerregelung festlegen.
+ *
+ * The page stays `draft` (and therefore `noindex`) until those are settled and
+ * the text has been reviewed — see docs/go-live-checklist.md §3 and §4.
+ */
 import LegalLayout from "../layouts/LegalLayout.astro";
+import type { LegalSection } from "../layouts/LegalLayout.astro";
+import { ORDERS_ENABLED } from "../lib/shop";
+import {
+	FREE_SHIPPING_THRESHOLD_EUR,
+	QUANTITY_DISCOUNT_TIERS,
+	SHIPPING_FEE_EUR,
+	SHIPPING_FEE_OUTSIDE_GERMANY_EUR,
+	formatEur,
+} from "../lib/pricing";
 
-// TODO (anwaltlich prüfen lassen):
-// - Zielgruppe festlegen. § 2 unten geht davon aus, dass ausschließlich an
-//   Unternehmer, Forschungseinrichtungen und Behörden verkauft wird. Wird auch
-//   an Verbraucher verkauft, ändern sich Widerrufsrecht, Gewährleistung
-//   (§ 476 BGB) und die Pflichtinformationen erheblich.
-// - Versandkosten in § 4 an die tatsächlich konfigurierten Werte anpassen.
+/**
+ * Rendered smallest tier first, the way the cart earns them. Read from the same
+ * constant the cart displays, so the terms cannot promise a tier the checkout
+ * does not apply. Medusa remains authoritative for what is charged — see the
+ * note in `pricing.ts`.
+ */
+const discountTiers = [...QUANTITY_DISCOUNT_TIERS].sort((a, b) => a[0] - b[0]);
+
+const S = {
+	scope: { id: "geltungsbereich", heading: "§ 1 Geltungsbereich" },
+	customers: { id: "kundenkreis", heading: "§ 2 Kundenkreis und Verwendungszweck" },
+	formation: { id: "vertragsschluss", heading: "§ 3 Vertragsschluss" },
+	prices: { id: "preise", heading: "§ 4 Preise, Rabatte und Versandkosten" },
+	payment: { id: "zahlung", heading: "§ 5 Zahlung" },
+	delivery: { id: "lieferung", heading: "§ 6 Lieferung und Eigentumsvorbehalt" },
+	withdrawal: { id: "widerruf", heading: "§ 7 Widerrufsrecht" },
+	warranty: { id: "gewaehrleistung", heading: "§ 8 Gewährleistung" },
+	liability: { id: "haftung", heading: "§ 9 Haftung" },
+	contractText: { id: "vertragstext", heading: "§ 10 Vertragssprache und Vertragstext" },
+	disputes: { id: "streitbeilegung", heading: "§ 11 Streitbeilegung" },
+	final: { id: "schlussbestimmungen", heading: "§ 12 Schlussbestimmungen" },
+} as const satisfies Record<string, LegalSection>;
+
+const SECTIONS: LegalSection[] = Object.values(S);
 ---
 
 <LegalLayout
 	title="Allgemeine Geschäftsbedingungen"
-	description="AGB für Bestellungen bei Peptide Einkaufen."
+	description="Vertragsbedingungen für Bestellungen bei Peptide Einkaufen — Vertragsschluss, Preise, Zahlung, Lieferung, Gewährleistung und Haftung."
+	sections={SECTIONS}
 	draft
 >
-	<h2>§ 1 Geltungsbereich</h2>
+	{
+		!ORDERS_ENABLED && (
+			<aside class="legal__state" role="note">
+				<strong>Derzeit keine Bestellmöglichkeit.</strong> Der Bestellvorgang ist
+				zurzeit nicht verfügbar. Die nachstehenden Bedingungen gelten für
+				Bestellungen, sobald diese wieder möglich sind.
+			</aside>
+		)
+	}
+
+	<h2 id={S.scope.id}>{S.scope.heading}</h2>
 	<p>
 		Diese Allgemeinen Geschäftsbedingungen gelten für alle Bestellungen, die über
 		diesen Online-Shop bei <span class="todo">[Firmierung]</span> (nachfolgend
@@ -22,8 +81,13 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 		nicht Vertragsbestandteil, es sei denn, der Anbieter stimmt ihrer Geltung
 		ausdrücklich schriftlich zu.
 	</p>
+	<p>
+		Maßgeblich ist die zum Zeitpunkt der Bestellung abrufbare Fassung. Angaben
+		zum Anbieter nach § 5 DDG finden Sie im{" "}
+		<a href="/impressum/">Impressum</a>.
+	</p>
 
-	<h2>§ 2 Kundenkreis und Verwendungszweck</h2>
+	<h2 id={S.customers.id}>{S.customers.heading}</h2>
 	<p>
 		Die angebotenen Produkte sind <strong
 			>ausschließlich für Forschungs-, Analyse- und Laborzwecke</strong
@@ -37,15 +101,19 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 		und sicheren Handhabung erforderliche Sachkunde und Ausstattung verfügt und
 		die einschlägigen rechtlichen Vorgaben einhält.
 	</p>
+	<p>
+		Der Anbieter erteilt keine Auskünfte zu Anwendung, Dosierung oder
+		gesundheitlichen Wirkungen und macht hierzu keine Angaben.
+	</p>
 	<p class="todo">
 		[Sofern ausschließlich an Unternehmer, Forschungseinrichtungen und Behörden
 		geliefert wird, hier ausdrücklich aufnehmen: „Ein Verkauf an Verbraucher im
 		Sinne des § 13 BGB findet nicht statt." Diese Entscheidung muss vor
-		Inbetriebnahme getroffen werden — sie bestimmt § 7 und die
+		Inbetriebnahme getroffen werden — sie bestimmt § 7, § 8 und die
 		Widerrufsbelehrung.]
 	</p>
 
-	<h2>§ 3 Vertragsschluss</h2>
+	<h2 id={S.formation.id}>{S.formation.heading}</h2>
 	<p>
 		Die Darstellung der Produkte im Shop stellt kein rechtlich bindendes Angebot,
 		sondern eine Aufforderung zur Bestellung dar. Mit dem Absenden der Bestellung
@@ -57,46 +125,89 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 		Bestätigung stellt noch keine Annahme dar. Der Vertrag kommt zustande, wenn
 		der Anbieter die Bestellung ausdrücklich annimmt oder die Ware versendet.
 	</p>
-
-	<h2>§ 4 Preise und Versandkosten</h2>
 	<p>
-		Alle Preise verstehen sich in Euro
+		<strong>Eingabefehler:</strong> Vor dem Absenden der Bestellung werden die
+		gewählten Artikel, Packgrößen, Mengen, Rabatte, Versandkosten und der
+		Gesamtbetrag in der Bestellübersicht angezeigt. Eingaben können bis zum
+		Absenden jederzeit über die Eingabefelder sowie über den Warenkorb korrigiert
+		oder die Bestellung dort abgebrochen werden.
+	</p>
+
+	<h2 id={S.prices.id}>{S.prices.heading}</h2>
+	<p>
+		Alle Preise verstehen sich in Euro{" "}
 		<span class="todo">[inkl. / zzgl. gesetzlicher Umsatzsteuer — je nach
 		Kleinunternehmerregelung und Zielgruppe festlegen]</span>.
 	</p>
 	<p>
-		Zusätzlich zu den Produktpreisen fallen Versandkosten an. Die für Ihre
-		Bestellung geltenden Versandkosten werden vor Absenden der Bestellung im
-		Bestellformular ausgewiesen.
-		<span class="todo"
-			>[Konkrete Staffel ergänzen, sobald die Versandregeln im Backend
-			konfiguriert sind.]</span
-		>
+		<strong>Mengenrabatt:</strong> Rabatte werden automatisch je Position anhand
+		der für diese Position bestellten Stückzahl berechnet und im Warenkorb
+		ausgewiesen. Es gilt jeweils nur die erreichte Stufe; Stufen werden nicht
+		addiert.
 	</p>
+	{/* A table is the one block on these pages that cannot reflow, so it scrolls
+	    inside its own box rather than widening the document on a phone — the
+	    failure the footer already had to be fixed for. */}
+	<div class="table-scroll">
+	<table class="legal-table">
+		<caption>Rabattstufen je Position</caption>
+		<thead>
+			<tr>
+				<th scope="col">Stückzahl je Position</th>
+				<th scope="col">Rabatt</th>
+			</tr>
+		</thead>
+		<tbody>
+			{
+				discountTiers.map(([quantity, rate], index) => (
+					<tr>
+						<th scope="row">
+							{quantity}
+							{index === discountTiers.length - 1 ? " und mehr" : ""}
+						</th>
+						<td>{Math.round(rate * 100)} %</td>
+					</tr>
+				))
+			}
+		</tbody>
+	</table>
+	</div>
 	<p>
-		Mengenrabatte werden automatisch anhand der bestellten Stückzahl je Position
-		berechnet und im Warenkorb ausgewiesen.
+		<strong>Versandkosten:</strong> Zusätzlich zu den Produktpreisen fallen
+		Versandkosten an. Sie betragen {formatEur(SHIPPING_FEE_EUR)} für Lieferungen
+		innerhalb Deutschlands und {formatEur(SHIPPING_FEE_OUTSIDE_GERMANY_EUR)} für
+		Lieferungen in das übrige Europa. Ab einem Warenwert von
+		{" "}{formatEur(FREE_SHIPPING_THRESHOLD_EUR)} nach Abzug gewährter Rabatte
+		entfallen die Versandkosten. Die für Ihre Bestellung geltenden Versandkosten
+		werden vor dem Absenden der Bestellung ausgewiesen.
 	</p>
 
-	<h2>§ 5 Zahlung</h2>
+	<h2 id={S.payment.id}>{S.payment.heading}</h2>
 	<p>
 		Die Zahlung erfolgt ausschließlich per <strong>Vorkasse</strong> durch
-		Banküberweisung. Nach Absenden der Bestellung erhalten Sie die Bankverbindung
-		sowie einen Verwendungszweck. Bitte geben Sie den Verwendungszweck bei der
-		Überweisung vollständig und unverändert an, damit die Zahlung Ihrer
-		Bestellung zugeordnet werden kann.
+		Banküberweisung. Andere Zahlungsarten werden nicht angeboten. Nach Absenden
+		der Bestellung erhalten Sie die Bankverbindung, den Betrag sowie einen
+		Verwendungszweck im Format <code>PE-XXXXXX</code>. Bitte geben Sie den
+		Verwendungszweck bei der Überweisung vollständig und unverändert an, damit die
+		Zahlung Ihrer Bestellung zugeordnet werden kann.
 	</p>
 	<p>
-		Der Rechnungsbetrag ist ohne Abzug innerhalb von
+		Betrag und Verwendungszweck können Sie jederzeit über die Seite{" "}
+		<a href="/bestellung/suchen/">Bestellung suchen</a> erneut abrufen, indem Sie
+		Bestellnummer oder Verwendungszweck zusammen mit Ihrer E-Mail-Adresse
+		eingeben.
+	</p>
+	<p>
+		Der Rechnungsbetrag ist ohne Abzug innerhalb von{" "}
 		<span class="todo">[Anzahl]</span> Tagen ab Bestellbestätigung auf dem
 		angegebenen Konto gutzuschreiben. Geht die Zahlung nicht fristgerecht ein,
 		kann der Anbieter vom Vertrag zurücktreten.
 	</p>
 
-	<h2>§ 6 Lieferung und Eigentumsvorbehalt</h2>
+	<h2 id={S.delivery.id}>{S.delivery.heading}</h2>
 	<p>
 		Der Versand erfolgt erst nach vollständigem Zahlungseingang. Die
-		Lieferzeit beträgt, sofern nicht anders angegeben,
+		Lieferzeit beträgt, sofern nicht anders angegeben,{" "}
 		<span class="todo">[Anzahl]</span> Werktage ab Zahlungseingang.
 	</p>
 	<p>
@@ -104,11 +215,31 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 		Anbieters.
 	</p>
 	<p class="todo">
-		[Liefergebiete festlegen und hier benennen; Ausfuhrbeschränkungen für die
-		betroffenen Stoffe je Zielland prüfen.]
+		[Liefergebiete festlegen und hier abschließend benennen; die im Shop
+		auswählbaren Länder ergeben sich aus der konfigurierten Versandregion.
+		Ausfuhrbeschränkungen für die betroffenen Stoffe je Zielland prüfen.]
 	</p>
 
-	<h2>§ 7 Gewährleistung</h2>
+	<h2 id={S.withdrawal.id}>{S.withdrawal.heading}</h2>
+	<p>
+		Verbrauchern im Sinne des § 13 BGB steht ein gesetzliches Widerrufsrecht zu.
+		Die Einzelheiten, die Fristen, die Folgen des Widerrufs und das
+		Muster-Widerrufsformular ergeben sich aus der{" "}
+		<a href="/widerruf/">Widerrufsbelehrung</a>, die Bestandteil dieser
+		Bedingungen ist.
+	</p>
+	<p>
+		Bestellungen von Unternehmen, Forschungseinrichtungen und Behörden im Rahmen
+		ihrer gewerblichen oder selbständigen beruflichen Tätigkeit sind davon nicht
+		erfasst.
+	</p>
+	<p class="todo">
+		[Nach der Entscheidung zu § 2 anpassen. Bei reinem B2B-Vertrieb entfällt
+		dieser Paragraf und die Widerrufsbelehrung wird durch einen entsprechenden
+		Hinweis ersetzt.]
+	</p>
+
+	<h2 id={S.warranty.id}>{S.warranty.heading}</h2>
 	<p>
 		Es gelten die gesetzlichen Bestimmungen über die Mängelhaftung. Die
 		Beschaffenheit der Ware ergibt sich aus der jeweiligen Produktbeschreibung
@@ -117,16 +248,19 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 	<p>
 		Offensichtliche Mängel und Transportschäden sind unverzüglich, spätestens
 		innerhalb von <span class="todo">[Anzahl]</span> Tagen nach Erhalt, in
-		Textform anzuzeigen.
+		Textform anzuzeigen. Bei einer beschädigten oder unvollständigen Lieferung
+		bitten wir um eine Beschreibung des Mangels; die weitere Abwicklung stimmen
+		wir anschließend mit Ihnen ab.
 	</p>
 
-	<h2>§ 8 Haftung</h2>
+	<h2 id={S.liability.id}>{S.liability.heading}</h2>
 	<p>
 		Der Anbieter haftet unbeschränkt für Schäden aus der Verletzung des Lebens,
 		des Körpers oder der Gesundheit sowie für Vorsatz und grobe Fahrlässigkeit.
 		Bei leicht fahrlässiger Verletzung wesentlicher Vertragspflichten ist die
 		Haftung auf den vertragstypischen, vorhersehbaren Schaden begrenzt. Im
-		Übrigen ist die Haftung ausgeschlossen.
+		Übrigen ist die Haftung ausgeschlossen. Die Haftung nach dem
+		Produkthaftungsgesetz bleibt unberührt.
 	</p>
 	<p>
 		Für Schäden, die aus einer bestimmungswidrigen Verwendung der Produkte
@@ -134,10 +268,34 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 		der Anbieter nicht.
 	</p>
 
-	<h2>§ 9 Schlussbestimmungen</h2>
+	<h2 id={S.contractText.id}>{S.contractText.heading}</h2>
+	<p>
+		Die Vertragssprache ist Deutsch. Der Vertragstext wird vom Anbieter
+		gespeichert, ist aber nicht über die Website frei abrufbar. Die Angaben zu
+		Ihrer Bestellung — Bestellnummer, Positionen, Betrag und Verwendungszweck —
+		können Sie über die Seite <a href="/bestellung/suchen/">Bestellung suchen</a>{" "}
+		aufrufen. Wir empfehlen, die Bestätigungsseite zusätzlich zu sichern.
+	</p>
+
+	<h2 id={S.disputes.id}>{S.disputes.heading}</h2>
+	<p>
+		Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung
+		bereit: <a
+			href="https://ec.europa.eu/consumers/odr/"
+			rel="noopener noreferrer"
+			target="_blank">https://ec.europa.eu/consumers/odr/</a
+		>. Die Kontaktangaben des Anbieters finden Sie im{" "}
+		<a href="/impressum/">Impressum</a>.
+	</p>
+	<p>
+		Wir sind nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren
+		vor einer Verbraucherschlichtungsstelle teilzunehmen.
+	</p>
+
+	<h2 id={S.final.id}>{S.final.heading}</h2>
 	<p>
 		Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des
-		UN-Kaufrechts.
+		UN-Kaufrechts.{" "}
 		<span class="todo"
 			>[Gerichtsstandsklausel ergänzen — nur zulässig gegenüber Kaufleuten.]</span
 		>
@@ -146,4 +304,59 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 		Sollten einzelne Bestimmungen dieser AGB unwirksam sein, bleibt die Wirksamkeit
 		der übrigen Bestimmungen unberührt.
 	</p>
+
+	<style>
+		/* Scoped to this page: the discount tiers are the only table on a legal
+		   page, and a shared style for one caller would be indirection. */
+		.table-scroll {
+			overflow-x: auto;
+			max-width: 100%;
+		}
+		.legal-table {
+			width: 100%;
+			border-collapse: collapse;
+			margin: 0.5rem 0 1.25rem;
+			font-size: 0.92rem;
+		}
+		.legal-table caption {
+			text-align: left;
+			font-size: 0.78rem;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+			color: var(--c-muted);
+			padding-bottom: 0.5rem;
+		}
+		.legal-table th,
+		.legal-table td {
+			text-align: left;
+			padding: 0.4rem 0.6rem;
+			border-bottom: 1px solid var(--c-border);
+		}
+		.legal-table thead th {
+			font-size: 0.78rem;
+			text-transform: uppercase;
+			letter-spacing: 0.04em;
+			color: var(--c-muted);
+		}
+		.legal-table tbody th {
+			font-weight: 600;
+		}
+
+		.legal__state {
+			background: var(--c-warn-bg);
+			color: var(--c-warn-ink);
+			border-radius: var(--radius-sm);
+			padding: 0.85rem 1rem;
+			font-size: 0.88rem;
+			margin-bottom: 2rem;
+		}
+
+		code {
+			font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+			font-size: 0.9em;
+			background: var(--c-field);
+			border-radius: 4px;
+			padding: 0.05rem 0.3rem;
+		}
+	</style>
 </LegalLayout>

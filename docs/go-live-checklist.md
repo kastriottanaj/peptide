@@ -238,6 +238,34 @@ These can be done at any time:
 - [ ] Monitoring / uptime alerting. Nothing currently reports that the box is
       down.
 
+## 8. Unsupported public claims — block deployment, not the commit
+
+Found while rewriting the trust pages on 2026-08-01. Each is a statement on a
+**public, indexable** page that nothing in this repository supports. None was
+changed in that commit: two of them live outside the trust pages, and all three
+are decisions rather than edits.
+
+- [ ] **`llms.txt` asserts VAT treatment.** `src/pages/llms.txt.ts` tells models
+      "Alle Preise in EUR inkl. deutscher Umsatzsteuer", while AGB § 4 still
+      carries a `[Platzhalter]` because the Kleinunternehmer question in §3 above
+      is open. One of the two is wrong. Settle §3, then make them agree.
+- [ ] **The homepage promises a delivery time.** `src/pages/index.astro` states
+      "Zustellung in 1–3 Werktagen nach Zahlungseingang". No shipping provider is
+      contracted (§2) and AGB § 6 leaves the delivery time as `[Anzahl]`. Either
+      confirm the figure with the carrier or drop it from the homepage.
+- [ ] **`ORDERS_CLOSED_TEXT` states a business status.** `src/lib/shop.ts` says
+      "Der Shop wird gerade eingerichtet", rendered on the product, cart and
+      checkout pages. `ORDERS_ENABLED` establishes only whether orders are
+      accepted — not what state the business is in. The trust pages were
+      corrected to say only that ordering is unavailable; this string should
+      follow, but it changes copy on the shop pages and so was left alone.
+
+Also open, from the same pass: `datenschutz.astro` names Hetzner Online GmbH as
+the hosting processor but keeps a `[Platzhalter]` for the full address, because
+the address recorded in [launch-data-needed.md](launch-data-needed.md) names a
+town that looks wrong. Confirm it against Hetzner's own Impressum and conclude
+the Art. 28 AVV before that page loses its `draft` flag.
+
 ---
 
 ## When an item lands
