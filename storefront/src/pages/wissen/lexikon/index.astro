@@ -3,7 +3,7 @@ import { getCollection } from "astro:content";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import ContentSearch from "../../../components/ContentSearch.astro";
 import {
-	absoluteUrl,
+	canonicalUrl,
 	breadcrumbNode,
 	ORGANIZATION_ID,
 } from "../../../lib/site";
@@ -41,17 +41,17 @@ const searchIndex = (entry: (typeof terms)[number]) =>
 const jsonLd = [
 	{
 		"@type": "DefinedTermSet",
-		"@id": `${absoluteUrl("/wissen/lexikon")}#termset`,
+		"@id": `${canonicalUrl("/wissen/lexikon")}#termset`,
 		name: "Peptid-Lexikon",
-		url: absoluteUrl("/wissen/lexikon"),
+		url: canonicalUrl("/wissen/lexikon"),
 		publisher: { "@id": ORGANIZATION_ID },
 		inLanguage: "de-DE",
 		hasDefinedTerm: terms.map((entry) => ({
 			"@type": "DefinedTerm",
-			"@id": `${absoluteUrl(`/wissen/lexikon/${entry.id}`)}#term`,
+			"@id": `${canonicalUrl(`/wissen/lexikon/${entry.id}`)}#term`,
 			name: entry.data.term,
 			description: entry.data.summary,
-			url: absoluteUrl(`/wissen/lexikon/${entry.id}`),
+			url: canonicalUrl(`/wissen/lexikon/${entry.id}`),
 		})),
 	},
 	breadcrumbNode([

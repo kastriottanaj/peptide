@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { SITE_NAME, absoluteUrl } from "../lib/site";
+import { SITE_NAME, absoluteUrl, canonicalUrl } from "../lib/site";
 import {
 	allStaticEntries,
 	articleEntries,
@@ -38,7 +38,7 @@ function oneLine(value: string): string {
 }
 
 function bullet(entry: IndexedEntry): string {
-	const link = `- [${oneLine(entry.title)}](${absoluteUrl(entry.path)})`;
+	const link = `- [${oneLine(entry.title)}](${canonicalUrl(entry.path)})`;
 	return entry.description ? `${link}: ${oneLine(entry.description)}` : link;
 }
 
@@ -78,7 +78,7 @@ export const GET: APIRoute = async () => {
 		"",
 		"## Kontakt",
 		"",
-		`- [Kontaktseite](${absoluteUrl("/contact")}): Kontaktwege für Fragen zu Sortiment und Bestellungen.`,
+		`- [Kontaktseite](${canonicalUrl("/contact")}): Kontaktwege für Fragen zu Sortiment und Bestellungen.`,
 		"",
 		"## Optional",
 		"",

@@ -2,8 +2,16 @@
  * Single source of truth for the site origin and brand identity.
  *
  * Every absolute URL in the storefront (canonicals, OpenGraph, JSON-LD,
- * sitemaps) is built through `absoluteUrl()` so there is exactly one place that
- * knows the origin. Never hand-build absolute URLs at call sites.
+ * sitemaps) is built here so there is exactly one place that knows the origin.
+ * Never hand-build absolute URLs at call sites. Two builders, and the
+ * difference matters:
+ *
+ * - `canonicalUrl()` for **pages** — canonical tags, `og:url`, JSON-LD `url`,
+ *   breadcrumb items, sitemap `<loc>`. Normalised per `canonical.ts`, which
+ *   includes the trailing slash the server actually serves.
+ * - `absoluteUrl()` for **files and assets** — product images, `/sitemap.xml`,
+ *   `/llms.txt`. Those are served at their exact path and must not be
+ *   slash-normalised.
  *
  * The fallback is the production domain on purpose: if `PUBLIC_SITE_URL` is ever
  * missing in a real build, emitting production URLs is harmless, whereas
@@ -11,9 +19,11 @@
  * development sets `PUBLIC_SITE_URL=http://localhost:4321` in `.env`.
  */
 
-export const SITE_URL = (
-	import.meta.env.PUBLIC_SITE_URL ?? "https://peptideeinkaufen.de"
-).replace(/\/+$/, "");
+import { PRODUCTION_ORIGIN, buildCanonicalUrl, normalizeOrigin } from "./canonical";
+
+export const SITE_URL = normalizeOrigin(
+	import.meta.env.PUBLIC_SITE_URL ?? PRODUCTION_ORIGIN,
+);
 
 export const SITE_NAME = "Peptide Einkaufen";
 export const SITE_LOCALE = "de_DE";
@@ -21,19 +31,26 @@ export const SITE_LOCALE = "de_DE";
 /** Stable @id for the Organization node, referenced as seller/publisher. */
 export const ORGANIZATION_ID = `${SITE_URL}/#organization`;
 
+/**
+ * Absolute URL for a file or asset served at its exact path — product images,
+ * `/sitemap.xml`, `/llms.txt`. Pages go through `canonicalUrl()` instead.
+ * Values that are already absolute (Medusa image URLs) are passed through.
+ */
 export function absoluteUrl(path: string): string {
 	if (path.startsWith("http://") || path.startsWith("https://")) return path;
 	return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 /**
- * Canonical URL for a page: the pathname without query string or trailing
- * slash. Filtered/sorted listing URLs (`/produkte?q=…`) therefore canonicalise
- * to their clean path rather than becoming separate documents.
+ * Canonical URL for a page, from a path or an `Astro.url`.
+ *
+ * Query string and fragment are dropped, so filtered/sorted listing URLs
+ * (`/produkte?q=…`) canonicalise to their clean path rather than becoming
+ * separate documents. The trailing slash is the one the server serves — see
+ * `canonical.ts` for why that is load-bearing.
  */
-export function canonicalFrom(url: URL): string {
-	const path = url.pathname.replace(/\/+$/, "") || "/";
-	return absoluteUrl(path);
+export function canonicalUrl(input: string | URL): string {
+	return buildCanonicalUrl(input, SITE_URL);
 }
 
 /** The Organization node, emitted once per page and referenced by @id. */
@@ -54,7 +71,7 @@ export function breadcrumbNode(trail: Array<[string, string]>) {
 			"@type": "ListItem",
 			position: index + 1,
 			name,
-			item: absoluteUrl(path),
+			item: canonicalUrl(path),
 		})),
 	};
 }

@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { SITE_NAME, absoluteUrl } from "../lib/site";
+import { SITE_NAME, canonicalUrl } from "../lib/site";
 import { editorialBodies } from "../lib/content-index";
 import { BUILD_DATE } from "../lib/build-time";
 
@@ -49,7 +49,7 @@ export const GET: APIRoute = async () => {
 		"> Anwendungshinweise, keine gesundheitsbezogenen Aussagen. Alle Produkte sind",
 		"> ausschließlich für Forschungszwecke bestimmt.",
 		"",
-		`Quelle: ${absoluteUrl("/")}`,
+		`Quelle: ${canonicalUrl("/")}`,
 		`Stand: ${BUILD_DATE}`,
 		"",
 	];
@@ -65,7 +65,7 @@ export const GET: APIRoute = async () => {
 		parts.push(
 			`## ${doc.entry.title}`,
 			"",
-			`URL: ${absoluteUrl(doc.entry.path)}`,
+			`URL: ${canonicalUrl(doc.entry.path)}`,
 			...doc.meta,
 			"",
 		);

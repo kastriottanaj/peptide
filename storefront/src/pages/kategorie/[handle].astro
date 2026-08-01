@@ -7,7 +7,7 @@ import {
 	type CatalogCategory,
 	type CatalogProduct,
 } from "../../lib/catalog";
-import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
+import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 
 export async function getStaticPaths() {
 	const categories = await listCategories();
@@ -40,10 +40,10 @@ const description =
 const jsonLd = [
 	{
 		"@type": "CollectionPage",
-		"@id": `${absoluteUrl(path)}#collection`,
+		"@id": `${canonicalUrl(path)}#collection`,
 		name: category.name,
 		description,
-		url: absoluteUrl(path),
+		url: canonicalUrl(path),
 		publisher: { "@id": ORGANIZATION_ID },
 		mainEntity: {
 			"@type": "ItemList",
@@ -52,7 +52,7 @@ const jsonLd = [
 				"@type": "ListItem",
 				position: index + 1,
 				name: product.title,
-				url: absoluteUrl(`/produkte/${product.handle}`),
+				url: canonicalUrl(`/produkte/${product.handle}`),
 			})),
 		},
 	},

@@ -13,7 +13,7 @@
 
 import { getCollection } from "astro:content";
 import type { HttpTypes } from "@medusajs/types";
-import { absoluteUrl } from "./site";
+import { absoluteUrl, canonicalUrl } from "./site";
 import { listCategories, listProductsInSourceOrder } from "./catalog";
 import { WISSEN_CATEGORY_LABELS } from "../content.config";
 import type { ChangeFrequency, SitemapImage, SitemapUrl } from "./sitemap";
@@ -37,10 +37,16 @@ export type IndexedEntry = {
 	images?: SitemapImage[];
 };
 
-/** Adapt an entry for the XML sitemap, resolving the path to an absolute URL. */
+/**
+ * Adapt an entry for the XML sitemap, resolving the path to an absolute URL.
+ *
+ * `<loc>` uses the canonical form, so a sitemap URL is the same URL the page
+ * canonicalises to and returns 200 rather than a redirect. Image locations stay
+ * on `absoluteUrl` — they are files, not pages.
+ */
 export function toSitemapUrl(entry: IndexedEntry): SitemapUrl {
 	return {
-		loc: absoluteUrl(entry.path),
+		loc: canonicalUrl(entry.path),
 		lastModified: entry.lastModified,
 		changeFrequency: entry.changeFrequency,
 		priority: entry.priority,

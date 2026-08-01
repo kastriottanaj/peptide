@@ -3,7 +3,7 @@ import { getCollection } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ContentSearch from "../../components/ContentSearch.astro";
 import { WISSEN_CATEGORY_LABELS } from "../../content.config";
-import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
+import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 import { foldSearchText } from "../../lib/search";
 
 const articles = (await getCollection("wissen", ({ data }) => !data.draft)).sort(
@@ -44,9 +44,9 @@ const searchIndex = (article: (typeof articles)[number]) =>
 const jsonLd = [
 	{
 		"@type": "CollectionPage",
-		"@id": `${absoluteUrl("/wissen")}#collection`,
+		"@id": `${canonicalUrl("/wissen")}#collection`,
 		name: "Wissen",
-		url: absoluteUrl("/wissen"),
+		url: canonicalUrl("/wissen"),
 		publisher: { "@id": ORGANIZATION_ID },
 		mainEntity: {
 			"@type": "ItemList",
@@ -55,7 +55,7 @@ const jsonLd = [
 				"@type": "ListItem",
 				position: index + 1,
 				name: article.data.title,
-				url: absoluteUrl(`/wissen/${article.id}`),
+				url: canonicalUrl(`/wissen/${article.id}`),
 			})),
 		},
 	},

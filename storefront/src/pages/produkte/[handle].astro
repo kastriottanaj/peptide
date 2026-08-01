@@ -7,7 +7,7 @@ import {
 	isVariantAvailable,
 	listProductsInSourceOrder,
 } from "../../lib/catalog";
-import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
+import { absoluteUrl, breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 
 export async function getStaticPaths() {
 	const products = await listProductsInSourceOrder({ limit: 1000 });
@@ -59,9 +59,9 @@ const currency = (
 
 const productNode: Record<string, unknown> = {
 	"@type": "Product",
-	"@id": `${absoluteUrl(`/produkte/${product.handle}`)}#product`,
+	"@id": `${canonicalUrl(`/produkte/${product.handle}`)}#product`,
 	name: product.title,
-	url: absoluteUrl(`/produkte/${product.handle}`),
+	url: canonicalUrl(`/produkte/${product.handle}`),
 	description: metaDescription,
 	...(product.thumbnail ? { image: absoluteUrl(product.thumbnail) } : {}),
 	...(researchCode ? { sku: researchCode } : {}),

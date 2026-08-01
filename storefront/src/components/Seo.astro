@@ -6,7 +6,7 @@
 import {
 	SITE_NAME,
 	SITE_LOCALE,
-	canonicalFrom,
+	canonicalUrl,
 	organizationNode,
 } from "../lib/site";
 
@@ -34,7 +34,7 @@ const {
 } = Astro.props;
 
 const fullTitle = rawTitle ? title : `${title} | ${SITE_NAME}`;
-const canonical = canonicalFrom(Astro.url);
+const canonical = canonicalUrl(Astro.url);
 
 /**
  * Google Search Console ownership token, for the meta-tag verification method.

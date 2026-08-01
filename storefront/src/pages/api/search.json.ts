@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { absoluteUrl } from "../../lib/site";
+import { canonicalUrl } from "../../lib/site";
 import { foldSearchText } from "../../lib/search";
 import { listProducts } from "../../lib/catalog";
 import { BUILD_DATE } from "../../lib/build-time";
@@ -63,7 +63,7 @@ const packAmount = (title: string) => {
 const fromEntry = (type: SearchDoc["type"]) => (entry: IndexedEntry): SearchDoc => ({
 	type,
 	title: entry.title,
-	url: absoluteUrl(entry.path),
+	url: canonicalUrl(entry.path),
 	excerpt: entry.description ?? "",
 	search: foldSearchText(
 		[
@@ -104,7 +104,7 @@ export const GET: APIRoute = async () => {
 		return {
 			type: "produkt",
 			title: product.title,
-			url: absoluteUrl(`/produkte/${product.handle}`),
+			url: canonicalUrl(`/produkte/${product.handle}`),
 			excerpt: product.description?.trim() ?? "",
 			search: foldSearchText(
 				[

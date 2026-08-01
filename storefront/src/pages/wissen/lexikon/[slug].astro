@@ -2,7 +2,7 @@
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
 import {
-	absoluteUrl,
+	canonicalUrl,
 	breadcrumbNode,
 	ORGANIZATION_ID,
 } from "../../../lib/site";
@@ -22,7 +22,7 @@ interface Props {
 const { term } = Astro.props;
 const { Content } = await render(term);
 const data = term.data;
-const url = absoluteUrl(`/wissen/lexikon/${term.id}`);
+const url = canonicalUrl(`/wissen/lexikon/${term.id}`);
 
 const allTerms = await getCollection("lexikon", ({ data }) => !data.draft);
 const related = data.relatedTerms
@@ -40,9 +40,9 @@ const jsonLd = [
 		...(data.aliases.length ? { alternateName: data.aliases } : {}),
 		inDefinedTermSet: {
 			"@type": "DefinedTermSet",
-			"@id": `${absoluteUrl("/wissen/lexikon")}#termset`,
+			"@id": `${canonicalUrl("/wissen/lexikon")}#termset`,
 			name: "Peptid-Lexikon",
-			url: absoluteUrl("/wissen/lexikon"),
+			url: canonicalUrl("/wissen/lexikon"),
 			publisher: { "@id": ORGANIZATION_ID },
 		},
 	},

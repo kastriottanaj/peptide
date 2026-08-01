@@ -2,7 +2,7 @@
 import { getCollection, render, type CollectionEntry } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { WISSEN_CATEGORY_LABELS } from "../../content.config";
-import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
+import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 
 export async function getStaticPaths() {
 	const articles = await getCollection("wissen", ({ data }) => !data.draft);
@@ -20,7 +20,7 @@ const { article } = Astro.props;
 const { Content } = await render(article);
 const data = article.data;
 
-const url = absoluteUrl(`/wissen/${article.id}`);
+const url = canonicalUrl(`/wissen/${article.id}`);
 
 // Terms this article references, resolved so we can link them at the foot.
 const allTerms = await getCollection("lexikon", ({ data }) => !data.draft);

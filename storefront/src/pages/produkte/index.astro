@@ -2,7 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
 import { listProducts, listCategories } from "../../lib/catalog";
-import { absoluteUrl, breadcrumbNode, ORGANIZATION_ID } from "../../lib/site";
+import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 
 const products = await listProducts();
 const categories = await listCategories();
@@ -13,9 +13,9 @@ const categories = await listCategories();
 const jsonLd = [
 	{
 		"@type": "CollectionPage",
-		"@id": `${absoluteUrl("/produkte")}#collection`,
+		"@id": `${canonicalUrl("/produkte")}#collection`,
 		name: "Forschungspeptide",
-		url: absoluteUrl("/produkte"),
+		url: canonicalUrl("/produkte"),
 		publisher: { "@id": ORGANIZATION_ID },
 		mainEntity: {
 			"@type": "ItemList",
@@ -24,7 +24,7 @@ const jsonLd = [
 				"@type": "ListItem",
 				position: index + 1,
 				name: product.title,
-				url: absoluteUrl(`/produkte/${product.handle}`),
+				url: canonicalUrl(`/produkte/${product.handle}`),
 			})),
 		},
 	},
