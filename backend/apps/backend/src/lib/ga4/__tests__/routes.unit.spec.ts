@@ -88,8 +88,12 @@ describe("GET /admin/analytics/ga4/health", () => {
     await healthGET(fakeReq(), res as never);
 
     expect(res.statusCode).toBe(status);
+    // `code` and `message` also appear at the top level: `@medusajs/js-sdk`
+    // keeps only those when it turns a non-2xx into a `FetchError`.
     expect(res.body).toEqual({
       error: { code, message: expect.any(String) },
+      code,
+      message: expect.any(String),
     });
   });
 
@@ -108,12 +112,13 @@ describe("GET /admin/analytics/ga4/health", () => {
 
     expect(res.statusCode).toBe(503);
     // Exact equality, not a substring check: nothing but the code and the
-    // fixed message can be present if the whole body is these two fields.
+    // fixed message can be present if the whole body is these fields.
+    const message =
+      "The Google Analytics service-account credentials were rejected.";
     expect(res.body).toEqual({
-      error: {
-        code: "GA4_INVALID_CREDENTIALS",
-        message: "The Google Analytics service-account credentials were rejected.",
-      },
+      error: { code: "GA4_INVALID_CREDENTIALS", message },
+      code: "GA4_INVALID_CREDENTIALS",
+      message,
     });
     expect(JSON.stringify(res.body)).not.toContain("/Users/x/secrets/key.json");
   });
@@ -130,6 +135,8 @@ describe("GET /admin/analytics/ga4/health", () => {
     expect(res.statusCode).toBe(502);
     expect(res.body).toEqual({
       error: { code: "GA4_API_UNAVAILABLE", message: expect.any(String) },
+      code: "GA4_API_UNAVAILABLE",
+      message: expect.any(String),
     });
     expect(JSON.stringify(res.body)).not.toContain("totally unexpected");
     expect(JSON.stringify(res.body)).not.toContain("stack");
@@ -168,7 +175,7 @@ describe("GET /admin/analytics/ga4/summary", () => {
     const getSummary = jest.fn();
     serviceReturning({ getSummary });
 
-    for (const period of ["1d", "90d", "yesterday", "7D", "", "all"]) {
+    for (const period of ["1d", "180d", "yesterday", "7D", "", "all"]) {
       const res = fakeRes();
       await summaryGET(fakeReq({ period }), res as never);
 
@@ -179,6 +186,24 @@ describe("GET /admin/analytics/ga4/summary", () => {
     }
 
     expect(getSummary).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The Medusa dashboard reads the error code out of the *top-level* fields:
+   * `@medusajs/js-sdk` discards the nested `error` object when it converts a
+   * non-2xx into a `FetchError`.
+   */
+  it("repeats the code and message at the top level for the SDK", async () => {
+    serviceReturning({ getSummary: jest.fn() });
+
+    const res = fakeRes();
+    await summaryGET(fakeReq({ period: "1d" }), res as never);
+
+    expect(res.body).toMatchObject({
+      code: "GA4_INVALID_PERIOD",
+      message: expect.stringContaining("today, 7d, 30d, 90d"),
+      error: { code: "GA4_INVALID_PERIOD" },
+    });
   });
 
   it("rejects a repeated query parameter", async () => {
@@ -204,7 +229,7 @@ describe("GET /admin/analytics/ga4/summary", () => {
     expect(res.statusCode).toBe(200);
   });
 
-  it.each(["today", "7d", "30d"])("accepts period=%s", async (period) => {
+  it.each(["today", "7d", "30d", "90d"])("accepts period=%s", async (period) => {
     const getSummary = jest.fn().mockResolvedValue({ period });
     serviceReturning({ getSummary });
 

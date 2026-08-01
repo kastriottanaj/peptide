@@ -32,5 +32,12 @@
     ".medusa/admin",
     ".cache",
     "eslint.config.*",
+    // The admin extension is a browser bundle, not part of this CommonJS
+    // server build: it uses `import.meta.env`, JSX and bundler module
+    // resolution, none of which this config permits. `medusa build` already
+    // compiles the two separately — the server with tsc, the admin with Vite —
+    // so this only aligns a direct `tsc -p tsconfig.json` with what the build
+    // actually does. `src/admin/tsconfig.json` typechecks that half.
+    "src/admin",
   ]
 }

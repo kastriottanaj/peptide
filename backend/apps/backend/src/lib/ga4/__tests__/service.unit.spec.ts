@@ -577,13 +577,13 @@ describe("getRealtime", () => {
 });
 
 describe("getSummary", () => {
-  it("accepts exactly the three supported periods", () => {
-    expect(GA4_PERIODS).toEqual(["today", "7d", "30d"]);
+  it("accepts exactly the four supported periods", () => {
+    expect(GA4_PERIODS).toEqual(["today", "7d", "30d", "90d"]);
 
     for (const period of GA4_PERIODS) expect(isGa4Period(period)).toBe(true);
     for (const invalid of [
       "1d",
-      "90d",
+      "180d",
       "7D",
       "yesterday",
       "",
@@ -604,6 +604,7 @@ describe("getSummary", () => {
       // Seven days *including* today, not the eight that 7daysAgo would span.
       "7d": { startDate: "6daysAgo", endDate: "today" },
       "30d": { startDate: "29daysAgo", endDate: "today" },
+      "90d": { startDate: "89daysAgo", endDate: "today" },
     } as const;
 
     for (const period of GA4_PERIODS) {
@@ -622,7 +623,7 @@ describe("getSummary", () => {
     const client = stubClient();
     await makeService(client).getSummary("7d");
 
-    expect(client.runReport).toHaveBeenCalledTimes(4);
+    expect(client.runReport).toHaveBeenCalledTimes(5);
 
     const requests = client.runReport.mock.calls.map(([r]) => r);
     const totalsMetrics = (requests[0].metrics as { name: string }[]).map(
@@ -649,6 +650,7 @@ describe("getSummary", () => {
       "date",
       "sessionDefaultChannelGroup",
       "sessionSourceMedium",
+      "pagePath",
     ]);
 
     // itemsPurchased is item-scoped and only safe without a dimension.
@@ -687,6 +689,14 @@ describe("getSummary", () => {
         ])
         .mockResolvedValueOnce([
           { rows: [row("google / organic", "85", "66", "28", "4", "499.96")] },
+        ])
+        .mockResolvedValueOnce([
+          {
+            rows: [
+              row("/produkte", "210", "80"),
+              row("/produkte/bpc-157", "140", "55"),
+            ],
+          },
         ]),
     });
 
@@ -730,6 +740,12 @@ describe("getSummary", () => {
       },
     ]);
     expect(result.bySourceMedium[0].sourceMedium).toBe("google / organic");
+
+    // Most-visited pages, ordered as Google returned them.
+    expect(result.topPages).toEqual([
+      { pagePath: "/produkte", screenPageViews: 210, activeUsers: 80 },
+      { pagePath: "/produkte/bpc-157", screenPageViews: 140, activeUsers: 55 },
+    ]);
   });
 
   it("returns zeros for a period with no data", async () => {
@@ -739,6 +755,96 @@ describe("getSummary", () => {
     expect(result.daily).toEqual([]);
     expect(result.byChannelGroup).toEqual([]);
     expect(result.bySourceMedium).toEqual([]);
+    expect(result.topPages).toEqual([]);
+  });
+
+  /**
+   * 90d was added after the endpoint shipped. These pin the two things that
+   * could quietly break: the window really being ninety days, and the daily
+   * series not being clipped by a row limit sized for thirty.
+   */
+  describe("90d", () => {
+    it("asks Google for eighty-nine days ago through today", async () => {
+      const client = stubClient();
+      const result = await makeService(client).getSummary("90d");
+
+      expect(result.period).toBe("90d");
+      expect(result.dateRange).toEqual({
+        startDate: "89daysAgo",
+        endDate: "today",
+      });
+      for (const [request] of client.runReport.mock.calls) {
+        expect(request.dateRanges).toEqual([
+          { startDate: "89daysAgo", endDate: "today" },
+        ]);
+      }
+    });
+
+    it("allows enough daily rows for ninety days", async () => {
+      const client = stubClient();
+      await makeService(client).getSummary("90d");
+
+      const daily = client.runReport.mock.calls
+        .map(([request]) => request)
+        .find((request) =>
+          (request.dimensions ?? []).some(
+            (dimension: { name: string }) => dimension.name === "date",
+          ),
+        );
+
+      expect(daily.limit).toBeGreaterThanOrEqual(90);
+    });
+
+    it("returns all ninety days rather than the first forty", async () => {
+      const days = Array.from({ length: 90 }, (_, index) => {
+        const date = new Date(Date.UTC(2026, 4, 4 + index));
+        const compact = date.toISOString().slice(0, 10).replace(/-/g, "");
+        return row(compact, "1", "1", "1", "1", "1", "0", "0", "0");
+      });
+
+      const client = stubClient({
+        runReport: jest
+          .fn()
+          .mockResolvedValueOnce([{ rows: [] }])
+          .mockResolvedValueOnce([{ rows: days }])
+          .mockResolvedValue([{ rows: [] }]),
+      });
+
+      const result = await makeService(client).getSummary("90d");
+
+      expect(result.daily).toHaveLength(90);
+      expect(result.daily[0].date).toBe("2026-05-04");
+      expect(result.daily[89].date).toBe("2026-08-01");
+    });
+
+    it("caches 90d separately from the shorter periods", async () => {
+      const client = stubClient();
+      const service = makeService(client);
+
+      await service.getSummary("30d");
+      const ninety = await service.getSummary("90d");
+
+      expect(ninety.cache.status).toBe("miss");
+      expect(client.runReport).toHaveBeenCalledTimes(10);
+    });
+
+    it("does not change the existing periods", async () => {
+      const client = stubClient();
+      const service = makeService(client);
+
+      expect((await service.getSummary("today")).dateRange).toEqual({
+        startDate: "today",
+        endDate: "today",
+      });
+      expect((await service.getSummary("7d")).dateRange).toEqual({
+        startDate: "6daysAgo",
+        endDate: "today",
+      });
+      expect((await service.getSummary("30d")).dateRange).toEqual({
+        startDate: "29daysAgo",
+        endDate: "today",
+      });
+    });
   });
 
   it("caches each period independently", async () => {
@@ -751,7 +857,7 @@ describe("getSummary", () => {
 
     expect(cached.cache.status).toBe("hit");
     expect(other.cache.status).toBe("miss");
-    expect(client.runReport).toHaveBeenCalledTimes(8);
+    expect(client.runReport).toHaveBeenCalledTimes(10);
   });
 
   it("coalesces concurrent identical requests", async () => {
@@ -763,7 +869,7 @@ describe("getSummary", () => {
       service.getSummary("7d"),
     ]);
 
-    expect(client.runReport).toHaveBeenCalledTimes(4);
+    expect(client.runReport).toHaveBeenCalledTimes(5);
     expect([a.cache.status, b.cache.status].sort()).toEqual([
       "coalesced",
       "miss",

@@ -1,4 +1,9 @@
-import { Ga4Error, classifyGa4Error, notConfigured } from "../errors";
+import {
+  GA4_ERROR_CODES,
+  Ga4Error,
+  classifyGa4Error,
+  notConfigured,
+} from "../errors";
 
 /** A rejection shaped the way google-gax produces one. */
 function grpcError(code: number, message: string): Error & { code: number } {
@@ -143,14 +148,30 @@ describe("safe surface", () => {
   it("serializes to nothing but a code and a fixed message", () => {
     const error = classifyGa4Error(grpcError(7, "raw google detail"));
 
-    expect(Object.keys(error.toResponse())).toEqual(["error"]);
+    // The nested object is the documented shape; the top-level pair exists
+    // because `@medusajs/js-sdk` discards everything else on a non-2xx.
+    expect(Object.keys(error.toResponse()).sort()).toEqual([
+      "code",
+      "error",
+      "message",
+    ]);
     expect(Object.keys(error.toResponse().error).sort()).toEqual([
       "code",
       "message",
     ]);
+    expect(error.toResponse().code).toBe(error.toResponse().error.code);
+    expect(error.toResponse().message).toBe(error.toResponse().error.message);
     expect(JSON.stringify(error.toResponse())).not.toContain("raw google detail");
   });
 
+/**
+ * The top-level `code`/`message` pair was added so `@medusajs/js-sdk` — which
+ * keeps only a body's top-level `message` when it converts a non-2xx into a
+ * `FetchError` — can surface the real message in the admin. It is **additive**.
+ * The nested `error` object is the shape `docs/analytics-ga4-api.md` documents
+ * and the shape any existing client reads, so it must never be replaced by the
+ * flattened one.
+ */
   it("does not retain the original error as a cause", () => {
     // An error carrying a `cause` eventually gets spread into a log by someone
     // who did not read the comment explaining why it must not be.
@@ -164,5 +185,59 @@ describe("safe surface", () => {
   it("never exposes a stack trace through the response body", () => {
     const error = classifyGa4Error(grpcError(14, "boom"));
     expect(JSON.stringify(error.toResponse())).not.toContain("at ");
+  });
+});
+
+
+describe("error-body backward compatibility", () => {
+  it.each(GA4_ERROR_CODES)("%s keeps the nested error object", (code) => {
+    const body = new Ga4Error(code).toResponse();
+
+    expect(body).toHaveProperty("error");
+    expect(body.error).toEqual({
+      code,
+      message: expect.any(String),
+    });
+  });
+
+  it.each(GA4_ERROR_CODES)("%s also exposes the SDK-readable fields", (code) => {
+    const body = new Ga4Error(code).toResponse();
+
+    expect(body.code).toBe(code);
+    expect(typeof body.message).toBe("string");
+    expect(body.message.length).toBeGreaterThan(0);
+  });
+
+  it("keeps the two representations in agreement", () => {
+    for (const code of GA4_ERROR_CODES) {
+      const body = new Ga4Error(code).toResponse();
+
+      expect(body.code).toBe(body.error.code);
+      expect(body.message).toBe(body.error.message);
+    }
+  });
+
+  /**
+   * A client written against the original shape reads `body.error.code`.
+   * This is that client.
+   */
+  it("still satisfies a consumer written before the flattening", () => {
+    const raw = JSON.parse(
+      JSON.stringify(new Ga4Error("GA4_PERMISSION_DENIED").toResponse()),
+    );
+
+    const legacyRead = (payload: { error: { code: string; message: string } }) =>
+      `${payload.error.code}: ${payload.error.message}`;
+
+    expect(legacyRead(raw)).toBe(
+      "GA4_PERMISSION_DENIED: The service account does not have access to this Google Analytics property.",
+    );
+  });
+
+  it("adds nothing beyond the two representations", () => {
+    for (const code of GA4_ERROR_CODES) {
+      const body = new Ga4Error(code).toResponse();
+      expect(Object.keys(body).sort()).toEqual(["code", "error", "message"]);
+    }
   });
 });

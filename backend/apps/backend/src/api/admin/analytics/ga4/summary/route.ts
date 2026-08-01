@@ -8,7 +8,7 @@ import {
 } from "../../../../../lib/ga4/service";
 
 /**
- * `GET /admin/analytics/ga4/summary?period=today|7d|30d`
+ * `GET /admin/analytics/ga4/summary?period=today|7d|30d|90d`
  *
  * Aggregated visitor, acquisition and ecommerce reporting for a fixed window,
  * plus a daily time series and traffic grouped by channel and source/medium.
@@ -29,11 +29,13 @@ export async function GET(req: MedusaRequest, res: MedusaResponse) {
   const raw = req.query.period ?? "7d";
 
   if (!isGa4Period(raw)) {
+    const message = `period must be one of: ${GA4_PERIODS.join(", ")}.`;
+    // `code`/`message` are repeated at the top level to match `Ga4Error`; see
+    // the comment on `Ga4Error.toResponse`.
     return res.status(400).json({
-      error: {
-        code: "GA4_INVALID_PERIOD",
-        message: `period must be one of: ${GA4_PERIODS.join(", ")}.`,
-      },
+      error: { code: "GA4_INVALID_PERIOD", message },
+      code: "GA4_INVALID_PERIOD",
+      message,
     });
   }
 

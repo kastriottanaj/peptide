@@ -212,7 +212,18 @@ head tags in a page:
 German market, so DSGVO/TTDSG apply to the storefront:
 
 Analytics is Google Analytics 4, gated on consent. **[docs/analytics.md](docs/analytics.md)
-is the runbook** — read it before touching consent or measurement.
+is the runbook** — read it before touching consent or measurement. The
+server-side reporting API has its own runbook,
+[docs/analytics-ga4-api.md](docs/analytics-ga4-api.md), and the Admin dashboard
+that reads it is [docs/analytics-dashboard.md](docs/analytics-dashboard.md).
+
+**GA4 is never the source of truth for money.** Medusa's order records are, for
+orders, revenue, refunds, AOV and everything downstream of them. GA4 answers
+questions about visitors. The two are reported side by side and never summed,
+divided or substituted for one another — a per-channel conversion rate in
+particular cannot be computed, because the storefront persists no acquisition
+source on the order. See the analytics-dashboard runbook before adding a metric
+that appears to join them.
 
 - Analytics loads **only** after explicit statistics consent — default off, no
   pre-ticked toggles. A hard block, not Google Consent Mode: before consent there is

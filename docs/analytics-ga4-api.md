@@ -124,23 +124,31 @@ Issued as five separate Google calls, run concurrently: the Realtime API
 supports a much narrower set of dimensions and metrics than the core API and
 rejects most multi-dimension requests.
 
-### `GET /admin/analytics/ga4/summary?period=today|7d|30d`
+### `GET /admin/analytics/ga4/summary?period=today|7d|30d|90d`
 
 Aggregated reporting via `runReport`. `period` defaults to `7d`; anything
-outside the three values is `400 GA4_INVALID_PERIOD`. The set is closed on
+outside the four values is `400 GA4_INVALID_PERIOD`. The set is closed on
 purpose — each period is a cache key, and arbitrary date ranges would both
 defeat the cache and hand an authenticated caller a way to burn the property's
 Data API quota.
 
 `7d` means the last seven days **including today** (`6daysAgo`..`today`), not
-the eight days that `7daysAgo`..`today` would span.
+the eight days that `7daysAgo`..`today` would span. `90d` is `89daysAgo`..`today`
+on the same rule; it was added for the admin dashboard's 90D button, and the
+daily series is capped at 100 rows so ninety days are never clipped.
 
 Returns `totals` (all ten metrics), `daily` (time series with ISO dates),
 `byChannelGroup` (`sessionDefaultChannelGroup`), `bySourceMedium`
-(`sessionSourceMedium`), `period`, `dateRange`, `generatedAt` and `cache`.
+(`sessionSourceMedium`), `topPages` (`pagePath` with `screenPageViews` and
+`activeUsers`), `period`, `dateRange`, `generatedAt` and `cache`.
 
 `itemsPurchased` appears only in `totals`: it is item-scoped and does not
 combine reliably with session-scoped acquisition dimensions.
+
+`topPages` was added after the endpoint first shipped; callers that ignore it
+are unaffected. It uses page-scoped metrics rather than `sessions`, because a
+session spans several pages and "sessions per page" answers a different
+question from "views of this page".
 
 ## Errors
 
@@ -163,6 +171,13 @@ own session instead of the server's key.
 Responses never contain the full property id, service-account email, credential
 path, project id, private key, access token, raw Google error or stack trace.
 Logs carry the error code and attempt count only.
+
+The error body repeats `code` and `message` at the **top level** as well as
+inside `error`. That is for `@medusajs/js-sdk`, which the admin dashboard uses:
+it keeps only the body's top-level `message` when it converts a non-2xx into a
+`FetchError`, so without the repetition the dashboard would show "Service
+Unavailable" instead of the message written for the operator. The nested `error`
+object stays because it is the documented shape.
 
 **Retries.** Transient failures (`UNAVAILABLE`, `DEADLINE_EXCEEDED`, `INTERNAL`,
 `ABORTED`) are retried up to three times with backoff. Invalid credentials and
@@ -259,3 +274,6 @@ sudo systemctl restart medusa
 Tests live in `src/lib/ga4/__tests__/` and run with `npm run test`. They mock
 `BetaAnalyticsDataClient` and use fabricated credentials — no test reads the real
 key.
+
+The admin dashboard that consumes these endpoints is documented separately in
+[analytics-dashboard.md](analytics-dashboard.md).

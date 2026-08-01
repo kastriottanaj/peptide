@@ -71,9 +71,27 @@ export class Ga4Error extends Error {
     this.retryable = retryable;
   }
 
-  /** Exactly the shape sent to the client. Nothing else is ever serialized. */
-  toResponse(): { error: { code: Ga4ErrorCode; message: string } } {
-    return { error: { code: this.code, message: this.message } };
+  /**
+   * Exactly the shape sent to the client. Nothing else is ever serialized.
+   *
+   * `code` and `message` are repeated at the top level, which looks redundant
+   * and is not. `@medusajs/js-sdk` — the client the admin dashboard uses —
+   * turns a non-2xx response into a `FetchError` carrying only the body's
+   * *top-level* `message`, discarding everything else. Without this the admin
+   * would render "Service Unavailable" instead of the actionable sentence this
+   * class exists to produce. The nested `error` object stays because it is the
+   * documented shape and other callers read it.
+   */
+  toResponse(): {
+    error: { code: Ga4ErrorCode; message: string };
+    code: Ga4ErrorCode;
+    message: string;
+  } {
+    return {
+      error: { code: this.code, message: this.message },
+      code: this.code,
+      message: this.message,
+    };
   }
 }
 

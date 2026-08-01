@@ -40,7 +40,7 @@ export type Ga4Logger = {
   error(message: string): void;
 };
 
-export const GA4_PERIODS = ["today", "7d", "30d"] as const;
+export const GA4_PERIODS = ["today", "7d", "30d", "90d"] as const;
 export type Ga4Period = (typeof GA4_PERIODS)[number];
 
 export function isGa4Period(value: unknown): value is Ga4Period {
@@ -59,7 +59,17 @@ const DATE_RANGES: Record<Ga4Period, { startDate: string; endDate: string }> = {
   today: { startDate: "today", endDate: "today" },
   "7d": { startDate: "6daysAgo", endDate: "today" },
   "30d": { startDate: "29daysAgo", endDate: "today" },
+  "90d": { startDate: "89daysAgo", endDate: "today" },
 };
+
+/**
+ * Row cap on the daily series.
+ *
+ * One row per day, so the longest period decides it. Sized with headroom rather
+ * than exactly 90: GA4 emits an extra `(other)` row once a report is bucketed,
+ * and a limit that exactly fits the days would silently drop the last one.
+ */
+const SUMMARY_DAILY_LIMIT = 100;
 
 const REALTIME_TOTAL_METRICS = [
   "activeUsers",
@@ -97,6 +107,17 @@ const SUMMARY_DAILY_METRICS = [
   "purchaseRevenue",
   "keyEvents",
 ] as const;
+
+/**
+ * Page-scoped metrics for the most-visited-pages report.
+ *
+ * The same pair the realtime pages report uses. Session-scoped metrics combine
+ * with `pagePath` in the Data API, but not always in a way that means what a
+ * reader assumes — a session spans several pages, so "sessions per page" is a
+ * different question from "views of this page". Views and users answer the one
+ * the panel is actually asking.
+ */
+const SUMMARY_PAGE_METRICS = ["screenPageViews", "activeUsers"] as const;
 
 /** Session-scoped metrics, safe against acquisition dimensions. */
 const SUMMARY_CHANNEL_METRICS = [
@@ -142,6 +163,11 @@ export type Ga4SummaryResult = {
   daily: Array<Record<string, string | number>>;
   byChannelGroup: Array<Record<string, string | number>>;
   bySourceMedium: Array<Record<string, string | number>>;
+  /**
+   * Most-visited pages for the window, by path. Added after the first release
+   * of this endpoint; existing callers that ignore it are unaffected.
+   */
+  topPages: Array<Record<string, string | number>>;
   generatedAt: string;
   cache: CacheMeta;
 };
@@ -391,37 +417,47 @@ export class Ga4Service {
       this.#cacheKey(config, `summary:${period}`),
       config.cacheTtlMs,
       async () => {
-        const [totals, daily, byChannel, bySourceMedium] = await Promise.all([
-          this.#runReport(config, "summary.totals", {
-            dateRanges: [dateRange],
-            metrics: SUMMARY_TOTAL_METRICS.map((name) => ({ name })),
-          }),
-          this.#runReport(config, "summary.daily", {
-            dateRanges: [dateRange],
-            dimensions: [{ name: "date" }],
-            metrics: SUMMARY_DAILY_METRICS.map((name) => ({ name })),
-            orderBys: [{ dimension: { dimensionName: "date" } }],
-            limit: 40,
-          }),
-          this.#runReport(config, "summary.channel", {
-            dateRanges: [dateRange],
-            dimensions: [{ name: "sessionDefaultChannelGroup" }],
-            metrics: SUMMARY_CHANNEL_METRICS.map((name) => ({ name })),
-            orderBys: [
-              { metric: { metricName: "sessions" }, desc: true },
-            ],
-            limit: 25,
-          }),
-          this.#runReport(config, "summary.sourceMedium", {
-            dateRanges: [dateRange],
-            dimensions: [{ name: "sessionSourceMedium" }],
-            metrics: SUMMARY_CHANNEL_METRICS.map((name) => ({ name })),
-            orderBys: [
-              { metric: { metricName: "sessions" }, desc: true },
-            ],
-            limit: 25,
-          }),
-        ]);
+        const [totals, daily, byChannel, bySourceMedium, topPages] =
+          await Promise.all([
+            this.#runReport(config, "summary.totals", {
+              dateRanges: [dateRange],
+              metrics: SUMMARY_TOTAL_METRICS.map((name) => ({ name })),
+            }),
+            this.#runReport(config, "summary.daily", {
+              dateRanges: [dateRange],
+              dimensions: [{ name: "date" }],
+              metrics: SUMMARY_DAILY_METRICS.map((name) => ({ name })),
+              orderBys: [{ dimension: { dimensionName: "date" } }],
+              limit: SUMMARY_DAILY_LIMIT,
+            }),
+            this.#runReport(config, "summary.channel", {
+              dateRanges: [dateRange],
+              dimensions: [{ name: "sessionDefaultChannelGroup" }],
+              metrics: SUMMARY_CHANNEL_METRICS.map((name) => ({ name })),
+              orderBys: [
+                { metric: { metricName: "sessions" }, desc: true },
+              ],
+              limit: 25,
+            }),
+            this.#runReport(config, "summary.sourceMedium", {
+              dateRanges: [dateRange],
+              dimensions: [{ name: "sessionSourceMedium" }],
+              metrics: SUMMARY_CHANNEL_METRICS.map((name) => ({ name })),
+              orderBys: [
+                { metric: { metricName: "sessions" }, desc: true },
+              ],
+              limit: 25,
+            }),
+            this.#runReport(config, "summary.pages", {
+              dateRanges: [dateRange],
+              dimensions: [{ name: "pagePath" }],
+              metrics: SUMMARY_PAGE_METRICS.map((name) => ({ name })),
+              orderBys: [
+                { metric: { metricName: "screenPageViews" }, desc: true },
+              ],
+              limit: 25,
+            }),
+          ]);
 
         return {
           totals: totalsFromResponse(totals, SUMMARY_TOTAL_METRICS),
@@ -441,6 +477,7 @@ export class Ga4Service {
             "sourceMedium",
             SUMMARY_CHANNEL_METRICS,
           ),
+          topPages: rowsToObjects(topPages, "pagePath", SUMMARY_PAGE_METRICS),
         };
       },
     );
