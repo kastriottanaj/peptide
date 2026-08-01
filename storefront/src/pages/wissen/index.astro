@@ -5,6 +5,7 @@ import ContentSearch from "../../components/ContentSearch.astro";
 import { WISSEN_CATEGORY_LABELS } from "../../content.config";
 import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 import { foldSearchText } from "../../lib/search";
+import { articlePath, lexikonPath } from "../../lib/links";
 
 const articles = (await getCollection("wissen", ({ data }) => !data.draft)).sort(
 	(a, b) => b.data.datePublished.getTime() - a.data.datePublished.getTime(),
@@ -93,7 +94,7 @@ const jsonLd = [
 				<ul class="cards">
 					{group.items.map((article) => (
 						<li data-search-item data-search={searchIndex(article)}>
-							<a href={`/wissen/${article.id}`} class="card">
+							<a href={articlePath(article.id)} class="card">
 								<h3>{article.data.title}</h3>
 								<p>{article.data.excerpt}</p>
 								<span class="card__meta">{article.data.readingMinutes} Min. Lesezeit</span>
@@ -109,13 +110,13 @@ const jsonLd = [
 		<h2>Lexikon</h2>
 		<p class="lead lead--tight">
 			Kurzdefinitionen der wichtigsten Begriffe.
-			<a href="/wissen/lexikon">Alle {terms.length} Einträge ansehen →</a>
+			<a href="/wissen/lexikon/">Alle {terms.length} Einträge ansehen →</a>
 		</p>
 		<ul class="chips">
 			{
 				terms.slice(0, 8).map((entry) => (
 					<li>
-						<a href={`/wissen/lexikon/${entry.id}`}>{entry.data.term}</a>
+						<a href={lexikonPath(entry.id)}>{entry.data.term}</a>
 					</li>
 				))
 			}

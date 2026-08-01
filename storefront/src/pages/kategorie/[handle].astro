@@ -8,6 +8,7 @@ import {
 	type CatalogProduct,
 } from "../../lib/catalog";
 import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
+import { categoryPath } from "../../lib/links";
 
 export async function getStaticPaths() {
 	const categories = await listCategories();
@@ -70,7 +71,7 @@ const jsonLd = [
 	jsonLd={jsonLd}
 >
 	<nav class="crumbs" aria-label="Brotkrumen">
-		<a href="/produkte">Sortiment</a>
+		<a href="/produkte/">Sortiment</a>
 		<span aria-hidden="true">/</span>
 		<span>{category.name}</span>
 	</nav>
@@ -100,9 +101,9 @@ const jsonLd = [
 				<h2>Weitere Kategorien</h2>
 				<nav class="cats">
 					{otherCategories.map((other) => (
-						<a href={`/kategorie/${other.handle}`}>{other.name}</a>
+						<a href={categoryPath(other.handle)}>{other.name}</a>
 					))}
-					<a href="/produkte" class="cats__all">
+					<a href="/produkte/" class="cats__all">
 						Alle Produkte
 					</a>
 				</nav>

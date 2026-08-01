@@ -3,6 +3,7 @@ import { getCollection, render, type CollectionEntry } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { WISSEN_CATEGORY_LABELS } from "../../content.config";
 import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
+import { lexikonPath } from "../../lib/links";
 
 export async function getStaticPaths() {
 	const articles = await getCollection("wissen", ({ data }) => !data.draft);
@@ -62,7 +63,7 @@ const formatDate = (date: Date) =>
 >
 	<article class="article">
 		<nav class="crumbs" aria-label="Brotkrumen">
-			<a href="/wissen">Wissen</a>
+			<a href="/wissen/">Wissen</a>
 			<span aria-hidden="true">/</span>
 			<span>{WISSEN_CATEGORY_LABELS[data.category]}</span>
 		</nav>
@@ -83,7 +84,7 @@ const formatDate = (date: Date) =>
 					<ul>
 						{relatedTerms.map((term) => (
 							<li>
-								<a href={`/wissen/lexikon/${term.id}`}>{term.data.term}</a>
+								<a href={lexikonPath(term.id)}>{term.data.term}</a>
 								<span>{term.data.summary}</span>
 							</li>
 						))}
@@ -92,7 +93,7 @@ const formatDate = (date: Date) =>
 			)
 		}
 
-		<a class="back" href="/wissen">← Alle Beiträge</a>
+		<a class="back" href="/wissen/">← Alle Beiträge</a>
 	</article>
 
 	<style>

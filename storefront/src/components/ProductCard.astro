@@ -1,6 +1,7 @@
 ---
 import type { HttpTypes } from "@medusajs/types";
 import { isProductAvailable, isVariantAvailable } from "../lib/catalog";
+import { productPath } from "../lib/links";
 
 interface Props {
 	product: HttpTypes.StoreProduct;
@@ -45,7 +46,7 @@ const available = isProductAvailable(product);
 ---
 
 <article class="pcard">
-	<a href={`/produkte/${product.handle}`} class="pcard__link">
+	<a href={productPath(product.handle)} class="pcard__link">
 		<div class="pcard__media">
 			{researchCode && <span class="pcard__code">{researchCode}</span>}
 			{purity && <span class="pcard__purity">{purity}</span>}

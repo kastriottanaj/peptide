@@ -53,7 +53,7 @@ Grundlagenforschung, etwa bei der Untersuchung von Rezeptorbindung, Enzymkinetik
 oder Zell-Zell-Kommunikation.
 
 Für die Laborpraxis relevant sind vor allem Reinheit, Identität und Stabilität
-der Substanz — siehe dazu [Reinheit und Analysezertifikat](/wissen/reinheit-und-coa).
+der Substanz — siehe dazu [Reinheit und Analysezertifikat](/wissen/reinheit-und-coa/).
 
 ---
 

@@ -23,7 +23,7 @@ import { ORDERS_ENABLED } from "../lib/shop";
 
 		<div data-cart-empty hidden>
 			<p>Ihr Warenkorb ist leer.</p>
-			<a class="btn btn--green" href="/produkte">Sortiment ansehen</a>
+			<a class="btn btn--green" href="/produkte/">Sortiment ansehen</a>
 		</div>
 
 		<div class="cart" data-cart-filled hidden>
@@ -57,7 +57,7 @@ import { ORDERS_ENABLED } from "../lib/shop";
 
 				{
 					ORDERS_ENABLED ? (
-						<a class="btn btn--green cart__checkout" href="/kasse">
+						<a class="btn btn--green cart__checkout" href="/kasse/">
 							Zur Kasse
 						</a>
 					) : (

@@ -178,7 +178,7 @@ const anyAvailable = firstAvailableIndex !== -1;
 				submit.textContent = "Zum Warenkorb hinzugefügt ✓";
 				if (status) {
 					const link = el("a", "Warenkorb ansehen →");
-					link.href = "/warenkorb";
+					link.href = "/warenkorb/";
 					status.replaceChildren(link);
 				}
 				window.setTimeout(() => {

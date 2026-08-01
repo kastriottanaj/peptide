@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { listCategories } from "../lib/catalog";
+import { categoryPath } from "../lib/links";
 
 // AGENTS.md: unknown slugs return noindex, nofollow rather than a soft 200.
 const categories = await listCategories();
@@ -20,11 +21,11 @@ const categories = await listCategories();
 		</p>
 
 		<div class="nf__actions">
-			<a class="btn btn--green" href="/produkte">Zum Sortiment</a>
-			<a class="btn nf__ghost" href="/wissen">Wissen &amp; Grundlagen</a>
+			<a class="btn btn--green" href="/produkte/">Zum Sortiment</a>
+			<a class="btn nf__ghost" href="/wissen/">Wissen &amp; Grundlagen</a>
 		</div>
 
-		<form class="nf__search" action="/produkte" method="get" role="search">
+		<form class="nf__search" action="/produkte/" method="get" role="search">
 			<label>
 				<span class="visually-hidden">Sortiment durchsuchen</span>
 				<input
@@ -43,7 +44,7 @@ const categories = await listCategories();
 					<h2>Kategorien</h2>
 					<nav>
 						{categories.map((category) => (
-							<a href={`/kategorie/${category.handle}`}>{category.name}</a>
+							<a href={categoryPath(category.handle)}>{category.name}</a>
 						))}
 					</nav>
 				</section>
@@ -52,8 +53,8 @@ const categories = await listCategories();
 
 		<p class="nf__support">
 			Sie suchen eine aufgegebene Bestellung?
-			<a href="/bestellung/suchen">Bestellung suchen</a> · Weiterhin Fragen?
-			<a href="/contact">Support kontaktieren</a>
+			<a href="/bestellung/suchen/">Bestellung suchen</a> · Weiterhin Fragen?
+			<a href="/contact/">Support kontaktieren</a>
 		</p>
 	</div>
 

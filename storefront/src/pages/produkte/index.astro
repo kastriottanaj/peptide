@@ -3,6 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import ProductCard from "../../components/ProductCard.astro";
 import { listProducts, listCategories } from "../../lib/catalog";
 import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
+import { categoryPath } from "../../lib/links";
 
 const products = await listProducts();
 const categories = await listCategories();
@@ -65,7 +66,7 @@ const searchIndex = (product: (typeof products)[number]) => {
 		categories.length > 0 && (
 			<nav class="cats" aria-label="Kategorien">
 				{categories.map((category) => (
-					<a href={`/kategorie/${category.handle}`}>{category.name}</a>
+					<a href={categoryPath(category.handle)}>{category.name}</a>
 				))}
 			</nav>
 		)

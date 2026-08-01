@@ -25,4 +25,4 @@ Materials kann sich beim Transport am Stopfen oder an der Vialwand absetzen —
 das ist normal und kein Qualitätsmangel.
 
 Lyophilisate sind hygroskopisch. Siehe
-[Lagerung lyophilisierter Peptide](/wissen/lagerung-lyophilisierter-peptide).
+[Lagerung lyophilisierter Peptide](/wissen/lagerung-lyophilisierter-peptide/).

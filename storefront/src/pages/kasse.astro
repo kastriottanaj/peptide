@@ -27,7 +27,7 @@ const countries = ORDERS_ENABLED ? await listDeliveryCountries() : [];
 		!ORDERS_ENABLED && (
 			<Fragment>
 				<OrdersClosedNotice />
-				<a class="btn btn--green" href="/produkte">
+				<a class="btn btn--green" href="/produkte/">
 					Sortiment ansehen
 				</a>
 			</Fragment>
@@ -40,7 +40,7 @@ const countries = ORDERS_ENABLED ? await listDeliveryCountries() : [];
 
 	<div data-checkout-empty hidden>
 		<p>Ihr Warenkorb ist leer.</p>
-		<a class="btn btn--green" href="/produkte">Sortiment ansehen</a>
+		<a class="btn btn--green" href="/produkte/">Sortiment ansehen</a>
 	</div>
 
 	<form class="checkout" data-checkout-form hidden novalidate>
@@ -100,9 +100,9 @@ const countries = ORDERS_ENABLED ? await listDeliveryCountries() : [];
 				<label class="confirm">
 					<input type="checkbox" name="terms" required />
 					<span>
-						Ich habe die <a href="/agb" target="_blank">AGB</a>, die
-						<a href="/datenschutz" target="_blank">Datenschutzerklärung</a> und die
-						<a href="/widerruf" target="_blank">Widerrufsbelehrung</a> gelesen und
+						Ich habe die <a href="/agb/" target="_blank">AGB</a>, die
+						<a href="/datenschutz/" target="_blank">Datenschutzerklärung</a> und die
+						<a href="/widerruf/" target="_blank">Widerrufsbelehrung</a> gelesen und
 						akzeptiere sie. *
 					</span>
 				</label>
@@ -128,7 +128,7 @@ const countries = ORDERS_ENABLED ? await listDeliveryCountries() : [];
 			<button class="btn btn--green checkout__submit" type="submit" data-submit disabled>
 				Zahlungspflichtig bestellen
 			</button>
-			<a class="checkout__back" href="/warenkorb">← Zurück zum Warenkorb</a>
+			<a class="checkout__back" href="/warenkorb/">← Zurück zum Warenkorb</a>
 		</aside>
 	</form>
 	</Fragment>
@@ -424,7 +424,7 @@ const countries = ORDERS_ENABLED ? await listDeliveryCountries() : [];
 						/* non-fatal */
 					}
 
-					window.location.href = `/bestellung?id=${encodeURIComponent(order.id)}`;
+					window.location.href = `/bestellung/?id=${encodeURIComponent(order.id)}`;
 				} catch (error) {
 					console.error(error);
 					submitting = false;

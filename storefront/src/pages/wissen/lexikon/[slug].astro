@@ -6,6 +6,7 @@ import {
 	breadcrumbNode,
 	ORGANIZATION_ID,
 } from "../../../lib/site";
+import { lexikonPath } from "../../../lib/links";
 
 export async function getStaticPaths() {
 	const terms = await getCollection("lexikon", ({ data }) => !data.draft);
@@ -63,9 +64,9 @@ const jsonLd = [
 >
 	<article class="term">
 		<nav class="crumbs" aria-label="Brotkrumen">
-			<a href="/wissen">Wissen</a>
+			<a href="/wissen/">Wissen</a>
 			<span aria-hidden="true">/</span>
-			<a href="/wissen/lexikon">Lexikon</a>
+			<a href="/wissen/lexikon/">Lexikon</a>
 		</nav>
 
 		<h1>{data.term}</h1>
@@ -88,7 +89,7 @@ const jsonLd = [
 					<ul>
 						{related.map((entry) => (
 							<li>
-								<a href={`/wissen/lexikon/${entry.id}`}>{entry.data.term}</a>
+								<a href={lexikonPath(entry.id)}>{entry.data.term}</a>
 							</li>
 						))}
 					</ul>
@@ -96,7 +97,7 @@ const jsonLd = [
 			)
 		}
 
-		<a class="back" href="/wissen/lexikon">← Alle Begriffe</a>
+		<a class="back" href="/wissen/lexikon/">← Alle Begriffe</a>
 	</article>
 
 	<style>

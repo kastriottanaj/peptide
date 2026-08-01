@@ -16,4 +16,4 @@ zuordenbare Chargennummer belegt nichts über die tatsächlich gelieferte Substa
 HPLC-Reinheit mit Chromatogramm, Massenspektrum zur Identitätsbestätigung sowie
 Angaben zu Aussehen und Löslichkeit.
 
-Ausführlich: [Reinheit und Analysezertifikat](/wissen/reinheit-und-coa).
+Ausführlich: [Reinheit und Analysezertifikat](/wissen/reinheit-und-coa/).

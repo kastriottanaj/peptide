@@ -8,6 +8,7 @@ import {
 	ORGANIZATION_ID,
 } from "../../../lib/site";
 import { foldSearchText } from "../../../lib/search";
+import { lexikonPath } from "../../../lib/links";
 
 const terms = (await getCollection("lexikon", ({ data }) => !data.draft)).sort(
 	(a, b) => a.data.term.localeCompare(b.data.term, "de"),
@@ -94,7 +95,7 @@ const jsonLd = [
 					{groups[letter].map((entry) => (
 						<div class="entry" data-search-item data-search={searchIndex(entry)}>
 							<dt>
-								<a href={`/wissen/lexikon/${entry.id}`}>{entry.data.term}</a>
+								<a href={lexikonPath(entry.id)}>{entry.data.term}</a>
 								{entry.data.aliases.length > 0 && (
 									<span class="aliases">{entry.data.aliases.join(", ")}</span>
 								)}

@@ -18,4 +18,4 @@ strukturbestimmend: Sie schränkt die möglichen räumlichen Anordnungen der Ket
 ein und ist damit die Grundlage von Sekundärstrukturen wie α-Helix und
 β-Faltblatt.
 
-Siehe auch [Was sind Peptide?](/wissen/was-sind-peptide).
+Siehe auch [Was sind Peptide?](/wissen/was-sind-peptide/).

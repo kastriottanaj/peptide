@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductCard from "../components/ProductCard.astro";
 import { ORGANIZATION_ID, SITE_NAME, SITE_URL } from "../lib/site";
+import { categoryPath, productPath } from "../lib/links";
 import {
 	listCategories,
 	listProductsInSourceOrder,
@@ -156,8 +157,8 @@ const homeJsonLd = [
 					Klare Produktdaten, Packgrößen und Zertifikatsstatus auf einen Blick.
 				</p>
 				<div class="hero__actions">
-					<a href="/produkte" class="btn btn--green">Peptide ansehen</a>
-					<a href="/about" class="btn btn--ghost">Mehr erfahren</a>
+					<a href="/produkte/" class="btn btn--green">Peptide ansehen</a>
+					<a href="/about/" class="btn btn--ghost">Mehr erfahren</a>
 				</div>
 				<ul class="hero__trust">
 					<li>Diskreter Versand</li>
@@ -169,7 +170,7 @@ const homeJsonLd = [
 
 			{
 				spotlight && (
-					<a class="spotlight" href={`/produkte/${spotlight.handle}`}>
+					<a class="spotlight" href={productPath(spotlight.handle)}>
 						<div class="spotlight__head">
 							<span>Produktdaten</span>
 							<span class="spotlight__code">
@@ -229,7 +230,7 @@ const homeJsonLd = [
 		<span class="eyebrow">Alle Produkte</span>
 		<div class="section__head">
 			<h2>Forschungspeptide direkt vergleichen</h2>
-			<a href="/produkte" class="section__link">Alle Produkte ansehen →</a>
+			<a href="/produkte/" class="section__link">Alle Produkte ansehen →</a>
 		</div>
 		<p class="section__lead">
 			Packgrößen, Preis und Zertifikatsstatus auf einen Blick. Öffne ein Produkt,
@@ -264,7 +265,7 @@ const homeJsonLd = [
 		<div class="cat-grid">
 			{
 				categories.map((c) => (
-					<a href={`/kategorie/${c.handle}`} class="cat">
+					<a href={categoryPath(c.handle)} class="cat">
 						<span class="cat__label">{c.label}</span>
 						<h3>{c.title}</h3>
 						<p>{c.body}</p>
@@ -301,7 +302,7 @@ const homeJsonLd = [
 					<li>Klare Produktdaten und diskreter Versand.</li>
 				</ul>
 			</div>
-			<a href="/produkte" class="btn btn--green">Zum Shop →</a>
+			<a href="/produkte/" class="btn btn--green">Zum Shop →</a>
 		</div>
 	</section>
 
