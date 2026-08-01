@@ -27,8 +27,15 @@ const SUMMARY =
 	"laborinterne Forschungszwecke bestimmt — nicht für die Anwendung am Menschen " +
 	"oder am Tier.";
 
+/**
+ * The currency is stated because `formatEur` establishes it. The tax treatment
+ * is not, and is not replaced by a different claim either: the
+ * Kleinunternehmer question is open (docs/go-live-checklist.md §3), so AGB § 4
+ * still carries a placeholder. A file that tells language models prices are
+ * gross would be the one asserting an answer nobody has made.
+ */
 const NOTES = [
-	"Alle Preise in EUR inkl. deutscher Umsatzsteuer; Preise und Verfügbarkeit stehen auf der jeweiligen Produktseite.",
+	"Alle Preise in EUR. Preise und Verfügbarkeit stehen auf der jeweiligen Produktseite.",
 	"Die Inhalte im Bereich Wissen und Lexikon sind rein wissenschaftlicher Hintergrund. Sie enthalten keine Dosierungs- oder Anwendungshinweise und keine gesundheitsbezogenen Aussagen.",
 ];
 

@@ -42,16 +42,26 @@ without touching a page:
 
 | Variable | Value |
 |---|---|
-| `PUBLIC_CONTACT_EMAIL` | `info@peptideeinkaufen.de` — supplied 2026-08-01, **not yet configured anywhere** |
+| `PUBLIC_CONTACT_EMAIL` | `info@peptideeinkaufen.de` — **PENDING VERIFICATION** (see below) |
 | `PUBLIC_CONTACT_PHONE` (only if publicly offered) | |
 | `PUBLIC_CONTACT_HOURS` (optional, needs a phone) | |
 
-The email address above is known but is **not** set in any `.env`, so every
-build still renders the "no contact channel" state. Before deployment: confirm
-the mailbox actually receives mail, add
-`PUBLIC_CONTACT_EMAIL=info@peptideeinkaufen.de` to `/srv/peptides/.env`, and
-redeploy — it is baked into the static build, so a restart is not enough. Add
-the same line to `storefront/.env` for local work.
+> **`info@peptideeinkaufen.de` is the intended address, not a verified one.**
+> Confirmed with the owner on 2026-08-01 that the mailbox has **not** been
+> tested. It is therefore set nowhere — not in `/srv/peptides/.env`, not in
+> `storefront/.env`, not in any tracked file — and every build still renders the
+> "no contact channel" state.
+>
+> - [ ] Send a test message to the mailbox from an unrelated account and confirm
+>       it arrives and can be replied to.
+> - [ ] Only then configure it, following
+>       ["Publishing the contact email"](deploy.md) in the deploy runbook: back
+>       up `/srv/peptides/.env`, set the key exactly once, **rebuild and
+>       deploy** — the static storefront bakes the value in at build time, so
+>       restarting Medusa changes nothing.
+>
+> Publishing an address that bounces is worse than publishing none: § 5 DDG
+> wants a channel that works, and the customer only finds out after writing.
 
 Until one of them is set, `/contact/` states plainly that the channels are being
 set up rather than printing a placeholder — it is a public, indexable page. Set

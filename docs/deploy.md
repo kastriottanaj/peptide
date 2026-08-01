@@ -357,6 +357,54 @@ The storefront is static and fetches the catalog **at build time**. Editing a
 product in the admin changes the API immediately but does **not** change the
 built pages. After a catalog change, re-run `deploy.sh` with the current SHA.
 
+### Publishing the contact email
+
+`/contact/`, the Datenschutz controller block and the `Organization` JSON-LD all
+read one variable, `PUBLIC_CONTACT_EMAIL`. While it is unset the pages state that
+no contact channel is published — which is correct, and better than an address
+nobody reads. Publishing one is therefore a deploy step, not a code change.
+
+**The intended address is `info@peptideeinkaufen.de`. As of 2026-08-01 it is
+NOT confirmed to receive mail, so it is not configured anywhere.**
+
+1. **Verify the mailbox first.** Send a message to it from an unrelated account
+   and confirm it arrives and can be replied to. An address on an indexable page
+   that bounces is worse than no address: § 5 DDG requires a channel that works,
+   and a customer only discovers the failure after writing. Do not skip this
+   because the domain resolves — MX records and a working mailbox are different
+   things.
+2. **Back up the environment file** before editing it. It also holds the database
+   password and the Medusa signing secrets, so a slip costs more than this
+   variable:
+   ```bash
+   cp -a /srv/peptides/.env /srv/peptides/.env.bak-$(date +%F-%H%M)
+   ```
+3. **Set it exactly once.** Append the line, then confirm there is exactly one:
+   ```bash
+   nano /srv/peptides/.env          # PUBLIC_CONTACT_EMAIL=info@peptideeinkaufen.de
+   grep -c '^PUBLIC_CONTACT_EMAIL=' /srv/peptides/.env   # must print 1
+   ```
+   A duplicate key is not an error — the last one silently wins, which is how a
+   corrected address gets overridden by the typo above it.
+4. **Rebuild and deploy.** The storefront is static and bakes the value in at
+   build time, so the variable does nothing until a build reads it:
+   ```bash
+   bash /srv/peptides/repo/deploy/deploy.sh <sha>
+   ```
+   **`systemctl restart medusa` is not sufficient** — it restarts the API, which
+   never reads this variable. Nothing on the storefront changes until the build
+   runs.
+5. **Verify on the live site**, not in the shell: `/contact/` must show the
+   address as a `mailto:` link, and `/datenschutz/` must show it in section 1.
+
+`src/lib/contact.ts` rejects anything empty, bracketed or carrying a placeholder
+marker, so a half-filled value renders no channel rather than a broken
+`mailto:`. Note that reserved example domains are rejected too — a test address
+like `kontakt@example.com` will silently render nothing.
+
+Never commit the value: it belongs in `/srv/peptides/.env` and, for local work,
+in the git-ignored `storefront/.env`.
+
 ## Rollback
 
 ```bash

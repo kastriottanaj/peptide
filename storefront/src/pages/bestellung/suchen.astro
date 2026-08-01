@@ -41,12 +41,14 @@ const placeholderBank = bankDetailsArePlaceholder();
 			<p class="status" data-r-date></p>
 
 			<div class="pay">
+				{/* Same correction as on the confirmation page: the placeholder check
+				    proves the bank details are placeholders, not that an account is
+				    being set up. */}
 				{
 					placeholderBank && (
 						<p class="pay__warning">
-							<strong>Hinweis:</strong> Das Geschäftskonto wird derzeit
-							eingerichtet. Die unten gezeigten Bankdaten sind Platzhalter —
-							bitte noch nicht überweisen.
+							<strong>Hinweis:</strong> Die unten gezeigten Bankdaten sind
+							Platzhalter — bitte noch nicht überweisen.
 						</p>
 					)
 				}

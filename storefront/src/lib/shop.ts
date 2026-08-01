@@ -22,14 +22,26 @@ export const ORDERS_ENABLED =
 /**
  * The copy, here rather than in each component: it appears on the product page,
  * in the cart and on the checkout page, and three near-identical wordings would
- * drift. Says what is true — the shop is being set up — and does not promise a
- * date we do not have.
+ * drift.
+ *
+ * It states only what `ORDERS_ENABLED` establishes — that ordering is
+ * unavailable — and nothing about why. The earlier wording ("Der Shop wird
+ * gerade eingerichtet") read a business status out of a boolean that carries
+ * none: the flag says whether orders are accepted, not what stage the operating
+ * company is at. The trust pages were corrected the same way; these three
+ * strings are the shop-side surfaces of that correction.
  */
 export const ORDERS_CLOSED_HEADING = "Bestellungen derzeit nicht möglich";
 
 export const ORDERS_CLOSED_TEXT =
-	"Der Shop wird gerade eingerichtet. Sortiment, Packgrößen und Preise können " +
-	"Sie einsehen, Bestellungen sind vorübergehend nicht möglich.";
+	"Der Bestellvorgang ist derzeit nicht verfügbar. Sortiment, Packgrößen und " +
+	"Preise können weiterhin eingesehen werden.";
 
+/**
+ * Rendered immediately before a link whose text is "Kontakt", so it reads as one
+ * sentence. It promises no response and names no channel: there is no contact
+ * form (this line used to claim one) and no address is published until
+ * `PUBLIC_CONTACT_EMAIL` is configured — see `lib/contact.ts`.
+ */
 export const ORDERS_CLOSED_CONTACT =
-	"Bei Fragen zu Produkten oder Verfügbarkeit erreichen Sie uns über das Kontaktformular.";
+	"Die derzeit verfügbaren Kontaktwege stehen auf der Seite";

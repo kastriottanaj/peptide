@@ -238,29 +238,34 @@ These can be done at any time:
 - [ ] Monitoring / uptime alerting. Nothing currently reports that the box is
       down.
 
-## 8. Unsupported public claims — block deployment, not the commit
+## 8. Unsupported public claims — removed 2026-08-01
 
-Found while rewriting the trust pages on 2026-08-01. Each is a statement on a
-**public, indexable** page that nothing in this repository supports. None was
-changed in that commit: two of them live outside the trust pages, and all three
-are decisions rather than edits.
+Three statements on public pages asserted facts nothing in this repository
+supports. All three are **removed**; what remains is the underlying decision,
+which is tracked in the sections above.
 
-- [ ] **`llms.txt` asserts VAT treatment.** `src/pages/llms.txt.ts` tells models
-      "Alle Preise in EUR inkl. deutscher Umsatzsteuer", while AGB § 4 still
-      carries a `[Platzhalter]` because the Kleinunternehmer question in §3 above
-      is open. One of the two is wrong. Settle §3, then make them agree.
-- [ ] **The homepage promises a delivery time.** `src/pages/index.astro` states
-      "Zustellung in 1–3 Werktagen nach Zahlungseingang". No shipping provider is
-      contracted (§2) and AGB § 6 leaves the delivery time as `[Anzahl]`. Either
-      confirm the figure with the carrier or drop it from the homepage.
-- [ ] **`ORDERS_CLOSED_TEXT` states a business status.** `src/lib/shop.ts` says
-      "Der Shop wird gerade eingerichtet", rendered on the product, cart and
-      checkout pages. `ORDERS_ENABLED` establishes only whether orders are
-      accepted — not what state the business is in. The trust pages were
-      corrected to say only that ordering is unavailable; this string should
-      follow, but it changes copy on the shop pages and so was left alone.
+- [x] ~~**`llms.txt` asserted VAT treatment.**~~ Removed 2026-08-01. It told
+      language models "Alle Preise in EUR inkl. deutscher Umsatzsteuer" while
+      AGB § 4 carried a `[Platzhalter]`. It now states the currency only —
+      **not** replaced with a net or gross claim, because §3 is still open. The
+      AGB placeholder stays until §3 is decided, and then both change together.
+- [x] ~~**The homepage promised a delivery time.**~~ Removed 2026-08-01. It
+      stated "Zustellung in 1–3 Werktagen nach Zahlungseingang" with no carrier
+      contracted (§2) and no dispatch SLA. Replaced with "Informationen zu
+      Versand und Lieferzeit werden vor Aktivierung des Bestellvorgangs
+      veröffentlicht." No new number was invented; AGB § 6 keeps `[Anzahl]`.
+- [x] ~~**`ORDERS_CLOSED_TEXT` stated a business status.**~~ Removed
+      2026-08-01. "Der Shop wird gerade eingerichtet" read a business status out
+      of a boolean that carries none. The shared copy now says only that
+      ordering is unavailable. `ORDERS_CLOSED_CONTACT` was corrected in the same
+      pass: it pointed customers at a "Kontaktformular" that does not exist.
 
-Also open, from the same pass: `datenschutz.astro` names Hetzner Online GmbH as
+`src/lib/operational-claims.test.ts` scans every source file and every built
+page and text route for these claims and their paraphrases, so none can return
+while the questions above are open. **Answering §3 or contracting a carrier
+means updating that test's allow-list deliberately — not deleting it.**
+
+Still open from the same pass: `datenschutz.astro` names Hetzner Online GmbH as
 the hosting processor but keeps a `[Platzhalter]` for the full address, because
 the address recorded in [launch-data-needed.md](launch-data-needed.md) names a
 town that looks wrong. Confirm it against Hetzner's own Impressum and conclude

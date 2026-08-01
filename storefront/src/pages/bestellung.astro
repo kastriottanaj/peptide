@@ -33,12 +33,16 @@ const placeholderBank = bankDetailsArePlaceholder();
 			<section class="pay">
 				<h2>Jetzt überweisen</h2>
 
+				{/* States what `bankDetailsArePlaceholder()` establishes and nothing
+				    more. It used to add that the account "wird derzeit eröffnet" — a
+				    business status the check does not prove — and to promise the final
+				    details by email, which no system can send: there is no mail
+				    transport at all (docs/go-live-checklist.md §6). */}
 				{
 					placeholderBank && (
 						<p class="pay__warning">
-							<strong>Hinweis:</strong> Das Geschäftskonto wird derzeit eröffnet.
-							Die unten gezeigten Bankdaten sind Platzhalter — bitte noch nicht
-							überweisen. Wir melden uns mit den finalen Daten per E-Mail.
+							<strong>Hinweis:</strong> Die unten gezeigten Bankdaten sind
+							Platzhalter — bitte noch nicht überweisen.
 						</p>
 					)
 				}
