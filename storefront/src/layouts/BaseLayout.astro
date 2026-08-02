@@ -174,7 +174,13 @@ const {
 
 		<script>
 			// Keep the header cart badge in sync across pages and after any mutation.
-			import { refresh, cartItemCount, CART_UPDATED_EVENT } from "../lib/cart";
+			//
+			// Imports `cart-state` rather than `cart`: this runs on all 37 pages, and
+			// `cart.ts` reaches the 141 kB Medusa SDK, which would then be downloaded
+			// and evaluated by every visitor on every page. Everything the badge needs
+			// to *render* is here; the SDK is only needed to *read* a cart from the
+			// server, so it is fetched on demand below.
+			import { cartItemCount, readCartId, CART_UPDATED_EVENT } from "../lib/cart-state";
 
 			const badge = document.querySelector<HTMLElement>("[data-cart-count]");
 
@@ -189,9 +195,17 @@ const {
 				paint((event as CustomEvent).detail);
 			});
 
-			refresh().catch(() => {
-				/* No cart yet, or Medusa unreachable — leave the badge hidden. */
-			});
+			// No stored cart id means `refresh()` would resolve to null without ever
+			// reaching the network, and the badge would be painted to the hidden state
+			// it already ships in — so the load is pure cost. Visitors who do have a
+			// cart get the same badge, one dynamic import later.
+			if (readCartId()) {
+				import("../lib/cart")
+					.then(({ refresh }) => refresh())
+					.catch(() => {
+						/* Cart gone, or Medusa unreachable — leave the badge hidden. */
+					});
+			}
 		</script>
 
 		<script>

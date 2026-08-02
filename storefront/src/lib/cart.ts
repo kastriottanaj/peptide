@@ -8,9 +8,23 @@
  */
 import type { HttpTypes } from "@medusajs/types";
 import { medusa, getDefaultRegionId } from "./medusa";
+import {
+	announce,
+	cartItemCount,
+	clearCartId,
+	readCartId,
+	writeCartId,
+	CART_UPDATED_EVENT,
+	type Cart,
+} from "./cart-state";
 
-const CART_ID_KEY = "peptide_cart_id";
-export const CART_UPDATED_EVENT = "cart:updated";
+/**
+ * Re-exported so importing `cart.ts` still yields the whole cart API. Anything
+ * that needs only these — the header badge does — should import `cart-state.ts`
+ * directly and skip the Medusa SDK this module pulls in.
+ */
+export { cartItemCount, CART_UPDATED_EVENT };
+export type { Cart };
 
 /**
  * Medusa does not return per-line totals unless they are asked for — a cart read
@@ -18,41 +32,6 @@ export const CART_UPDATED_EVENT = "cart:updated";
  * Cart-level totals come back regardless.
  */
 const CART_FIELDS = "*items,+items.total,+items.subtotal";
-
-export type Cart = HttpTypes.StoreCart;
-
-function readCartId(): string | null {
-	try {
-		return window.localStorage.getItem(CART_ID_KEY);
-	} catch {
-		return null; // private mode / storage disabled
-	}
-}
-
-function writeCartId(id: string): void {
-	try {
-		window.localStorage.setItem(CART_ID_KEY, id);
-	} catch {
-		// Non-fatal: the cart simply will not survive a reload.
-	}
-}
-
-function clearCartId(): void {
-	try {
-		window.localStorage.removeItem(CART_ID_KEY);
-	} catch {
-		// ignore
-	}
-}
-
-function announce(cart: Cart | null): void {
-	window.dispatchEvent(new CustomEvent(CART_UPDATED_EVENT, { detail: cart }));
-}
-
-/** Total number of units in the cart (not the number of distinct lines). */
-export function cartItemCount(cart: Cart | null): number {
-	return (cart?.items ?? []).reduce((sum, item) => sum + (item.quantity ?? 0), 0);
-}
 
 /**
  * Whether a failed cart read means the cart is really gone.

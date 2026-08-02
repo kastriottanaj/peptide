@@ -184,12 +184,6 @@ const { label, placeholder, nounSingular, nounPlural } = Astro.props;
 		font-size: 0.85rem;
 		color: var(--c-muted);
 	}
-	.visually-hidden {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		overflow: hidden;
-		clip: rect(0 0 0 0);
-		white-space: nowrap;
-	}
+	/* `.visually-hidden` comes from BaseLayout's global block, which is on every
+	   page this component can appear on — a scoped copy only duplicated it. */
 </style>

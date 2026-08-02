@@ -8,6 +8,7 @@ import {
 	listProductsInSourceOrder,
 } from "../../lib/catalog";
 import { absoluteUrl, breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
+import { productImageAlt } from "../../lib/product-image-alt";
 
 export async function getStaticPaths() {
 	const products = await listProductsInSourceOrder({ limit: 1000 });
@@ -105,7 +106,7 @@ const jsonLd = [
 	description={metaDescription}
 	ogType="product"
 	image={product.thumbnail
-		? { url: absoluteUrl(product.thumbnail), alt: product.title }
+		? { url: absoluteUrl(product.thumbnail), alt: productImageAlt(product, "social") }
 		: undefined}
 	jsonLd={jsonLd}
 >
@@ -117,7 +118,25 @@ const jsonLd = [
 			{purity && <span class="badge badge--purity">{purity}</span>}
 			{
 				product.thumbnail ? (
-					<img src={product.thumbnail} alt={product.title} width="440" height="440" />
+					/*
+					 * The LCP element of this page whenever a thumbnail exists: it is
+					 * the largest thing above the fold on both viewports (460×460 at
+					 * 1366×900, 327×327 starting 230 px down at 390×844) and there is
+					 * exactly one of it, so fetchpriority="high" is the justified case
+					 * rather than a blanket setting. Never lazy.
+					 *
+					 * `.detail__media` is `aspect-ratio: 1 / 1`, so the frame is laid
+					 * out before the image loads and nothing shifts.
+					 */
+					<img
+						src={product.thumbnail}
+						alt={productImageAlt(product, "detail")}
+						loading="eager"
+						fetchpriority="high"
+						decoding="async"
+						width="440"
+						height="440"
+					/>
 				) : (
 					<svg viewBox="0 0 80 100" aria-hidden="true">
 						<rect x="30" y="6" width="20" height="10" rx="2" fill="#c9d3df" />
@@ -243,27 +262,11 @@ const jsonLd = [
 			font-size: 1rem;
 			margin: 0 0 0.6rem;
 		}
-		.variants {
-			list-style: none;
-			margin: 0 0 1.5rem;
-			padding: 0;
-		}
-		.variants li {
-			display: flex;
-			justify-content: space-between;
-			padding: 0.7rem 0.9rem;
-			border: 1px solid var(--c-border);
-			border-radius: var(--radius-sm);
-			margin-bottom: 0.5rem;
-		}
-		.variants__price {
-			font-weight: 700;
-			color: var(--c-navy);
-		}
-		.btn[disabled] {
-			opacity: 0.55;
-			cursor: not-allowed;
-		}
+		/* The `.variants` list and `.btn[disabled]` that used to sit here styled
+		   markup this page no longer renders — the pack sizes moved into
+		   `AddToCart.astro`, which brings its own scoped styles. Astro scopes
+		   these rules to this component, so they could never have matched the
+		   markup in that one. */
 		.disclaimer {
 			margin: 1.25rem 0 0;
 			font-size: 0.78rem;

@@ -9,6 +9,7 @@ import {
 } from "../../lib/catalog";
 import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 import { categoryPath } from "../../lib/links";
+import { isAboveTheFoldCard } from "../../lib/product-grid";
 
 export async function getStaticPaths() {
 	const categories = await listCategories();
@@ -88,8 +89,8 @@ const jsonLd = [
 			<p>In dieser Kategorie sind aktuell keine Produkte verfügbar.</p>
 		) : (
 			<div class="grid">
-				{products.map((product) => (
-					<ProductCard product={product} />
+				{products.map((product, index) => (
+					<ProductCard product={product} aboveTheFold={isAboveTheFoldCard(index)} />
 				))}
 			</div>
 		)

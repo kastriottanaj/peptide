@@ -133,13 +133,29 @@ const anyAvailable = firstAvailableIndex !== -1;
 
 
 <script>
-	import { addLine } from "../lib/cart";
 	import { el } from "../lib/dom";
+
+	/**
+	 * `lib/cart.ts` pulls in the 141 kB Medusa SDK. Nothing on a product page
+	 * needs it to render, and a visitor who only reads the page never needs it at
+	 * all, so it is fetched on demand instead of at page load.
+	 *
+	 * The fetch is started as soon as the visitor shows intent — hovering,
+	 * touching or tabbing into the widget — so by the time the button is pressed
+	 * the module is normally already there. `warm()` is idempotent: the promise
+	 * is cached, and the click awaits the same one.
+	 */
+	let cartModule: Promise<typeof import("../lib/cart")> | null = null;
+	const warm = () => (cartModule ??= import("../lib/cart"));
 
 	document.querySelectorAll<HTMLElement>("[data-add-to-cart]").forEach((root) => {
 		const qtyInput = root.querySelector<HTMLInputElement>('input[name="quantity"]');
 		const submit = root.querySelector<HTMLButtonElement>("[data-add]");
 		const status = root.querySelector<HTMLElement>("[data-status]");
+
+		for (const event of ["pointerenter", "pointerdown", "focusin"] as const) {
+			root.addEventListener(event, warm, { once: true, passive: true });
+		}
 
 		const clampQty = (value: number) => Math.min(99, Math.max(1, value || 1));
 
@@ -174,6 +190,7 @@ const anyAvailable = firstAvailableIndex !== -1;
 			if (status) status.textContent = "";
 
 			try {
+				const { addLine } = await warm();
 				await addLine(variantId, clampQty(Number(qtyInput?.value ?? 1)));
 				submit.textContent = "Zum Warenkorb hinzugefügt ✓";
 				if (status) {

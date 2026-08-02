@@ -2,12 +2,27 @@
 import type { HttpTypes } from "@medusajs/types";
 import { isProductAvailable, isVariantAvailable } from "../lib/catalog";
 import { productPath } from "../lib/links";
+import { productImageAlt } from "../lib/product-image-alt";
 
 interface Props {
 	product: HttpTypes.StoreProduct;
+	/**
+	 * Whether this card is inside the first viewport when the page loads.
+	 *
+	 * The card cannot work this out for itself — the same component sits below a
+	 * full-height hero on the homepage and directly under the `<h1>` on the
+	 * listing and category pages — and DOM order is not the answer either, since
+	 * the grid is responsive. So the page that lays the cards out declares it,
+	 * and the default is the safe one: lazy.
+	 *
+	 * Measured at 1366×900 and 390×844: on `/produkte/` and `/kategorie/*` the
+	 * first grid row starts ~80 px down, well inside the fold; on `/` the row
+	 * starts at ~937 px (desktop) and ~1846 px (mobile), below it on both.
+	 */
+	aboveTheFold?: boolean;
 }
 
-const { product } = Astro.props;
+const { product, aboveTheFold = false } = Astro.props;
 
 // Peptide-specific attributes live in product.metadata. They are optional:
 // the card degrades gracefully when a value is missing so it works for any
@@ -52,10 +67,17 @@ const available = isProductAvailable(product);
 			{purity && <span class="pcard__purity">{purity}</span>}
 			{
 				product.thumbnail ? (
+					/*
+					 * `.pcard__media` is `aspect-ratio: 1 / 1`, so the box is reserved
+					 * before the image arrives and lazy loading costs no layout shift.
+					 * width/height stay as the intrinsic ratio for anything that reads
+					 * the attributes rather than the stylesheet.
+					 */
 					<img
 						src={product.thumbnail}
-						alt={product.title}
-						loading="lazy"
+						alt={productImageAlt(product, "card")}
+						loading={aboveTheFold ? "eager" : "lazy"}
+						decoding="async"
 						width="220"
 						height="220"
 					/>

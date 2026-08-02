@@ -4,6 +4,7 @@ import ProductCard from "../../components/ProductCard.astro";
 import { listProducts, listCategories } from "../../lib/catalog";
 import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 import { categoryPath } from "../../lib/links";
+import { isAboveTheFoldCard } from "../../lib/product-grid";
 
 const products = await listProducts();
 const categories = await listCategories();
@@ -95,9 +96,9 @@ const searchIndex = (product: (typeof products)[number]) => {
 			<p>Aktuell sind keine Produkte verfügbar.</p>
 		) : (
 			<div class="grid" data-product-grid>
-				{products.map((product) => (
+				{products.map((product, index) => (
 					<div data-product data-search={searchIndex(product)}>
-						<ProductCard product={product} />
+						<ProductCard product={product} aboveTheFold={isAboveTheFoldCard(index)} />
 					</div>
 				))}
 			</div>
@@ -256,18 +257,13 @@ const searchIndex = (product: (typeof products)[number]) => {
 			text-decoration: underline;
 			font-size: inherit;
 		}
+		/* `.visually-hidden` is not redeclared here: BaseLayout defines it in its
+		   global block, which every page loads, so a scoped copy only duplicated
+		   the same five properties into this page's bundle. */
 		.grid {
 			display: grid;
 			grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 			gap: 1.4rem;
-		}
-		.visually-hidden {
-			position: absolute;
-			width: 1px;
-			height: 1px;
-			overflow: hidden;
-			clip: rect(0 0 0 0);
-			white-space: nowrap;
 		}
 	</style>
 </BaseLayout>

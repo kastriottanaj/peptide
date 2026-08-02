@@ -138,13 +138,7 @@ const categories = await listCategories();
 			color: var(--c-green-dark);
 			font-weight: 600;
 		}
-		.visually-hidden {
-			position: absolute;
-			width: 1px;
-			height: 1px;
-			overflow: hidden;
-			clip: rect(0 0 0 0);
-			white-space: nowrap;
-		}
+		/* `.visually-hidden` is BaseLayout's, from its global block — this page
+		   renders inside that layout, so a scoped copy only duplicated it. */
 	</style>
 </BaseLayout>

@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductCard from "../components/ProductCard.astro";
 import { ORGANIZATION_ID, SITE_NAME, SITE_URL } from "../lib/site";
 import { categoryPath, productPath } from "../lib/links";
+import { productImageAlt } from "../lib/product-image-alt";
 import {
 	listCategories,
 	listProductsInSourceOrder,
@@ -212,7 +213,27 @@ const homeJsonLd = [
 							</div>
 							<div class="spotlight__media">
 								{spotlight.thumbnail ? (
-									<img src={spotlight.thumbnail} alt={spotlight.title} width="200" height="200" />
+									/*
+									 * Inside the hero and above the fold on desktop (measured
+									 * ~287 px down at 1366×900), below it on a phone (~1060 px
+									 * at 390×844). Static HTML cannot vary the attribute by
+									 * viewport, and eager is the side that cannot go wrong:
+									 * lazy would risk a blank panel in the desktop hero, while
+									 * eager only costs a phone an image it scrolls to shortly.
+									 *
+									 * No fetchpriority: the LCP element on this page is the
+									 * hero <h1> (measured, 85 324 px² against this ~200 px
+									 * panel), so promoting the image would take bandwidth from
+									 * the text that actually decides LCP.
+									 */
+									<img
+										src={spotlight.thumbnail}
+										alt={productImageAlt(spotlight, "card")}
+										loading="eager"
+										decoding="async"
+										width="200"
+										height="200"
+									/>
 								) : (
 									<svg viewBox="0 0 80 100" aria-hidden="true">
 										<rect x="30" y="6" width="20" height="10" rx="2" fill="#c9d3df" />

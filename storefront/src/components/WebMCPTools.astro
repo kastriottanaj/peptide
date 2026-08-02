@@ -9,8 +9,10 @@
  * has to go through `lib/cart.ts`, which owns the cart id storage key and the
  * `cart:updated` event the header badge listens for. An inline script cannot
  * import it, and reimplementing it here would leave two cart implementations
- * free to drift. BaseLayout already bundles `lib/cart.ts` on every page for the
- * badge, so reusing it costs no extra bytes.
+ * free to drift. `lib/cart.ts` is imported dynamically, inside the tool's
+ * `execute`, so the 141 kB Medusa SDK behind it is fetched when an agent
+ * actually adds something rather than on every page load — this component
+ * renders site-wide, and the two read-only tools above need no cart at all.
  *
  * Tool names and descriptions come from `lib/webmcp-tools.ts`, which llms.txt
  * reads too, so what we advertise is always what we register.
@@ -18,7 +20,6 @@
 ---
 
 <script>
-	import { addLine, cartItemCount } from "../lib/cart";
 	import { searchTerms } from "../lib/search";
 	import { ORDERS_ENABLED } from "../lib/shop";
 	import { WEBMCP_TOOLS } from "../lib/webmcp-tools";
@@ -160,6 +161,7 @@
 				const quantity = Math.min(Math.max(Number(input.quantity) || 1, 1), 20);
 
 				try {
+					const { addLine, cartItemCount } = await import("../lib/cart");
 					const cart = await addLine(variantId, quantity);
 					const lines = (cart.items ?? [])
 						.map((item) => `- ${item.title} x${item.quantity}`)
