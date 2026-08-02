@@ -9,6 +9,7 @@ import {
 } from "../../lib/catalog";
 import { absoluteUrl, breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 import { productImageAlt } from "../../lib/product-image-alt";
+import { productSeo } from "../../lib/catalog-seo";
 
 export async function getStaticPaths() {
 	const products = await listProductsInSourceOrder({ limit: 1000 });
@@ -99,11 +100,20 @@ const jsonLd = [
 		[product.title, `/produkte/${product.handle}`],
 	]),
 ];
+
+// Search-result copy for this handle, if one is curated. Resolved after the
+// JSON-LD above on purpose: the graph describes the catalogue record, so it
+// keeps using `product.title` and Medusa's own description either way.
+const seo = productSeo(product.handle, {
+	title: product.title,
+	description: metaDescription,
+});
 ---
 
 <BaseLayout
-	title={product.title}
-	description={metaDescription}
+	title={seo.title}
+	description={seo.description}
+	rawTitle={seo.rawTitle}
 	ogType="product"
 	image={product.thumbnail
 		? { url: absoluteUrl(product.thumbnail), alt: productImageAlt(product, "social") }

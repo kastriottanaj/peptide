@@ -1,7 +1,8 @@
 ---
 term: "Lyophilisat"
 aliases: ["Gefriertrocknung", "Lyophilisation"]
-metaDescription: "Lyophilisat: durch Gefriertrocknung gewonnener Feststoff. Warum Forschungspeptide in dieser Form geliefert werden."
+metaTitle: "Lyophilisat erklärt: Gefriertrocknung bei Peptiden"
+metaDescription: "Ein Lyophilisat entsteht durch Gefriertrocknung und erhöht Stabilität sowie Haltbarkeit von Peptiden. Jetzt den Begriff verständlich erklärt!"
 summary: "Durch Gefriertrocknung gewonnener, wasserfreier Feststoff."
 researchArea: "Laborpraxis"
 dateModified: 2026-07-27

@@ -1,7 +1,7 @@
 ---
 title: "Reinheit und Analysezertifikat (COA)"
-metaTitle: "Reinheit und COA — Analysezertifikate für Forschungspeptide lesen"
-metaDescription: "Was ein Analysezertifikat (COA) aussagt, wie HPLC- und MS-Werte zu lesen sind und warum eine Reinheitsangabe ohne Zertifikat wenig wert ist."
+metaTitle: "Reinheit und COA bei Forschungspeptiden richtig lesen"
+metaDescription: "Erfahren Sie, wie Reinheit, HPLC, Massenspektrometrie und COA bei Forschungspeptiden bewertet werden. Jetzt Prüfkriterien entdecken!"
 excerpt: "Was auf einem Analysezertifikat steht, wie HPLC- und Massenspektrometrie-Werte zu lesen sind und woran sich belastbare Angaben erkennen lassen."
 category: qualitaet
 datePublished: 2026-07-27

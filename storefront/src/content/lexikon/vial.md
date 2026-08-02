@@ -1,7 +1,8 @@
 ---
 term: "Vial"
 aliases: ["Fläschchen", "Injektionsfläschchen"]
-metaDescription: "Vial: Glasgefäß mit Stopfen und Bördelkappe zur Aufbewahrung lyophilisierter Substanzen im Labor."
+metaTitle: "Vial erklärt: Aufbau, Verschluss und Verwendung"
+metaDescription: "Was ist ein Vial? Erfahren Sie, wie Glasfläschchen Lyophilisate trocken und lichtgeschützt aufbewahren. Jetzt verständlich erklärt!"
 summary: "Kleines Glasgefäß mit Gummistopfen und Bördelkappe."
 researchArea: "Laborpraxis"
 dateModified: 2026-07-27

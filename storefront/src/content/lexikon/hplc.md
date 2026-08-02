@@ -1,7 +1,8 @@
 ---
 term: "HPLC"
 aliases: ["Hochleistungsflüssigkeitschromatographie", "High Performance Liquid Chromatography"]
-metaDescription: "HPLC: Hochleistungsflüssigkeitschromatographie. Wie der Reinheitswert in Flächenprozent zustande kommt und was er nicht erfasst."
+metaTitle: "HPLC erklärt: Reinheit und Chromatogramme verstehen"
+metaDescription: "Erfahren Sie, wie HPLC Proben trennt, chromatographische Reinheit bestimmt und Chromatogramme interpretiert werden. Jetzt Begriff verstehen!"
 summary: "Trennverfahren zur Bestimmung der chromatographischen Reinheit."
 researchArea: "Qualität & Analytik"
 dateModified: 2026-07-27

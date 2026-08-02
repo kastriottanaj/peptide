@@ -1,7 +1,7 @@
 ---
 title: "Was sind Peptide?"
 metaTitle: "Was sind Peptide? Aufbau, Definition und Abgrenzung"
-metaDescription: "Peptide sind kurze Ketten aus Aminosäuren, verbunden über Peptidbindungen. Aufbau, Abgrenzung zu Proteinen und Bedeutung in der Forschung."
+metaDescription: "Was sind Peptide? Entdecken Sie Aufbau, Peptidbindungen, Kettenlängen und ihre Bedeutung für die Forschung. Jetzt Grundlagen lesen!"
 excerpt: "Peptide sind kurze Aminosäureketten. Was sie ausmacht, wie sie aufgebaut sind und wo die Grenze zum Protein verläuft."
 category: grundlagen
 datePublished: 2026-07-27

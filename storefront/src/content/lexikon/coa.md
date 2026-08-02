@@ -1,7 +1,8 @@
 ---
 term: "COA"
 aliases: ["Certificate of Analysis", "Analysezertifikat"]
-metaDescription: "COA (Certificate of Analysis): chargenbezogenes Analysezertifikat. Welche Angaben es enthalten muss, um überprüfbar zu sein."
+metaTitle: "COA erklärt: Analysezertifikat und Messwerte verstehen"
+metaDescription: "Ein COA dokumentiert chargenbezogene Messwerte wie HPLC-Reinheit und Massenspektrum. Jetzt Bedeutung und Prüfkriterien entdecken!"
 summary: "Chargenbezogenes Dokument mit den analytischen Messwerten einer Substanz."
 researchArea: "Qualität & Analytik"
 dateModified: 2026-07-27

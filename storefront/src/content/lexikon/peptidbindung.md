@@ -1,7 +1,8 @@
 ---
 term: "Peptidbindung"
 aliases: ["Amidbindung"]
-metaDescription: "Peptidbindung: kovalente Verknüpfung zweier Aminosäuren unter Wasserabspaltung. Aufbau und Bedeutung für die Struktur."
+metaTitle: "Peptidbindung erklärt: Entstehung und Eigenschaften"
+metaDescription: "Peptidbindungen verknüpfen Aminosäuren und prägen die Struktur von Peptiden. Erfahren Sie mehr über Aufbau und Eigenschaften!"
 summary: "Kovalente Bindung zwischen Carboxyl- und Aminogruppe zweier Aminosäuren."
 researchArea: "Grundlagen"
 dateModified: 2026-07-27

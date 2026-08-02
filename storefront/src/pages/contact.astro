@@ -25,10 +25,20 @@ import {
 	formatEur,
 } from "../lib/pricing";
 
+// The name and description of the page *as an entity*, used by the ContactPage
+// node below. Kept separate from the head metadata: `ContactPage.name` is what
+// this page is called, not the string written to win a search result.
 const TITLE = "Kontakt";
 const DESCRIPTION =
 	"Kontaktwege, Abruf Ihrer Bestelldaten sowie die Bedingungen zu Versand und " +
 	"Zahlung bei Peptide Einkaufen.";
+
+// Search-result copy: `<title>`, `<meta name="description">` and their
+// OpenGraph/Twitter counterparts. Complete as written, so no brand suffix.
+const META_TITLE = "Kontakt & Support für Produkte und Bestellungen";
+const META_DESCRIPTION =
+	"Kontakt für Fragen zu bestehenden Bestellungen, Produktdaten, Versand, " +
+	"Zahlung und Datenschutz. Jetzt Support per E-Mail anfragen.";
 
 const topics = [
 	"Fragen zu einem Produkt, zu Packgrößen oder zur Verfügbarkeit",
@@ -94,7 +104,12 @@ const jsonLd = [
 ];
 ---
 
-<BaseLayout title={TITLE} description={DESCRIPTION} jsonLd={jsonLd}>
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	jsonLd={jsonLd}
+>
 	<div class="contact">
 		<h1>Kontakt</h1>
 		{/* The lead may not promise that anyone is answering: with no channel

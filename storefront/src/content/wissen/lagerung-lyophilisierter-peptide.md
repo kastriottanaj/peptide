@@ -1,7 +1,7 @@
 ---
 title: "Lagerung lyophilisierter Peptide"
-metaTitle: "Lagerung lyophilisierter Peptide im Labor — Temperatur, Licht, Feuchtigkeit"
-metaDescription: "Wie lyophilisierte Forschungspeptide im Labor gelagert werden: Temperaturbereiche, Schutz vor Feuchtigkeit und Licht, Umgang mit Frost-Tau-Zyklen."
+metaTitle: "Lyophilisierte Peptide richtig lagern: Laborpraxis"
+metaDescription: "Erfahren Sie, wie lyophilisierte Peptide im Labor vor Wärme, Feuchtigkeit und Licht geschützt werden. Jetzt Lagerungstipps lesen!"
 excerpt: "Temperatur, Feuchtigkeit, Licht und Frost-Tau-Zyklen bestimmen, wie lange eine lyophilisierte Substanz analytisch unverändert bleibt."
 category: labor-praxis
 datePublished: 2026-07-27

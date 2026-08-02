@@ -26,10 +26,20 @@ import {
 	formatEur,
 } from "../lib/pricing";
 
+// The name and description of the page *as an entity*, used by the AboutPage
+// node below. Kept separate from the head metadata: `AboutPage.name` is what
+// this page is called, not the string written to win a search result.
 const TITLE = "Über uns";
 const DESCRIPTION =
 	"Wer den Shop betreibt, wofür die Forschungspeptide bestimmt sind und wie " +
 	"Bestellung, Zahlung und Versand ablaufen — nachvollziehbar dargestellt.";
+
+// Search-result copy: `<title>`, `<meta name="description">` and their
+// OpenGraph/Twitter counterparts. Complete as written, so no brand suffix.
+const META_TITLE = "Über Peptide Einkaufen: Shop für Forschungspeptide";
+const META_DESCRIPTION =
+	"Erfahren Sie mehr über Forschungspeptide, transparente Produktangaben, " +
+	"COA-Status und diskreten Versand. Jetzt Sortiment ansehen!";
 
 const principles = [
 	{
@@ -136,7 +146,13 @@ const jsonLd = [
 ];
 ---
 
-<BaseLayout title={TITLE} description={DESCRIPTION} wide jsonLd={jsonLd}>
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	wide
+	jsonLd={jsonLd}
+>
 	<section class="hero">
 		<div class="container hero__inner">
 			<span class="eyebrow">Über den Shop</span>

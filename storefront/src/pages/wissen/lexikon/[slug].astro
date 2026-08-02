@@ -57,8 +57,9 @@ const jsonLd = [
 ---
 
 <BaseLayout
-	title={`${data.term} – Definition`}
+	title={data.metaTitle ?? `${data.term} – Definition`}
 	description={data.metaDescription}
+	rawTitle={Boolean(data.metaTitle)}
 	ogType="article"
 	jsonLd={jsonLd}
 >

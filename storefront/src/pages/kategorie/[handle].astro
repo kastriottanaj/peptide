@@ -10,6 +10,7 @@ import {
 import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 import { categoryPath } from "../../lib/links";
 import { isAboveTheFoldCard } from "../../lib/product-grid";
+import { categorySeo } from "../../lib/catalog-seo";
 
 export async function getStaticPaths() {
 	const categories = await listCategories();
@@ -64,11 +65,20 @@ const jsonLd = [
 		[category.name ?? "", path],
 	]),
 ];
+
+// Search-result copy for this handle, if one is curated. The CollectionPage
+// above keeps Medusa's own name and description, so the graph still describes
+// the category rather than the snippet.
+const seo = categorySeo(category.handle, {
+	title: `${category.name} kaufen – Forschungspeptide`,
+	description,
+});
 ---
 
 <BaseLayout
-	title={`${category.name} kaufen – Forschungspeptide`}
-	description={description}
+	title={seo.title}
+	description={seo.description}
+	rawTitle={seo.rawTitle}
 	jsonLd={jsonLd}
 >
 	<nav class="crumbs" aria-label="Brotkrumen">

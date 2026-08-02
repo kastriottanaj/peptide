@@ -1,7 +1,8 @@
 ---
 term: "Reinheit"
 aliases: ["Purity"]
-metaDescription: "Reinheit bei Forschungspeptiden: Was Angaben wie >99 % bedeuten und worin sie sich vom Peptidgehalt unterscheiden."
+metaTitle: "Reinheit bei Peptiden: HPLC-Wert und Gehalt erklärt"
+metaDescription: "Was bedeutet Reinheit bei Peptiden? Lernen Sie den Unterschied zwischen HPLC-Reinheit und Peptidgehalt kennen. Jetzt verständlich erklärt!"
 summary: "Anteil der Zielsubstanz, üblicherweise als HPLC-Flächenprozent angegeben."
 researchArea: "Qualität & Analytik"
 dateModified: 2026-07-27

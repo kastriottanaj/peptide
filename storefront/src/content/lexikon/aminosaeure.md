@@ -1,7 +1,8 @@
 ---
 term: "Aminosäure"
 aliases: ["Aminosäuren"]
-metaDescription: "Aminosäure: Grundbaustein von Peptiden und Proteinen. Aufbau, proteinogene Aminosäuren und Seitenketten."
+metaTitle: "Aminosäuren: Aufbau, Eigenschaften und Peptidbausteine"
+metaDescription: "Aminosäuren sind Grundbausteine von Peptiden und Proteinen. Erfahren Sie mehr über Aufbau, Eigenschaften und Peptidsynthese!"
 summary: "Grundbaustein der Peptide und Proteine."
 researchArea: "Grundlagen"
 dateModified: 2026-07-27

@@ -34,7 +34,10 @@ const wissen = defineCollection({
 	loader: glob({ pattern: "**/*.md", base: "./src/content/wissen" }),
 	schema: z.object({
 		title: z.string(),
-		/** Overrides the <title>; falls back to `title` when absent. */
+		/**
+		 * The complete `<title>`, used verbatim — no brand suffix is appended.
+		 * When absent the route composes one from `title` and keeps the suffix.
+		 */
 		metaTitle: z.string().optional(),
 		metaDescription: z.string(),
 		excerpt: z.string(),
@@ -55,6 +58,12 @@ const lexikon = defineCollection({
 		term: z.string(),
 		/** Synonyms and abbreviations, used for the A–Z index and search. */
 		aliases: z.array(z.string()).default([]),
+		/**
+		 * The complete `<title>`, used verbatim — no brand suffix is appended.
+		 * When absent the route composes `"<term> – Definition"` and keeps the
+		 * suffix, which is what every entry rendered before curated titles.
+		 */
+		metaTitle: z.string().optional(),
 		metaDescription: z.string(),
 		/** One-sentence definition, shown in the index and used for JSON-LD. */
 		summary: z.string(),

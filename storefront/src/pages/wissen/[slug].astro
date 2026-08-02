@@ -58,6 +58,7 @@ const formatDate = (date: Date) =>
 <BaseLayout
 	title={data.metaTitle ?? data.title}
 	description={data.metaDescription}
+	rawTitle={Boolean(data.metaTitle)}
 	ogType="article"
 	jsonLd={jsonLd}
 >

@@ -1,7 +1,8 @@
 ---
 term: "Massenspektrometrie"
 aliases: ["MS", "LC-MS"]
-metaDescription: "Massenspektrometrie (MS): Bestimmung der Molekülmasse zur Identitätsbestätigung von Peptiden."
+metaTitle: "Massenspektrometrie erklärt: Peptididentität prüfen"
+metaDescription: "Massenspektrometrie bestätigt die Identität von Peptiden über ihre Molekülmasse. Erfahren Sie, wie MS und LC-MS funktionieren!"
 summary: "Verfahren zur Bestimmung der Molekülmasse und damit der Identität."
 researchArea: "Qualität & Analytik"
 dateModified: 2026-07-27
