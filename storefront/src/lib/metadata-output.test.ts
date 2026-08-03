@@ -193,10 +193,10 @@ const EXPECTED: Record<string, PageMeta> = {
 /**
  * Routes that must stay out of the index: checkout and order flow, the four
  * legal pages while they still carry `draft`, the research-use policy page
- * until it has had legal review, the shipping/payment, returns and
- * quality/analysis pages until their open details are settled, and the 404
- * document. None of them received curated metadata, and none may become
- * indexable as a side effect of a metadata change.
+ * until it has had legal review, the shipping/payment, returns,
+ * quality/analysis and support-routing pages until their open details are
+ * settled, and the 404 document. None of them received curated metadata, and
+ * none may become indexable as a side effect of a metadata change.
  */
 const MUST_STAY_NOINDEX = [
 	"/404.html",
@@ -209,6 +209,7 @@ const MUST_STAY_NOINDEX = [
 	"/kasse/",
 	"/qualitaet-analyse/",
 	"/retouren-reklamation/",
+	"/support/anfrage/",
 	"/versand-zahlung/",
 	"/warenkorb/",
 	"/widerruf/",

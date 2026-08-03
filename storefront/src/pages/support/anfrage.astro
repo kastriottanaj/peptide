@@ -1,0 +1,413 @@
+---
+/**
+ * Support-Anfrage — routing guidance for getting in touch.
+ *
+ * There is deliberately **no form**. The storefront is a static build with no
+ * form endpoint, and the backend has no notification provider and no mail
+ * transport configured (docs/go-live-checklist.md §6), so a form here would
+ * accept a message and drop it — worse than none, because the customer
+ * believes they have written in. `/contact/` refuses a form for the same
+ * reason, and `trust-pages.test.ts` pins it there.
+ *
+ * For the same reason this page promises no reply and no processing time: an
+ * unanswerable promise is the one thing a support page must not make. It sorts
+ * the request and points at the page that already answers it.
+ *
+ * Contact channels come from `lib/company.ts`, which refuses anything unfilled,
+ * so the mailto link appears only when a real address is configured. Nothing
+ * here hard-codes one.
+ *
+ * `noindex` because the page is operational routing rather than something a
+ * search result should surface, and because the surfaces it routes to are
+ * themselves still provisional. It is absent from `content-index.ts`, so no
+ * sitemap and no llms.txt lists it.
+ */
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import OrdersClosedNotice from "../../components/OrdersClosedNotice.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../../lib/site";
+import { ORDERS_ENABLED } from "../../lib/shop";
+import { CONTACT, mailtoHref } from "../../lib/company";
+
+// The name and description of the page *as an entity*, used by the WebPage node
+// below and matching the visible heading.
+const TITLE = "Support-Anfrage";
+const DESCRIPTION =
+	"Wie eine Anfrage zu Bestellung, Versand, Dokumentation, Retoure, " +
+	"Datenschutz oder Website eingeordnet wird und wo sie hingehört.";
+
+// Head metadata. Complete as written, so no brand suffix.
+const META_TITLE = "Support-Anfrage";
+const META_DESCRIPTION =
+	"Kontaktmöglichkeiten für Fragen zu Bestellungen, Versand, Dokumentation, " +
+	"Retouren, Datenschutz und technischen Problemen.";
+
+/**
+ * The nine categories, each pointing at the page that already answers it where
+ * one exists. `href: null` means there is no page for it — the request goes to
+ * the contact channel as-is, rather than to a link invented to fill the column.
+ */
+const categories = [
+	{
+		label: "Bestehende Bestellung",
+		note: "Status, Änderung oder Rückfrage zu einer bereits aufgegebenen Bestellung.",
+		href: "/bestellung/suchen/",
+		linkLabel: "Bestellung suchen",
+	},
+	{
+		label: "Rechnung oder Zahlungsreferenz",
+		note: "Betrag und Verwendungszweck einer Bestellung erneut aufrufen.",
+		href: "/bestellung/suchen/",
+		linkLabel: "Bestellung suchen",
+	},
+	{
+		label: "Versandstatus",
+		note: "Fragen zu Liefergebiet, Versandkosten und zum Stand der Versandangaben.",
+		href: "/versand-zahlung/",
+		linkLabel: "Versand und Zahlung",
+	},
+	{
+		label: "Analysedaten oder Dokumentation",
+		note: "Einordnung von Reinheitsangaben, COA, HPLC und Chargendokumentation.",
+		href: "/qualitaet-analyse/",
+		linkLabel: "Qualität und Analyse",
+	},
+	{
+		label: "Beschädigte, falsche oder unvollständige Lieferung",
+		note: "Meldung eines Problems mit einer erhaltenen Sendung.",
+		href: "/retouren-reklamation/",
+		linkLabel: "Retouren und Reklamation",
+	},
+	{
+		label: "Stornierung, Retoure oder Erstattung",
+		note: "Vorgehen und derzeitiger Stand der Rücksende- und Erstattungsregelungen.",
+		href: "/retouren-reklamation/",
+		linkLabel: "Retouren und Reklamation",
+	},
+	{
+		label: "Datenschutzanfrage",
+		note: "Auskunft, Berichtigung oder Löschung nach DSGVO.",
+		href: "/datenschutz/",
+		linkLabel: "Datenschutzerklärung",
+	},
+	{
+		label: "Technisches Problem mit der Website",
+		note: "Seite lädt nicht, Darstellung fehlerhaft, Funktion reagiert nicht.",
+		href: null,
+		linkLabel: null,
+	},
+	{
+		label: "Allgemeine Frage",
+		note: "Alles, was sich keiner der übrigen Kategorien zuordnen lässt.",
+		href: null,
+		linkLabel: null,
+	},
+];
+
+/** What helps to sort a request — facts the sender already has. */
+const helpfulDetails = [
+	"die Bestellnummer oder den Verwendungszweck, soweit vorhanden",
+	"den Produktnamen und die betreffende Packgröße",
+	"die Chargen- oder Referenznummer, soweit vorhanden",
+	"eine kurze, sachliche Beschreibung des Anliegens",
+	"bei technischen Problemen: die Adresse der betroffenen Seite sowie Browser und Gerät",
+];
+
+// --- SEO ---------------------------------------------------------------
+// A plain WebPage node describing this document, plus the breadcrumb trail.
+// The trail has no intermediate `/support/` step: no such page exists, and a
+// breadcrumb item pointing at a URL that 404s is worse than a shorter trail.
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": `${canonicalUrl("/support/anfrage")}#webpage`,
+		url: canonicalUrl("/support/anfrage"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Support-Anfrage", "/support/anfrage"],
+	]),
+];
+---
+
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	noindex
+	jsonLd={jsonLd}
+>
+	<div class="support">
+		<h1>Support-Anfrage</h1>
+		<p class="lead">
+			Diese Seite ordnet ein, wohin ein Anliegen gehört und welche Angaben dabei
+			helfen.
+		</p>
+
+		{/* The promise this page must not make, stated up front. There is no
+		    ticket system and no mail transport behind it, so nothing here may
+		    imply a reply within any particular time. */}
+		<aside class="draft" role="note">
+			<p class="draft__heading">Wegweiser, keine Bearbeitungszusage</p>
+			<p>
+				Die Seite dient der Orientierung. Eine bestimmte Antwort oder
+				Bearbeitungsdauer ist damit nicht zugesagt; ein Anfrageformular wird auf
+				dieser Website nicht angeboten.
+			</p>
+		</aside>
+
+		<section class="section" id="anliegen">
+			<h2>Passendes Anliegen auswählen</h2>
+			<p>
+				Für viele Fragen steht die Antwort bereits auf einer Seite dieser
+				Website. Die folgende Übersicht zeigt, wo:
+			</p>
+			<dl class="facts">
+				{
+					categories.map((category) => (
+						<div>
+							<dt>{category.label}</dt>
+							<dd>
+								{category.note}
+								{category.href && (
+									<>
+										{" "}
+										<a href={category.href}>{category.linkLabel}</a>
+									</>
+								)}
+							</dd>
+						</div>
+					))
+				}
+			</dl>
+		</section>
+
+		<section class="section" id="angaben">
+			<h2>Welche Angaben helfen?</h2>
+			<p>Damit sich ein Anliegen zuordnen lässt, sind hilfreich:</p>
+			<ul class="list">
+				{helpfulDetails.map((detail) => <li>{detail}</li>)}
+			</ul>
+			<p class="section__note">
+				Nicht übermitteln: Passwörter oder Zugangsdaten, vollständige
+				Zahlungsdaten sowie Gesundheitsdaten und sonstige Angaben besonderer
+				Kategorien nach Art. 9 DSGVO. Für die Bearbeitung sind sie nicht
+				erforderlich. Zu Anwendung oder Dosierung können wir keine Auskunft
+				geben.
+			</p>
+		</section>
+
+		<section class="section" id="bestellungen">
+			<h2>Bestellungen und Zahlungen</h2>
+			{/* The shared copy from `lib/shop.ts`, rendered on the same condition as
+			    on the product, cart and checkout pages. The paragraph after it holds
+			    in both states. */}
+			{!ORDERS_ENABLED && <OrdersClosedNotice contact={false} />}
+			<p>
+				Der Bestellvorgang ist derzeit nicht verfügbar; solange das so ist,
+				sollte keine Zahlung angewiesen werden. Bankdaten stehen auf dieser
+				Seite nicht.
+			</p>
+			<p>
+				Angaben zu einer bereits aufgegebenen Bestellung lassen sich über die{" "}
+				<a href="/bestellung/suchen/">Bestellungssuche</a> abrufen.
+			</p>
+		</section>
+
+		<section class="section" id="versand">
+			<h2>Versand und Lieferung</h2>
+			<p>
+				Liefergebiete, Versandkosten und der Stand der noch offenen
+				Versandangaben stehen auf der Seite{" "}
+				<a href="/versand-zahlung/">Versand und Zahlung</a>. Angaben zu
+				Lieferzeit, Versanddienstleister und Sendungsverfolgung werden dort
+				ergänzt, sobald sie feststehen.
+			</p>
+		</section>
+
+		<section class="section" id="retouren">
+			<h2>Retouren und Reklamationen</h2>
+			<p>
+				Das Vorgehen bei einer beschädigten, falschen oder unvollständigen
+				Lieferung sowie der Stand der Rücksende- und Erstattungsregelungen
+				stehen auf der Seite{" "}
+				<a href="/retouren-reklamation/">Retouren und Reklamation</a>. Bitte
+				dort zuerst nachlesen, bevor etwas zurückgesendet wird.
+			</p>
+		</section>
+
+		<section class="section" id="dokumentation">
+			<h2>Dokumentation und Analyse</h2>
+			<p>
+				Wie Reinheitsangaben, Analysezertifikate und Chargendokumentation
+				einzuordnen sind, erklärt die Seite{" "}
+				<a href="/qualitaet-analyse/">Qualität und Analyse</a>. Welche
+				Unterlagen zu einem Artikel vorliegen, unterscheidet sich je nach
+				Produkt und Charge.
+			</p>
+			<p class="section__note">
+				Für eine Rückfrage dazu helfen der Produktname sowie die Chargen- oder
+				Referenznummer, soweit vorhanden.
+			</p>
+		</section>
+
+		<section class="section" id="datenschutz">
+			<h2>Datenschutz</h2>
+			<p>
+				Welche Daten verarbeitet werden, auf welcher Rechtsgrundlage und wie
+				Betroffenenrechte ausgeübt werden, steht in der{" "}
+				<a href="/datenschutz/">Datenschutzerklärung</a>.
+			</p>
+			<p class="section__note">
+				Bitte übermitteln Sie keine Gesundheitsdaten oder sonstigen Angaben
+				besonderer Kategorien nach Art. 9 DSGVO — auch nicht als Hintergrund zu
+				einer Frage.
+			</p>
+		</section>
+
+		<section class="section" id="kontakt">
+			<h2>Kontakt aufnehmen</h2>
+			{/* Reads `CONTACT`: the address is rendered only when one is actually
+			    configured, and `/contact/` remains the page that publishes the
+			    channels. Nothing is written into this page. */}
+			{
+				CONTACT.any ? (
+					<>
+						<p>
+							Die verfügbaren Kontaktwege stehen auf der{" "}
+							<a href="/contact/">Kontaktseite</a>.
+						</p>
+						{CONTACT.email && (
+							<p>
+								Direkt per E-Mail:{" "}
+								<a href={mailtoHref(CONTACT.email)}>{CONTACT.email}</a>
+							</p>
+						)}
+					</>
+				) : (
+					<p>
+						Welche Kontaktwege derzeit zur Verfügung stehen, ist auf der{" "}
+						<a href="/contact/">Kontaktseite</a> aufgeführt. Wir nennen hier
+						bewusst keine Angaben, die nicht erreichbar sind.
+					</p>
+				)
+			}
+			<p>
+				<a href="/contact/" class="btn btn--green">Zur Kontaktseite</a>
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.support {
+			max-width: 900px;
+		}
+		.support h1 {
+			font-size: clamp(1.9rem, 4vw, 2.5rem);
+			font-weight: 800;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.lead {
+			font-size: 1.05rem;
+			color: var(--c-muted);
+			max-width: 64ch;
+			margin: 0 0 1.25rem;
+		}
+
+		/* Neutral surface rather than the warning palette: it sets an expectation
+		   rather than warning about the page. */
+		.draft {
+			background: var(--c-surface);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.15rem;
+			max-width: 68ch;
+		}
+		.draft__heading {
+			font-weight: 700;
+			margin: 0 0 0.35rem;
+		}
+		.draft p:last-child {
+			margin: 0;
+			font-size: 0.92rem;
+			color: var(--c-muted);
+		}
+
+		.section {
+			padding-block: 1.5rem;
+			max-width: 68ch;
+		}
+		.section h2 {
+			font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+			margin-bottom: 0.75rem;
+			scroll-margin-top: 5rem;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.section p {
+			margin: 0 0 1rem;
+		}
+		.section__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+		.section a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.section a:focus-visible,
+		.btn:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+		/* `.section a` above would otherwise repaint the button label green on a
+		   green fill — the link rule is more specific than the global `.btn--green`. */
+		.section a.btn {
+			color: var(--c-white);
+		}
+
+		/* Same definition-list treatment the contact, shipping and quality pages
+		   use, so the fact tables read alike across the site. */
+		.facts {
+			margin: 0 0 1rem;
+			display: grid;
+			gap: 0.9rem;
+		}
+		.facts dt {
+			font-size: 0.74rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+			color: var(--c-muted);
+		}
+		.facts dd {
+			margin: 0.2rem 0 0;
+			font-size: 0.95rem;
+		}
+		.facts dd a {
+			overflow-wrap: break-word;
+		}
+		.facts > div {
+			border-bottom: 1px solid var(--c-border);
+			padding-bottom: 0.75rem;
+		}
+		.facts > div:last-child {
+			border-bottom: none;
+			padding-bottom: 0;
+		}
+
+		.list {
+			margin: 0 0 1rem;
+			padding-left: 1.25rem;
+			display: grid;
+			gap: 0.3rem;
+		}
+		.list li {
+			font-size: 0.95rem;
+		}
+	</style>
+</BaseLayout>
