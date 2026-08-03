@@ -114,6 +114,15 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 		priority: 0.5,
 	},
 	{
+		path: "/faq",
+		title: "Häufige Fragen",
+		description:
+			"Antworten zu Verwendungszweck, Produktangaben, Analysedaten, Bestellstatus, Versand, Zahlung und Support.",
+		keywords: ["FAQ", "Häufige Fragen", "Antworten", "Hilfe"],
+		changeFrequency: "monthly",
+		priority: 0.6,
+	},
+	{
 		path: "/contact",
 		title: "Kontakt",
 		description:

@@ -1,0 +1,358 @@
+---
+/**
+ * Häufige Fragen — the indexable FAQ hub.
+ *
+ * Unlike the other pages added recently this one **is** indexable, so every
+ * answer has to hold up in a search result on its own. Each answer therefore
+ * states only what another page on this site already establishes and links
+ * there; nothing about delivery times, carriers, certificates, refunds or
+ * medical use is asserted here.
+ *
+ * ## Why the answers are arrays
+ *
+ * Google's FAQ guidance requires the structured data to match the visible
+ * answer. An answer that carries links cannot satisfy that if the schema text
+ * is retyped: the two drift the first time someone edits one of them. So an
+ * answer is a list of parts — plain strings and links — and both the rendered
+ * `<dd>` and the JSON-LD `acceptedAnswer.text` are produced from that one
+ * array. `faq-output.test.ts` compares the rendered text against the schema
+ * text to keep it that way.
+ *
+ * Presentation follows `/peptid-rechner/`: a `<dl>` with everything visible and
+ * no JavaScript. The homepage uses collapsed `<details>`, which is fine for a
+ * teaser but would hide the links that are the point of this page.
+ *
+ * The order status comes from `ORDERS_ENABLED`, so this page cannot answer
+ * "kann ich bestellen?" differently from the rest of the shop.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+import OrdersClosedNotice from "../components/OrdersClosedNotice.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+import { ORDERS_ENABLED, ORDERS_CLOSED_TEXT } from "../lib/shop";
+import { CONTACT } from "../lib/company";
+
+const TITLE = "Häufige Fragen";
+const DESCRIPTION =
+	"Antworten zu Forschungszwecken, Produktinformationen, Analysedaten, " +
+	"Bestellstatus, Versand, Zahlung und Support.";
+
+// Search-result copy: complete as written, so no brand suffix.
+const META_TITLE = "Häufige Fragen zu Forschungspeptiden";
+const META_DESCRIPTION =
+	"Antworten zu Forschungszwecken, Produktinformationen, Analysedaten, " +
+	"Bestellstatus, Versand, Zahlung und Support.";
+
+/** A link inside an answer. `label` is part of the answer's text. */
+interface AnswerLink {
+	href: string;
+	label: string;
+}
+
+type AnswerPart = string | AnswerLink;
+
+interface FaqItem {
+	/** Fragment id, also the `<dt id>`, so an answer can be linked directly. */
+	id: string;
+	question: string;
+	answer: AnswerPart[];
+}
+
+const isLink = (part: AnswerPart): part is AnswerLink => typeof part !== "string";
+
+/** The answer as plain text — what the JSON-LD carries. */
+const answerText = (item: FaqItem): string =>
+	item.answer.map((part) => (isLink(part) ? part.label : part)).join("");
+
+/**
+ * The order-status answer, derived from the same switch the shop reads. Both
+ * branches are factual about the state and neither describes a checkout that
+ * is not there.
+ */
+const orderStatusAnswer: AnswerPart[] = ORDERS_ENABLED
+	? [
+			"Der Bestellvorgang ist verfügbar. Sortiment, Packgrößen und Preise stehen im ",
+			{ href: "/produkte/", label: "Produktkatalog" },
+			".",
+		]
+	: [
+			`${ORDERS_CLOSED_TEXT} Der aktuelle Stand zu Versand und Zahlung steht auf der Seite `,
+			{ href: "/versand-zahlung/", label: "Versand und Zahlung" },
+			".",
+		];
+
+const faqs: FaqItem[] = [
+	{
+		id: "verwendungszweck",
+		question: "Wofür sind die angebotenen Produkte bestimmt?",
+		answer: [
+			"Die Produkte sind ausschließlich für Forschungs-, Analyse- und Laborzwecke bestimmt. Welche Verwendungen ausgeschlossen sind, fasst die Seite ",
+			{ href: "/forschungszwecke/", label: "Forschungszwecke und Produktbeschränkungen" },
+			" zusammen.",
+		],
+	},
+	{
+		id: "mensch-tier",
+		question: "Sind die Produkte für Menschen oder Tiere bestimmt?",
+		answer: [
+			"Nein. Sie sind weder für die Anwendung am noch im menschlichen oder tierischen Körper zugelassen oder geeignet. Angaben zu Anwendung oder Dosierung machen wir nicht.",
+		],
+	},
+	{
+		id: "arzneimittel",
+		question: "Sind die Produkte Arzneimittel, Nahrungsergänzungsmittel oder Kosmetika?",
+		answer: [
+			"Nein. Die angebotenen Produkte sind keine Arzneimittel, Lebensmittel, Nahrungsergänzungs- oder Kosmetikprodukte.",
+		],
+	},
+	{
+		id: "bestellstatus",
+		question: "Ist eine Bestellung derzeit möglich?",
+		answer: orderStatusAnswer,
+	},
+	{
+		id: "versand-zahlung",
+		question: "Wo finde ich Informationen zu Versand und Zahlung?",
+		answer: [
+			"Liefergebiete, Versandkosten und die vorgesehene Zahlungsweise stehen auf der Seite ",
+			{ href: "/versand-zahlung/", label: "Versand und Zahlung" },
+			". Angaben, die dort noch offen sind, werden vor Aktivierung des Bestellvorgangs ergänzt.",
+		],
+	},
+	{
+		id: "analysedaten",
+		question: "Welche Analysedaten oder Dokumente sind verfügbar?",
+		answer: [
+			"Umfang und Art der vorliegenden Unterlagen können sich je nach Produkt und Charge unterscheiden; maßgeblich ist die jeweilige Produktseite. Wie solche Angaben einzuordnen sind, erklärt die Seite ",
+			{ href: "/qualitaet-analyse/", label: "Qualität, Analysedaten und Dokumentation" },
+			".",
+		],
+	},
+	{
+		id: "begriffe",
+		question: "Was bedeuten COA, HPLC und Massenspektrometrie?",
+		answer: [
+			"Ein ",
+			{ href: "/wissen/lexikon/coa/", label: "COA" },
+			" ist ein chargenbezogenes Dokument mit Messwerten, die ",
+			{ href: "/wissen/lexikon/hplc/", label: "HPLC" },
+			" ein Trennverfahren zur Bestimmung der chromatographischen Reinheit und die ",
+			{ href: "/wissen/lexikon/massenspektrometrie/", label: "Massenspektrometrie" },
+			" ein Verfahren zur Bestimmung der Molekülmasse. Ausführlich im Beitrag ",
+			{ href: "/wissen/reinheit-und-coa/", label: "Reinheit und Analysezertifikat" },
+			".",
+		],
+	},
+	{
+		id: "support",
+		question: "Wie stelle ich eine Support-Anfrage?",
+		answer: [
+			"Wohin ein Anliegen gehört und welche Angaben helfen, zeigt die Seite ",
+			{ href: "/support/anfrage/", label: "Support-Anfrage" },
+			". Die verfügbaren Kontaktwege stehen auf der ",
+			{ href: "/contact/", label: "Kontaktseite" },
+			".",
+		],
+	},
+	{
+		id: "retouren",
+		question: "Wie werden Retouren oder Reklamationen behandelt?",
+		answer: [
+			"Bitte zuerst Kontakt aufnehmen, bevor etwas zurückgesendet wird. Der derzeitige Stand der Rücksende- und Erstattungsregelungen steht auf der Seite ",
+			{ href: "/retouren-reklamation/", label: "Retouren, Reklamationen und Erstattungen" },
+			".",
+		],
+	},
+	{
+		id: "dokumentationsfrage",
+		question: "Welche Angaben sollte ich bei einer Dokumentationsfrage nennen?",
+		answer: [
+			"Hilfreich sind der Produktname mit Packgröße sowie die Chargen- oder Referenznummer, soweit vorhanden, und die konkrete Angabe, um die es geht. Gesundheitsdaten oder sonstige Angaben besonderer Kategorien nach Art. 9 DSGVO werden für die Bearbeitung nicht benötigt.",
+		],
+	},
+	{
+		id: "grundlagen",
+		question: "Wo finde ich allgemeine Informationen über Peptide?",
+		answer: [
+			"Fachartikel zu Grundlagen, Analytik und Laborpraxis stehen im Bereich ",
+			{ href: "/wissen/", label: "Wissen" },
+			", Kurzdefinitionen einzelner Begriffe im ",
+			{ href: "/wissen/lexikon/", label: "Peptid-Lexikon" },
+			".",
+		],
+	},
+	{
+		id: "keine-beratung",
+		question: "Gibt die Website medizinische Beratung?",
+		answer: [
+			"Nein. Diese Website gibt keine medizinische, diagnostische oder behandlungsbezogene Beratung und nennt weder Dosierungen noch Angaben zur Verabreichung oder Anwendungsprotokolle.",
+		],
+	},
+];
+
+// --- SEO ---------------------------------------------------------------
+// FAQPage built from the same array the page renders, so the schema cannot
+// carry a question or an answer the visitor does not see. The Organization is
+// referenced by @id rather than restated.
+const jsonLd = [
+	{
+		"@type": "FAQPage",
+		"@id": `${canonicalUrl("/faq")}#faq`,
+		url: canonicalUrl("/faq"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+		mainEntity: faqs.map((item) => ({
+			"@type": "Question",
+			name: item.question,
+			acceptedAnswer: { "@type": "Answer", text: answerText(item) },
+		})),
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Häufige Fragen", "/faq"],
+	]),
+];
+---
+
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	jsonLd={jsonLd}
+>
+	<div class="faq-page">
+		<h1>Häufige Fragen</h1>
+		<p class="lead">
+			Kurze Antworten zu Verwendungszweck, Produktangaben, Analysedaten,
+			Bestellstatus, Versand, Zahlung und Support — jeweils mit dem Verweis auf
+			die Seite, die das Thema vollständig behandelt.
+		</p>
+
+		{/* Outside the `<dl>` on purpose: the FAQ answers are compared against the
+		    JSON-LD word for word, and the shared notice is not part of an answer. */}
+		{!ORDERS_ENABLED && <OrdersClosedNotice contact={false} />}
+
+		<dl class="faq">
+			{
+				faqs.map((item) => (
+					<div class="faq__item">
+						<dt id={item.id}>{item.question}</dt>
+						<dd>
+							{item.answer.map((part) =>
+								isLink(part) ? <a href={part.href}>{part.label}</a> : part,
+							)}
+						</dd>
+					</div>
+				))
+			}
+		</dl>
+
+		<section class="more">
+			<h2>Noch offene Frage?</h2>
+			<p>
+				{
+					CONTACT.any
+						? "Anliegen, die hier nicht beantwortet sind, nimmt die Kontaktseite entgegen; dort stehen die verfügbaren Kontaktwege."
+						: "Welche Kontaktwege derzeit zur Verfügung stehen, ist auf der Kontaktseite aufgeführt."
+				}
+			</p>
+			<p class="more__actions">
+				<a href="/support/anfrage/" class="btn btn--green">Anliegen einordnen</a>
+				<a href="/contact/" class="btn btn--outline">Zur Kontaktseite</a>
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.faq-page {
+			max-width: 900px;
+		}
+		.faq-page h1 {
+			font-size: clamp(1.9rem, 4vw, 2.5rem);
+			font-weight: 800;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.lead {
+			font-size: 1.05rem;
+			color: var(--c-muted);
+			max-width: 64ch;
+			margin: 0 0 1.5rem;
+		}
+
+		/* Everything visible, no JavaScript — the same treatment `/peptid-rechner/`
+		   gives its FAQ. Collapsing these would hide the links they exist for. */
+		.faq {
+			margin: 0 0 2rem;
+			display: grid;
+			gap: 0.9rem;
+			max-width: 68ch;
+		}
+		.faq__item {
+			border-bottom: 1px solid var(--c-border);
+			padding-bottom: 0.9rem;
+		}
+		.faq__item:last-child {
+			border-bottom: none;
+			padding-bottom: 0;
+		}
+		.faq dt {
+			font-weight: 700;
+			font-size: 1rem;
+			/* The header is sticky, so an anchored question would land underneath it. */
+			scroll-margin-top: 5.5rem;
+		}
+		.faq dd {
+			margin: 0.35rem 0 0;
+			font-size: 0.95rem;
+			line-height: 1.6;
+		}
+		.faq a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.faq a:focus-visible,
+		.more a:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+
+		.more {
+			background: var(--c-cream);
+			border-radius: 18px;
+			padding: 1.6rem 1.8rem;
+			max-width: 68ch;
+		}
+		.more h2 {
+			margin: 0 0 0.5rem;
+			font-size: 1.2rem;
+		}
+		.more p {
+			margin: 0;
+			font-size: 0.92rem;
+			color: var(--c-gold-ink-soft);
+		}
+		.more__actions {
+			display: flex;
+			gap: 0.7rem;
+			flex-wrap: wrap;
+			margin-top: 1rem !important;
+		}
+		/* The ghost button is white-on-navy; on cream it needs an ink outline. */
+		.btn--outline {
+			background: transparent;
+			color: var(--c-navy);
+			box-shadow: inset 0 0 0 1.5px var(--c-navy);
+		}
+		.btn--outline:hover {
+			background: var(--c-white);
+		}
+
+		@media (max-width: 560px) {
+			.more {
+				padding: 1.3rem 1.2rem;
+			}
+		}
+	</style>
+</BaseLayout>
