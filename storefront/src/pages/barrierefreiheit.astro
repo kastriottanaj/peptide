@@ -1,0 +1,352 @@
+---
+/**
+ * Barrierefreiheit — accessibility information.
+ *
+ * Every measure listed below was checked against this repository before it was
+ * written down, because an accessibility statement is the one page where an
+ * unverified claim harms exactly the people it addresses:
+ *
+ * - heading structure: `trust-pages.test.ts` asserts headings descend without
+ *   skipping a level;
+ * - focus states: `:focus-visible` outlines are defined in the page-level styles
+ *   across the site and, since 2026-08-03, on the header search pill in
+ *   `BaseLayout.astro` (`.search:has(input:focus-visible)`) — that field was the
+ *   one gap this page used to disclose;
+ * - link and image labels: `aria-label` on the icon-only cart link, a
+ *   `visually-hidden` label on the search field, generated alt text via
+ *   `lib/product-image-alt.ts`, and `trust-pages.test.ts` rejects empty or
+ *   icon-only links;
+ * - responsive layout: viewport meta plus the media queries in the layout and
+ *   the pages;
+ * - form labels: every `<input>` on the site has a `<label>` — checkout 11/11,
+ *   order lookup 2/2, site search 1/1;
+ * - no web fonts: `fonts.test.ts` guards the system font stack.
+ *
+ * What is deliberately absent: WCAG, BITV or BFSG conformance, an audit, a
+ * certification, screen-reader test results and any remediation deadline. None
+ * of that exists here, and claiming conformance the site has not been measured
+ * against is worse than saying nothing.
+ *
+ * No "Stand" date either: the project records no review date for a page like
+ * this — `LegalLayout`'s `updated` prop is hand-maintained and the build date
+ * changes on every deploy without the text changing. A date that means nothing
+ * is a false signal, so the section says what is true instead.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+import { CONTACT } from "../lib/company";
+
+const TITLE = "Barrierefreiheit";
+const DESCRIPTION =
+	"Barrierearme Nutzung dieser Website: umgesetzte Maßnahmen, bekannte " +
+	"Einschränkungen und wie sich digitale Barrieren melden lassen.";
+
+// Search-result copy: complete as written, so no brand suffix.
+const META_TITLE = "Barrierefreiheit";
+const META_DESCRIPTION =
+	"Informationen zur barrierearmen Nutzung der Website, bekannten " +
+	"Einschränkungen und zur Meldung digitaler Barrieren.";
+
+/**
+ * Only measures that are checkable in this repository. Each entry names what
+ * the site does, not a standard it claims to meet.
+ */
+const measures = [
+	{
+		title: "Semantische Überschriftenstruktur",
+		body: "Jede Seite hat genau eine H1; die weiteren Ebenen folgen aufeinander, ohne eine Stufe zu überspringen. Das ist Teil der automatisierten Tests.",
+	},
+	{
+		title: "Sichtbarer Tastaturfokus",
+		body: "Links, Schaltflächen und Formularfelder erhalten bei Bedienung über die Tastatur einen sichtbaren Fokusrahmen — auch das Suchfeld in der Kopfzeile. Der Rahmen ist eine Umrandung und nicht nur eine Farbänderung.",
+	},
+	{
+		title: "Beschriftete Links und Bilder",
+		body: "Symbolschaltflächen wie der Warenkorb tragen eine Textalternative, das Suchfeld eine zugehörige Beschriftung, und Produktbilder erhalten einen beschreibenden Alternativtext.",
+	},
+	{
+		title: "Responsives Layout",
+		body: "Die Inhalte passen sich der Fensterbreite an und lassen sich auch auf schmalen Bildschirmen ohne seitliches Scrollen lesen.",
+	},
+	{
+		title: "Beschriftete Formularfelder",
+		body: "Alle Eingabefelder auf dieser Website — Suche, Bestellungssuche und Kasse — sind mit einem Label verknüpft.",
+	},
+	{
+		title: "Keine externen Schriftarten",
+		body: "Es werden keine Web-Schriften nachgeladen. Die Seite verwendet die Systemschrift, was Ladezeit spart und Textdarstellung nicht von einer externen Quelle abhängig macht.",
+	},
+];
+
+/** What a useful report contains — facts about the situation, nothing personal. */
+const reportDetails = [
+	"die Adresse der betroffenen Seite",
+	"eine kurze Beschreibung der Barriere",
+	"Browser und Gerät",
+	"die eingesetzte assistive Technologie, sofern relevant",
+];
+
+// --- SEO ---------------------------------------------------------------
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": `${canonicalUrl("/barrierefreiheit")}#webpage`,
+		url: canonicalUrl("/barrierefreiheit"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Barrierefreiheit", "/barrierefreiheit"],
+	]),
+];
+---
+
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	jsonLd={jsonLd}
+>
+	<div class="a11y">
+		<h1>Barrierefreiheit</h1>
+		<p class="lead">
+			Was diese Website für eine barrierearme Nutzung umsetzt, was noch offen
+			sein kann und wie sich eine Barriere melden lässt.
+		</p>
+
+		{/* States the nature of the page up front: information, not conformance. */}
+		<aside class="note" role="note">
+			<p class="note__heading">Informationsseite, keine Zertifizierung</p>
+			<p>
+				Diese Seite beschreibt den derzeitigen Stand der Umsetzung. Sie ist keine
+				Konformitätserklärung, kein Prüfbericht und keine rechtliche Zusicherung;
+				eine externe Prüfung dieser Website hat nicht stattgefunden.
+			</p>
+		</aside>
+
+		<section class="section" id="ziel">
+			<h2>Unser Ziel</h2>
+			<p>
+				Diese Website soll von möglichst vielen Menschen genutzt werden können —
+				unabhängig davon, ob sie mit Maus, Tastatur, Vergrößerung oder einer
+				assistiven Technologie bedient wird. Barrierearmut wird dabei als
+				laufende Aufgabe verstanden und nicht als einmal erledigter Zustand.
+			</p>
+		</section>
+
+		<section class="section" id="massnahmen">
+			<h2>Bereits umgesetzte Maßnahmen</h2>
+			<p>
+				Die folgenden Punkte sind im Code dieser Website umgesetzt und
+				nachvollziehbar:
+			</p>
+			<dl class="facts">
+				{
+					measures.map((measure) => (
+						<div>
+							<dt>{measure.title}</dt>
+							<dd>{measure.body}</dd>
+						</div>
+					))
+				}
+			</dl>
+		</section>
+
+		<section class="section" id="einschraenkungen">
+			<h2>Bekannte Einschränkungen</h2>
+			<p>
+				Einzelne Bereiche können weiterhin Einschränkungen enthalten. Die
+				Website wurde nicht vollständig gegen einen Kriterienkatalog geprüft,
+				weshalb hier keine abschließende Liste von Mängeln steht — eine solche
+				Liste würde Vollständigkeit vortäuschen, die nicht belegt ist.
+			</p>
+			{/* The search-field focus gap that stood here was fixed on 2026-08-03
+			    (`.search:has(input:focus-visible)` in BaseLayout), so the entry was
+			    removed rather than left as a stale disclosure. A limitation is
+			    listed here only while it is real. */}
+			<p class="section__note">
+				Konkrete Hinweise aus der Nutzung sind daher besonders hilfreich; wie sie
+				gemeldet werden können, steht weiter unten.
+			</p>
+		</section>
+
+		<section class="section" id="kompatibilitaet">
+			<h2>Technische Kompatibilität</h2>
+			<p>
+				Die Seiten sind für aktuelle Browserversionen und gängige assistive
+				Technologien gedacht. Die Inhalte werden als statisches HTML
+				ausgeliefert; die interaktiven Teile sind auf das Nötige begrenzt.
+			</p>
+			<p class="section__note">
+				Eine Zusage für jedes Gerät, jede Softwareversion und jede Kombination
+				daraus ist damit nicht verbunden.
+			</p>
+		</section>
+
+		<section class="section" id="melden">
+			<h2>Barriere melden</h2>
+			<p>
+				Wenn ein Teil dieser Website nicht nutzbar ist, ist ein Hinweis
+				willkommen. Meldungen nimmt die <a href="/contact/">Kontaktseite</a>{" "}
+				entgegen; welche Angaben ein Anliegen einordnen, zeigt die Seite{" "}
+				<a href="/support/anfrage/">Support-Anfrage</a>.
+			</p>
+			<p>Hilfreich sind:</p>
+			<ul class="list">
+				{reportDetails.map((detail) => <li>{detail}</li>)}
+			</ul>
+			<p class="section__note">
+				Bitte übermitteln Sie keine Passwörter oder Zugangsdaten, keine
+				Zahlungsdaten und keine Gesundheitsdaten oder sonstigen Angaben
+				besonderer Kategorien nach Art. 9 DSGVO — für die Bearbeitung eines
+				Barrierehinweises sind sie nicht erforderlich.
+			</p>
+		</section>
+
+		<section class="section" id="bearbeitung">
+			<h2>Bearbeitung von Hinweisen</h2>
+			<p>
+				Eingehende Hinweise werden gesichtet und im Rahmen der verfügbaren
+				Mittel bearbeitet. Was sich mit vertretbarem Aufwand beheben lässt, wird
+				bei der weiteren Arbeit an der Website berücksichtigt.
+			</p>
+			<p class="section__note">
+				Eine Frist für Antwort oder Behebung ist damit nicht zugesagt.
+			</p>
+		</section>
+
+		<section class="section" id="stand">
+			<h2>Stand dieser Erklärung</h2>
+			<p>
+				Diese Erklärung beschreibt den Stand der Website, wie er sich aus dem
+				aktuell veröffentlichten Code ergibt. Ein gesondertes Prüf- oder
+				Freigabedatum wird nicht geführt, und ein solches Datum wird hier auch
+				nicht angegeben, solange es keinem tatsächlichen Prüfvorgang entspricht.
+			</p>
+			<p class="section__note">
+				Ändert sich etwas an den oben genannten Punkten, wird diese Seite
+				entsprechend angepasst.
+			</p>
+		</section>
+
+		<section class="section" id="kontakt">
+			<h2>Kontakt</h2>
+			<p>
+				{
+					CONTACT.any
+						? "Rückfragen zu dieser Erklärung nimmt die Kontaktseite entgegen; dort stehen die verfügbaren Kontaktwege."
+						: "Welche Kontaktwege derzeit zur Verfügung stehen, ist auf der Kontaktseite aufgeführt."
+				}
+			</p>
+			<p>
+				<a href="/contact/" class="btn btn--green">Zur Kontaktseite</a>
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.a11y {
+			max-width: 900px;
+		}
+		.a11y h1 {
+			font-size: clamp(1.9rem, 4vw, 2.5rem);
+			font-weight: 800;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.lead {
+			font-size: 1.05rem;
+			color: var(--c-muted);
+			max-width: 64ch;
+			margin: 0 0 1.25rem;
+		}
+
+		.note {
+			background: var(--c-surface);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.15rem;
+			max-width: 68ch;
+		}
+		.note__heading {
+			font-weight: 700;
+			margin: 0 0 0.35rem;
+		}
+		.note p:last-child {
+			margin: 0;
+			font-size: 0.92rem;
+			color: var(--c-muted);
+		}
+
+		.section {
+			padding-block: 1.5rem;
+			max-width: 68ch;
+		}
+		.section h2 {
+			font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+			margin-bottom: 0.75rem;
+			scroll-margin-top: 5rem;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.section p {
+			margin: 0 0 1rem;
+		}
+		.section__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+		.section a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.section a:focus-visible,
+		.btn:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+		/* `.section a` above would otherwise repaint the button label green on a
+		   green fill — the link rule is more specific than the global `.btn--green`. */
+		.section a.btn {
+			color: var(--c-white);
+		}
+
+		.facts {
+			margin: 0 0 1rem;
+			display: grid;
+			gap: 0.9rem;
+		}
+		.facts dt {
+			font-size: 0.74rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+			color: var(--c-muted);
+		}
+		.facts dd {
+			margin: 0.2rem 0 0;
+			font-size: 0.95rem;
+		}
+		.facts > div {
+			border-bottom: 1px solid var(--c-border);
+			padding-bottom: 0.75rem;
+		}
+		.facts > div:last-child {
+			border-bottom: none;
+			padding-bottom: 0;
+		}
+
+		.list {
+			margin: 0 0 1rem;
+			padding-left: 1.25rem;
+			display: grid;
+			gap: 0.3rem;
+		}
+		.list li {
+			font-size: 0.95rem;
+		}
+	</style>
+</BaseLayout>

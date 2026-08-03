@@ -165,6 +165,7 @@ const {
 					<a href="/support/anfrage/">Support-Anfrage</a>
 					<a href="/faq/">FAQ</a>
 					<a href="/redaktionsrichtlinien/">Redaktionsrichtlinien</a>
+					<a href="/barrierefreiheit/">Barrierefreiheit</a>
 				</div>
 				<div class="footer__col">
 					<h3>Rechtliches</h3>
@@ -478,11 +479,39 @@ const {
 			.search input {
 				border: none;
 				background: transparent;
+				/* Suppressed only so the UA ring does not sit *inside* the pill; the
+				   keyboard focus indicator is restored on the pill below. Removing
+				   this without a replacement is what left the field with no visible
+				   focus at all until 2026-08-03. */
 				outline: none;
 				font-family: inherit;
 				font-size: 0.9rem;
 				color: var(--c-ink);
 				width: 100%;
+			}
+			/* Keyboard focus for the search field.
+
+			   The ring goes on the pill rather than the input: the input has no
+			   border or background of its own, so an outline on it would draw a
+			   rectangle floating inside the pill. `:focus-visible` (not `:focus`)
+			   keeps it keyboard-only, so a mouse click leaves the header looking
+			   exactly as before. Same 2px green outline with 2px offset the rest of
+			   the site uses — a shape, not a colour change, and 4.99:1 against the
+			   white header, above the 3:1 minimum for non-text indicators.
+
+			   Two rules, because `:has()` is not everywhere: browsers without it
+			   fall back to an outline on the input, and the third rule removes that
+			   inner ring wherever the pill ring is available. */
+			.search input:focus-visible {
+				outline: 2px solid var(--c-green);
+				outline-offset: 2px;
+			}
+			.search:has(input:focus-visible) {
+				outline: 2px solid var(--c-green);
+				outline-offset: 2px;
+			}
+			.search:has(input:focus-visible) input:focus-visible {
+				outline: none;
 			}
 
 			.nav {

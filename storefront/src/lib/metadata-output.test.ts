@@ -64,6 +64,10 @@ const EXPECTED: Record<string, PageMeta> = {
 		description:
 			"Erfahren Sie mehr über Forschungspeptide, transparente Produktangaben, COA-Status und diskreten Versand. Jetzt Sortiment ansehen!",
 	},
+	// `/barrierefreiheit/` is deliberately absent: its `<title>` and its H1 are
+	// both "Barrierefreiheit", which is correct for that page but the one thing
+	// "a curated SEO title never becomes the visible heading" below rejects.
+	// Its metadata is pinned by `barrierefreiheit.test.ts` instead.
 	"/redaktionsrichtlinien/": {
 		title: "Redaktionsrichtlinien und wissenschaftliche Quellen",
 		description:

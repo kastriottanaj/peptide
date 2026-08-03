@@ -114,6 +114,15 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 		priority: 0.5,
 	},
 	{
+		path: "/barrierefreiheit",
+		title: "Barrierefreiheit",
+		description:
+			"Umgesetzte Maßnahmen für eine barrierearme Nutzung, bekannte Einschränkungen und wie sich Barrieren melden lassen.",
+		keywords: ["Barrierefreiheit", "Zugänglichkeit", "Accessibility"],
+		changeFrequency: "yearly",
+		priority: 0.3,
+	},
+	{
 		path: "/redaktionsrichtlinien",
 		title: "Redaktionsrichtlinien",
 		description:
