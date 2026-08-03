@@ -1,0 +1,303 @@
+---
+/**
+ * Retouren, Reklamationen und Erstattungen — the returns and complaints page.
+ *
+ * This page describes **how to get in touch about a problem**, and nothing
+ * else. The return process itself does not exist yet: there is no return
+ * address, no carrier, no cost allocation, no refund route and no reviewed set
+ * of terms behind any of it (docs/go-live-checklist.md §1, §2, §4). Each of
+ * those is named as open rather than filled with a plausible value, because a
+ * returns policy is precisely the kind of text a customer acts on and the
+ * business is then held to.
+ *
+ * It also states no legal right and no eligibility. `/widerruf/` is the page
+ * that carries the Widerrufsbelehrung, it is `draft` and consumer-facing on
+ * purpose (see its own comment), and the customer model behind it is still
+ * open — so this page links there and takes no position of its own.
+ *
+ * `noindex` is set directly rather than through `LegalLayout`'s `draft` prop:
+ * this page carries no `[Platzhalter]` fields, so that layout's banner would
+ * not describe it. The reason is the same though — the process is not final —
+ * and it must stay until it is. The page is consequently absent from
+ * `content-index.ts`, so no sitemap and no llms.txt lists it.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+import OrdersClosedNotice from "../components/OrdersClosedNotice.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+import { ORDERS_ENABLED } from "../lib/shop";
+import { CONTACT } from "../lib/company";
+
+// The name and description of the page *as an entity*, used by the WebPage node
+// below and matching the visible heading.
+const TITLE = "Retouren, Reklamationen und Erstattungen";
+const DESCRIPTION =
+	"Vorgehen bei Rücksendungen, beschädigten oder fehlerhaften Lieferungen " +
+	"sowie der aktuelle Bearbeitungsstand bei Peptide Einkaufen.";
+
+// Head metadata. Complete as written, so no brand suffix.
+const META_TITLE = "Retouren, Reklamationen und Erstattungen";
+const META_DESCRIPTION =
+	"Informationen zu Rücksendungen, beschädigten oder fehlerhaften Lieferungen " +
+	"sowie zum aktuellen Bearbeitungsstand.";
+
+/**
+ * What a message about a problem should contain. Facts the customer already
+ * has — no photograph, no form, no proof, none of which is required by
+ * anything in this repository.
+ */
+const reportDetails = [
+	"Bestellnummer oder den Verwendungszweck aus der Überweisung, soweit vorhanden",
+	"welches Produkt und welche Packgröße betroffen ist",
+	"eine sachliche Beschreibung des Problems",
+];
+
+/** The points of the return process that are not settled yet. */
+const openPoints = [
+	"ob und für welche Artikel eine Rücksendung möglich ist",
+	"wie eine Rücksendung verpackt sein muss",
+	"an welche Adresse zurückgesendet wird",
+	"wie die Kosten einer Rücksendung aufgeteilt werden",
+];
+
+// --- SEO ---------------------------------------------------------------
+// A plain WebPage node describing this document, plus the breadcrumb trail —
+// the same shape the other information pages use, with the Organization
+// referenced by @id rather than restated.
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": `${canonicalUrl("/retouren-reklamation")}#webpage`,
+		url: canonicalUrl("/retouren-reklamation"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Retouren und Reklamation", "/retouren-reklamation"],
+	]),
+];
+---
+
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	noindex
+	jsonLd={jsonLd}
+>
+	<div class="returns">
+		<h1>Retouren, Reklamationen und Erstattungen</h1>
+		<p class="lead">
+			Wie Sie uns ein Problem mit einer Lieferung melden — und welche Punkte des
+			Rücksendevorgangs noch offen sind.
+		</p>
+
+		{/* Professional and specific: it names what is provisional and what it does
+		    not replace, rather than warning in the abstract. */}
+		<aside class="draft" role="note">
+			<p class="draft__heading">Vorgehen noch nicht abschließend festgelegt</p>
+			<p>
+				Diese Seite beschreibt den derzeitigen Stand. Der Ablauf für
+				Rücksendungen und Erstattungen wird vervollständigt, bevor der
+				Bestellvorgang aktiviert wird; die verbindlichen Regelungen ergeben sich
+				aus den juristisch geprüften Bedingungen des Shops und nicht aus dieser
+				Seite.
+			</p>
+		</aside>
+
+		<section class="section" id="stand">
+			<h2>Aktueller Stand</h2>
+			{/* The shared copy from `lib/shop.ts`, rendered on the same condition as
+			    on the product, cart and checkout pages. The paragraph after it holds
+			    in both states, so this section never becomes an implicit statement
+			    that ordering is available. */}
+			{!ORDERS_ENABLED && <OrdersClosedNotice contact={false} />}
+			<p>
+				Der Bestellvorgang ist derzeit nicht aktiviert. Die abschließenden
+				Bedingungen für Rücksendungen und Erstattungen werden veröffentlicht,
+				bevor Bestellungen wieder möglich sind.
+			</p>
+			<p class="section__note">
+				Bis dahin beschreibt diese Seite ausschließlich, wie ein Anliegen
+				gemeldet werden kann.
+			</p>
+		</section>
+
+		<section class="section" id="vorab-kontakt">
+			<h2>Kontakt vor einer Rücksendung</h2>
+			<p>
+				Bitte nehmen Sie zuerst über die <a href="/contact/">Kontaktseite</a>
+				{" "}Kontakt auf, bevor Sie etwas zurücksenden. So lässt sich klären,
+				welches Vorgehen für Ihren Fall vorgesehen ist.
+			</p>
+			<p class="section__note">
+				Eine Rücksendeadresse wird an dieser Stelle noch nicht veröffentlicht.
+			</p>
+		</section>
+
+		<section class="section" id="lieferprobleme">
+			<h2>Beschädigte, falsche oder unvollständige Lieferung</h2>
+			<p>
+				Ist eine Lieferung beschädigt, falsch oder unvollständig, schildern Sie
+				den Sachverhalt bitte über die <a href="/contact/">Kontaktseite</a>.
+				Hilfreich sind dabei:
+			</p>
+			<ul class="list">
+				{reportDetails.map((detail) => <li>{detail}</li>)}
+			</ul>
+			<p class="section__note">
+				Weitere Nachweise verlangen wir an dieser Stelle nicht; welche Angaben im
+				Einzelfall nötig sind, wird im Austausch geklärt.
+			</p>
+		</section>
+
+		<section class="section" id="ruecksendungen">
+			<h2>Rücksendungen</h2>
+			<p>Für Rücksendungen sind noch nicht festgelegt:</p>
+			<ul class="list">
+				{openPoints.map((point) => <li>{point}</li>)}
+			</ul>
+			<p class="section__note">
+				Solange diese Punkte offen sind, sagen wir für keinen Artikel eine
+				Rücknahme zu. Die Angaben werden ergänzt, bevor der Bestellvorgang
+				aktiviert wird.
+			</p>
+		</section>
+
+		<section class="section" id="erstattungen">
+			<h2>Erstattungen</h2>
+			<p>
+				Auf welchem Weg und in welchem Ablauf eine Erstattung erfolgt, wird
+				veröffentlicht, bevor der Bestellvorgang aktiviert wird. Eine Zusage
+				über Ablauf oder Dauer einer Bearbeitung machen wir vorher nicht.
+			</p>
+		</section>
+
+		<section class="section" id="widerruf">
+			<h2>Widerrufsrecht</h2>
+			<p>
+				Die Widerrufsbelehrung steht auf der Seite{" "}
+				<a href="/widerruf/">Widerruf</a>. Welche Regelungen davon im Einzelfall
+				greifen, hängt vom endgültigen Kundenmodell des Shops und von den
+				juristisch geprüften Bedingungen ab; beides ist noch nicht abgeschlossen.
+			</p>
+			<p class="section__note">
+				Diese Seite trifft dazu keine eigene Aussage und begründet weder Rechte
+				noch Einschränkungen.
+			</p>
+		</section>
+
+		<section class="section" id="keine-unaufgeforderten-sendungen">
+			<h2>Keine unaufgeforderten Rücksendungen</h2>
+			<p>
+				Bitte senden Sie keine Ware zurück, bevor Ihnen über den Kontaktweg ein
+				Vorgehen bestätigt wurde. Eine unaufgefordert versandte Sendung kann
+				derzeit nicht zugeordnet und nicht bearbeitet werden.
+			</p>
+		</section>
+
+		<section class="section" id="kontakt">
+			<h2>Kontakt</h2>
+			{/* Reads `CONTACT` rather than naming a channel: no address, number or
+			    opening hours exists in this repository, and the contact page is the
+			    one place that publishes whatever is configured. */}
+			<p>
+				{
+					CONTACT.any
+						? "Anliegen zu einer Lieferung oder zu einer möglichen Rücksendung nimmt die Kontaktseite entgegen; dort stehen die verfügbaren Kontaktwege."
+						: "Welche Kontaktwege derzeit zur Verfügung stehen, ist auf der Kontaktseite aufgeführt."
+				}
+			</p>
+			<p class="section__note">
+				Bitte senden Sie uns keine Gesundheitsdaten oder sonstigen Angaben
+				besonderer Kategorien nach Art. 9 DSGVO — für die Bearbeitung sind sie
+				nicht erforderlich.
+			</p>
+			<p>
+				<a href="/contact/" class="btn btn--green">Zur Kontaktseite</a>
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.returns {
+			max-width: 900px;
+		}
+		.returns h1 {
+			font-size: clamp(1.9rem, 4vw, 2.5rem);
+			font-weight: 800;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.lead {
+			font-size: 1.05rem;
+			color: var(--c-muted);
+			max-width: 64ch;
+			margin: 0 0 1.25rem;
+		}
+
+		/* Neutral surface rather than the warning palette: the page is accurate as
+		   far as it goes, it simply has open points. */
+		.draft {
+			background: var(--c-surface);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.15rem;
+			max-width: 68ch;
+		}
+		.draft__heading {
+			font-weight: 700;
+			margin: 0 0 0.35rem;
+		}
+		.draft p:last-child {
+			margin: 0;
+			font-size: 0.92rem;
+			color: var(--c-muted);
+		}
+
+		.section {
+			padding-block: 1.5rem;
+			max-width: 68ch;
+		}
+		.section h2 {
+			font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+			margin-bottom: 0.75rem;
+			scroll-margin-top: 5rem;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.section p {
+			margin: 0 0 1rem;
+		}
+		.section__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+		.section a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.section a:focus-visible,
+		.btn:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+		/* `.section a` above would otherwise repaint the button label green on a
+		   green fill — the link rule is more specific than the global `.btn--green`. */
+		.section a.btn {
+			color: var(--c-white);
+		}
+
+		.list {
+			margin: 0 0 1rem;
+			padding-left: 1.25rem;
+			display: grid;
+			gap: 0.3rem;
+		}
+		.list li {
+			font-size: 0.95rem;
+		}
+	</style>
+</BaseLayout>
