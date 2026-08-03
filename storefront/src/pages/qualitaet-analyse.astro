@@ -1,0 +1,389 @@
+---
+/**
+ * Qualität, Analysedaten und Dokumentation — how to read the analytical
+ * information the catalog shows.
+ *
+ * This page explains **what the terms mean**, not what this shop has. It makes
+ * no statement about the coverage, independence, accreditation or completeness
+ * of any testing, because nothing in this repository establishes any of that:
+ * the catalog data is still placeholder (AGENTS.md, "Current catalog data is
+ * placeholder") and the purity values are fabricated until real analytical data
+ * replaces them. Wherever a fact about a specific product could be stated, this
+ * page points at the product page and the contact channel instead.
+ *
+ * The subject-matter explanations deliberately restate what the Wissen and
+ * Lexikon entries already say (`src/content/lexikon/{coa,hplc,
+ * massenspektrometrie,reinheit}.md` and `wissen/reinheit-und-coa.md`) and link
+ * to them, rather than introducing a second, drifting account of HPLC or MS.
+ *
+ * `noindex` is set directly rather than through `LegalLayout`'s `draft` prop:
+ * this page carries no `[Platzhalter]` fields, so that layout's banner would
+ * not describe it. It stays noindex while the catalog's analytical data is
+ * placeholder. The page is consequently absent from `content-index.ts`, so no
+ * sitemap and no llms.txt lists it.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+import { CONTACT } from "../lib/company";
+
+// The name and description of the page *as an entity*, used by the WebPage node
+// below and matching the visible heading.
+const TITLE = "Qualität, Analysedaten und Dokumentation";
+const DESCRIPTION =
+	"Wie Analysedaten, Chargendokumentation und Zertifikatsangaben zu einem " +
+	"Forschungspeptid einzuordnen sind.";
+
+// Head metadata. Complete as written, so no brand suffix.
+const META_TITLE = "Qualität, Analysedaten und Dokumentation";
+const META_DESCRIPTION =
+	"Informationen zur Einordnung von Analysedaten, Chargendokumentation, COA, " +
+	"HPLC und Massenspektrometrie.";
+
+/**
+ * What a certificate of analysis usually carries. Descriptive of the document
+ * type — not a list this shop promises to supply for any given article.
+ */
+const coaContents = [
+	"Produkt- oder Probenbezeichnung",
+	"Chargen- oder Referenznummer",
+	"eingesetztes Analyseverfahren",
+	"Datum des Ergebnisses",
+	"die berichteten Ergebnisse",
+];
+
+/** The three terms that are most often used interchangeably, and are not. */
+const concepts = [
+	{
+		term: "Reinheit",
+		body: "Anteil der Zielsubstanz am gemessenen Material, üblicherweise als HPLC-Flächenprozent angegeben. Die Angabe bezieht sich auf das, was das jeweilige Verfahren erfasst.",
+	},
+	{
+		term: "Identität",
+		body: "Die Frage, ob die untersuchte Substanz die erwartete ist. Dazu trägt vor allem die massenspektrometrische Betrachtung bei, nicht der Reinheitswert.",
+	},
+	{
+		term: "Gehalt",
+		body: "Massenanteil des Peptids im gelieferten Pulver. Restwasser und Salze aus der Synthese erscheinen im Chromatogramm nicht, weshalb der Gehalt unter der angegebenen HPLC-Reinheit liegen kann.",
+	},
+];
+
+// --- SEO ---------------------------------------------------------------
+// A plain WebPage node describing this document, plus the breadcrumb trail —
+// the same shape the other information pages use, with the Organization
+// referenced by @id rather than restated.
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": `${canonicalUrl("/qualitaet-analyse")}#webpage`,
+		url: canonicalUrl("/qualitaet-analyse"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Qualität und Analyse", "/qualitaet-analyse"],
+	]),
+];
+---
+
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	noindex
+	jsonLd={jsonLd}
+>
+	<div class="quality">
+		<h1>Qualität, Analysedaten und Dokumentation</h1>
+		<p class="lead">
+			Was Angaben wie Reinheit, COA oder Chargennummer aussagen — und was sie
+			nicht aussagen.
+		</p>
+
+		{/* The one thing a reader must take away before reading any value: this
+		    page describes the terms, the product page carries the facts. */}
+		<aside class="draft" role="note">
+			<p class="draft__heading">Immer produkt- und chargenbezogen prüfen</p>
+			<p>
+				Diese Seite erklärt allgemeine Begriffe. Welche Unterlagen und welcher
+				Analysestand zu einem bestimmten Produkt oder einer bestimmten Charge
+				tatsächlich vorliegen, ist der jeweiligen Produktseite zu entnehmen oder
+				über die Kontaktseite zu klären — Angaben dieser Seite ersetzen diese
+				Prüfung nicht.
+			</p>
+		</aside>
+
+		<section class="section" id="zweck">
+			<h2>Zweck dieser Seite</h2>
+			<p>
+				Zu Forschungspeptiden werden Angaben genannt, die aus der analytischen
+				Praxis stammen: Reinheit in Flächenprozent, Chargennummern,
+				Analysezertifikate, HPLC und Massenspektrometrie. Diese Seite beschreibt,
+				wie solche Angaben und die zugehörige Dokumentation zu verstehen sind.
+			</p>
+			<p>
+				Sie trifft keine Aussage über den Prüfstand eines einzelnen Artikels.
+				Maßgeblich sind die Angaben auf der jeweiligen{" "}
+				<a href="/produkte/">Produktseite</a>; die fachlichen Hintergründe stehen
+				ausführlich im Beitrag{" "}
+				<a href="/wissen/reinheit-und-coa/">Reinheit und Analysezertifikat (COA)</a>.
+			</p>
+		</section>
+
+		<section class="section" id="chargendokumentation">
+			<h2>Chargenbezogene Dokumentation</h2>
+			<p>
+				Analytische Dokumentation ist chargenbezogen: Sie beschreibt das
+				Material einer konkreten Produktionscharge und nicht ein Produkt im
+				Allgemeinen. Ein Dokument ohne zuordenbare Chargen- oder Referenznummer
+				lässt sich der gelieferten Substanz nicht zuordnen.
+			</p>
+			<p>
+				Umfang und Art der vorliegenden Unterlagen können sich deshalb zwischen
+				Produkten und zwischen Chargen desselben Produkts unterscheiden. Was zu
+				einem bestimmten Artikel vorliegt, wird auf der Produktseite ausgewiesen.
+			</p>
+		</section>
+
+		<section class="section" id="coa">
+			<h2>Analysezertifikat / COA</h2>
+			<p>
+				Ein Analysezertifikat (Certificate of Analysis, COA) dokumentiert
+				Messwerte zu einer untersuchten Charge. Üblicherweise enthält ein
+				solches Dokument:
+			</p>
+			<ul class="list">
+				{coaContents.map((entry) => <li>{entry}</li>)}
+			</ul>
+			<p class="section__note">
+				Kurzdefinition im Lexikon: <a href="/wissen/lexikon/coa/">COA</a>.
+				Ausführlich, mit Hinweisen zur Bewertung:{" "}
+				<a href="/wissen/reinheit-und-coa/">Reinheit und Analysezertifikat</a>.
+			</p>
+		</section>
+
+		<section class="section" id="hplc">
+			<h2>HPLC</h2>
+			<p>
+				Die Hochleistungsflüssigkeitschromatographie trennt die Bestandteile
+				einer Probe und stellt sie als Chromatogramm dar. Aus dem Verhältnis der
+				Peakflächen ergibt sich ein berichteter Reinheitswert in Flächenprozent.
+			</p>
+			<p>
+				Der Wert erfasst, was der Detektor unter den gewählten Bedingungen
+				registriert. Andere Eigenschaften einer Probe — etwa ihre Identität oder
+				der Peptidgehalt des Pulvers — folgen daraus nicht; dafür sind weitere
+				Angaben erforderlich.
+			</p>
+			<p class="section__note">
+				Begriff im Lexikon: <a href="/wissen/lexikon/hplc/">HPLC</a>.
+			</p>
+		</section>
+
+		<section class="section" id="massenspektrometrie">
+			<h2>Massenspektrometrie</h2>
+			<p>
+				Die Massenspektrometrie bestimmt das Verhältnis von Masse zu Ladung
+				ionisierter Moleküle. Je nach eingesetztem Verfahren kann sie zur
+				Beurteilung der Identität oder der Molekülmasse einer Probe beitragen,
+				etwa indem die gemessene Masse mit der aus der Sequenz berechneten
+				verglichen wird.
+			</p>
+			<p>
+				Häufig wird sie mit der Chromatographie gekoppelt (LC-MS). Reinheits- und
+				Identitätsbetrachtung beantworten dabei unterschiedliche Fragen und
+				ergänzen einander.
+			</p>
+			<p class="section__note">
+				Begriff im Lexikon:{" "}
+				<a href="/wissen/lexikon/massenspektrometrie/">Massenspektrometrie</a>.
+			</p>
+		</section>
+
+		<section class="section" id="reinheit-identitaet-gehalt">
+			<h2>Reinheit, Identität und Gehalt</h2>
+			<p>
+				Drei Angaben, die häufig gleichgesetzt werden, obwohl sie
+				Unterschiedliches beschreiben und einander nicht ersetzen:
+			</p>
+			<dl class="facts">
+				{
+					concepts.map((concept) => (
+						<div>
+							<dt>{concept.term}</dt>
+							<dd>{concept.body}</dd>
+						</div>
+					))
+				}
+			</dl>
+			<p class="section__note">
+				Begriff im Lexikon: <a href="/wissen/lexikon/reinheit/">Reinheit</a>.
+			</p>
+		</section>
+
+		<section class="section" id="externe-analysen">
+			<h2>Externe Analysen</h2>
+			<p>
+				Liegen zu einem Produkt Angaben aus einem externen Labor vor, können sie
+				bei diesem Produkt ausgewiesen werden. Ob solche Angaben vorliegen,
+				unterscheidet sich von Produkt zu Produkt und von Charge zu Charge.
+			</p>
+			<p class="section__note">
+				Aussagen über Prüfumfang, Unabhängigkeit oder Wiederholbarkeit einer
+				Untersuchung sind damit nicht verbunden. Wo eine solche Angabe fehlt,
+				wird sie nicht durch eine allgemeine Formulierung ersetzt.
+			</p>
+		</section>
+
+		<section class="section" id="fehlende-dokumentation">
+			<h2>Fehlende oder ausstehende Dokumentation</h2>
+			<p>
+				Ist eine Angabe als „nicht verfügbar" oder „ausstehend" gekennzeichnet,
+				bedeutet das genau dies: Das betreffende Dokument liegt an dieser Stelle
+				nicht vor. Es sollte weder als vorhanden noch als vollständig
+				vorausgesetzt werden.
+			</p>
+			<p class="section__note">
+				Ein offen gekennzeichnetes Feld ist bewusst offen und wird nicht mit
+				einem Näherungswert gefüllt.
+			</p>
+		</section>
+
+		<section class="section" id="dokumentationsfrage">
+			<h2>Dokumentationsfrage melden</h2>
+			{/* Reads `CONTACT` rather than naming a channel: no address or number
+			    exists in this repository, and the contact page is the one place that
+			    publishes whatever is configured. */}
+			<p>
+				{
+					CONTACT.any
+						? "Fragen zur Dokumentation eines Produkts nimmt die Kontaktseite entgegen; dort stehen die verfügbaren Kontaktwege."
+						: "Welche Kontaktwege derzeit zur Verfügung stehen, ist auf der Kontaktseite aufgeführt."
+				}
+			</p>
+			<p>Hilfreich für die Zuordnung sind:</p>
+			<ul class="list">
+				<li>der Produktname und die betreffende Packgröße</li>
+				<li>die Chargen- oder Referenznummer, soweit vorhanden</li>
+				<li>die konkrete Angabe, um die es geht</li>
+			</ul>
+			<p class="section__note">
+				Bitte senden Sie uns keine Gesundheitsdaten oder sonstigen Angaben
+				besonderer Kategorien nach Art. 9 DSGVO — für die Bearbeitung sind sie
+				nicht erforderlich.
+			</p>
+			<p>
+				<a href="/contact/" class="btn btn--green">Zur Kontaktseite</a>
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.quality {
+			max-width: 900px;
+		}
+		.quality h1 {
+			font-size: clamp(1.9rem, 4vw, 2.5rem);
+			font-weight: 800;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.lead {
+			font-size: 1.05rem;
+			color: var(--c-muted);
+			max-width: 64ch;
+			margin: 0 0 1.25rem;
+		}
+
+		/* Neutral surface rather than the warning palette: the notice is guidance
+		   on how to read the page, not a warning about it. */
+		.draft {
+			background: var(--c-surface);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.15rem;
+			max-width: 68ch;
+		}
+		.draft__heading {
+			font-weight: 700;
+			margin: 0 0 0.35rem;
+		}
+		.draft p:last-child {
+			margin: 0;
+			font-size: 0.92rem;
+			color: var(--c-muted);
+		}
+
+		.section {
+			padding-block: 1.5rem;
+			max-width: 68ch;
+		}
+		.section h2 {
+			font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+			margin-bottom: 0.75rem;
+			scroll-margin-top: 5rem;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.section p {
+			margin: 0 0 1rem;
+		}
+		.section__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+		.section a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.section a:focus-visible,
+		.btn:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+		/* `.section a` above would otherwise repaint the button label green on a
+		   green fill — the link rule is more specific than the global `.btn--green`. */
+		.section a.btn {
+			color: var(--c-white);
+		}
+
+		/* Same definition-list treatment the contact and shipping pages use, so
+		   the fact tables read alike across the site. */
+		.facts {
+			margin: 0 0 1rem;
+			display: grid;
+			gap: 0.9rem;
+		}
+		.facts dt {
+			font-size: 0.74rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+			color: var(--c-muted);
+		}
+		.facts dd {
+			margin: 0.2rem 0 0;
+			font-size: 0.95rem;
+		}
+		.facts > div {
+			border-bottom: 1px solid var(--c-border);
+			padding-bottom: 0.75rem;
+		}
+		.facts > div:last-child {
+			border-bottom: none;
+			padding-bottom: 0;
+		}
+
+		.list {
+			margin: 0 0 1rem;
+			padding-left: 1.25rem;
+			display: grid;
+			gap: 0.3rem;
+		}
+		.list li {
+			font-size: 0.95rem;
+		}
+	</style>
+</BaseLayout>
