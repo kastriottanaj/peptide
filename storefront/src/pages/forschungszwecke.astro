@@ -1,0 +1,318 @@
+---
+/**
+ * Forschungszwecke und Produktbeschränkungen — the research-use policy page.
+ *
+ * This page **restates** restrictions that already exist elsewhere on the site
+ * (the footer disclaimer, the About hero note, the contact page's "Wofür der
+ * Kontakt gedacht ist" note) and gathers them at one URL. It deliberately adds
+ * no new commercial, legal, scientific or operational claim: nothing here about
+ * customer categories, age limits, verification procedures, certifications,
+ * batch guarantees, or where the business model is lawful — none of that is
+ * established anywhere in this repository.
+ *
+ * `noindex` is set directly rather than through `LegalLayout`'s `draft` prop:
+ * this page carries no `[Platzhalter]` fields, so the layout's draft banner
+ * ("Diese Seite enthält Platzhalter") would not describe it. The reason for the
+ * noindex is the same one though — the text has not had legal review — and it
+ * must stay until it has. The page is consequently absent from
+ * `content-index.ts`, so no sitemap and no llms.txt lists it.
+ *
+ * The order-status block reads `ORDERS_ENABLED`, the same switch the shop
+ * surfaces read, so this page cannot go on describing a shop that has moved on
+ * without it.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+import OrdersClosedNotice from "../components/OrdersClosedNotice.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+import { ORDERS_ENABLED } from "../lib/shop";
+
+// The name and description of the page *as an entity*, used by the WebPage node
+// below and matching the visible heading.
+const TITLE = "Forschungszwecke und Produktbeschränkungen";
+const DESCRIPTION =
+	"Zusammenfassung der Forschungs- und Analysezwecke, der ausgeschlossenen " +
+	"Verwendungen und der Hinweise zum Umgang mit Forschungsreagenzien.";
+
+// Head metadata. Complete as written, so no brand suffix.
+const META_TITLE = "Forschungszwecke und Produktbeschränkungen";
+const META_DESCRIPTION =
+	"Informationen zu Forschungszwecken, ausgeschlossenen Verwendungen und dem " +
+	"verantwortungsvollen Umgang mit Forschungsreagenzien.";
+
+/** Section 3 — the uses the products are not intended for. */
+const excludedUses = [
+	"Anwendung am Menschen",
+	"Anwendung am Tier",
+	"Verwendung als Arzneimittel",
+	"Verwendung als Lebensmittel",
+	"Verwendung als Nahrungsergänzungsmittel",
+	"Verwendung als Kosmetikprodukt",
+	"diagnostische oder therapeutische Zwecke",
+];
+
+/** Section 4 — the advice this website does not give. */
+const noAdvice = [
+	"medizinische Beratung",
+	"diagnostische Einschätzungen",
+	"Behandlungsempfehlungen",
+	"Dosierungsangaben",
+	"Angaben zur Verabreichung",
+	"Anwendungsprotokolle",
+];
+
+// --- SEO ---------------------------------------------------------------
+// A plain WebPage node describing this document, plus the breadcrumb trail —
+// the same shape `/about/` and `/contact/` use, with the Organization
+// referenced by @id rather than restated.
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": `${canonicalUrl("/forschungszwecke")}#webpage`,
+		url: canonicalUrl("/forschungszwecke"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Forschungszwecke", "/forschungszwecke"],
+	]),
+];
+---
+
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	noindex
+	jsonLd={jsonLd}
+>
+	<div class="policy">
+		<h1>Forschungszwecke und Produktbeschränkungen</h1>
+		<p class="lead">
+			Diese Seite fasst zusammen, für welchen Zusammenhang die angebotenen
+			Produkte bestimmt sind und welche Verwendungen ausgeschlossen sind.
+		</p>
+
+		{/* Short, factual, and not alarmist: it says what the page is and what it
+		    is not, which is also the reason it stays out of the index. */}
+		<aside class="draft" role="note">
+			<p class="draft__heading">Informationsseite, keine Rechtsberatung</p>
+			<p>
+				Der Text gibt bestehende Hinweise aus dem Shop in gebündelter Form
+				wieder. Er stellt keine Rechtsberatung dar und ersetzt keine juristische
+				Prüfung; bis diese vorliegt, ist die Seite nicht für die Aufnahme in
+				Suchmaschinen freigegeben.
+			</p>
+		</aside>
+
+		<section class="section" id="zweck">
+			<h2>Zweck dieser Seite</h2>
+			<p>
+				Angaben dazu, wofür die angebotenen Produkte bestimmt sind, stehen an
+				mehreren Stellen dieser Website — auf den Produktseiten, im
+				Wissensbereich und auf der Kontaktseite. Diese Seite führt sie an einer
+				Stelle zusammen, damit der vorgesehene Forschungs- und
+				Analysezusammenhang sowie die daraus folgenden Beschränkungen in einem
+				Zug nachgelesen werden können.
+			</p>
+			<p>
+				Neue Zusagen werden hier nicht gemacht. Maßgeblich für ein einzelnes
+				Produkt bleiben die Angaben auf der jeweiligen{" "}
+				<a href="/produkte/">Produktseite</a>.
+			</p>
+		</section>
+
+		<section class="section" id="forschung-und-analyse">
+			<h2>Ausschließlich für Forschung und Analyse</h2>
+			<p>
+				Die angebotenen Produkte werden ausschließlich als Forschungsreagenzien
+				für Labor-, Analyse- und wissenschaftliche Zwecke abgegeben. Dieser
+				Zusammenhang ist der einzige, für den sie bestimmt sind.
+			</p>
+			<p>
+				Fachlicher Hintergrund zu Reinheitsangaben, Analysezertifikaten und
+				Laborpraxis steht im Wissensbereich, etwa unter{" "}
+				<a href="/wissen/reinheit-und-coa/">Reinheit und COA</a>. Auch dieser
+				Bereich ist Hintergrundwissen und keine Anwendungsanleitung.
+			</p>
+		</section>
+
+		<section class="section" id="ausgeschlossene-verwendungen">
+			<h2>Ausgeschlossene Verwendungen</h2>
+			<p>Die Produkte sind nicht bestimmt für:</p>
+			<ul class="list">
+				{excludedUses.map((use) => <li>{use}</li>)}
+			</ul>
+			<p class="section__note">
+				Sie sind weder als Arzneimittel, Lebensmittel,
+				Nahrungsergänzungs- oder Kosmetikprodukt zugelassen noch für eine
+				Anwendung am oder im menschlichen oder tierischen Körper geeignet.
+			</p>
+		</section>
+
+		<section class="section" id="keine-beratung">
+			<h2>Keine medizinische oder anwendungsbezogene Beratung</h2>
+			<p>Über diese Website werden nicht bereitgestellt:</p>
+			<ul class="list">
+				{noAdvice.map((item) => <li>{item}</li>)}
+			</ul>
+			<p class="section__note">
+				Entsprechende Fragen können wir nicht beantworten. Für gesundheitliche
+				Fragen sind ausschließlich dafür qualifizierte Stellen zuständig.
+			</p>
+		</section>
+
+		<section class="section" id="verantwortung">
+			<h2>Verantwortung der anfragenden Person</h2>
+			<p>
+				Welche rechtlichen, institutionellen und sicherheitsbezogenen
+				Anforderungen für ein konkretes Forschungsvorhaben gelten, richtet sich
+				nach dem jeweiligen Vorhaben, dem Arbeitsumfeld und dem Ort. Die Prüfung
+				dieser Anforderungen liegt bei der anfragenden Person.
+			</p>
+			<p>
+				Wir treffen keine Aussage darüber, ob ein bestimmtes Vorhaben zulässig
+				ist, und diese Seite nimmt eine solche Prüfung nicht vorweg.
+			</p>
+		</section>
+
+		<section class="section" id="dokumentation">
+			<h2>Dokumentation und Analysedaten</h2>
+			<p>
+				Welche Dokumentation und welche analytischen Angaben vorliegen, kann
+				sich je nach Produkt und Charge unterscheiden. Der jeweils
+				ausgewiesene Stand steht auf der Produktseite; fehlt eine Angabe, bleibt
+				sie offen und wird nicht durch einen Näherungswert ersetzt.
+			</p>
+			<p>
+				Welche Unterlagen zu einem Produkt oder einer Charge aktuell verfügbar
+				sind, lässt sich über die{" "}
+				<a href="/produkte/">Produktseiten</a> und über die{" "}
+				<a href="/contact/">Kontaktseite</a> klären. Was ein Analysezertifikat
+				aussagt und wo seine Grenzen liegen, erklärt der Beitrag{" "}
+				<a href="/wissen/reinheit-und-coa/">Reinheit und COA</a>.
+			</p>
+		</section>
+
+		<section class="section" id="anfragen">
+			<h2>Ungeeignete oder unklare Anfragen</h2>
+			<p>
+				Lässt eine Anfrage einen Verwendungszweck erkennen, der zu den oben
+				genannten Beschränkungen nicht passt, oder bleibt der Zweck unklar, kann
+				um eine Klarstellung gebeten oder die Anfrage abgelehnt werden.
+			</p>
+			<p class="section__note">
+				Ein Nachweis- oder Prüfverfahren für Einrichtungen ist damit nicht
+				verbunden; diese Seite beschreibt keine solche Prüfung.
+			</p>
+		</section>
+
+		<section class="section" id="kontakt">
+			<h2>Kontakt bei Fragen</h2>
+			<p>
+				Fragen zu den hier beschriebenen Beschränkungen oder zu den Angaben
+				eines Produkts lassen sich über die Kontaktseite stellen. Welche
+				Kontaktwege derzeit zur Verfügung stehen, ist dort aufgeführt.
+			</p>
+			<p>
+				<a href="/contact/" class="btn btn--green">Zur Kontaktseite</a>
+			</p>
+		</section>
+
+		<section class="section" id="bestellstatus">
+			<h2>Hinweis zum Bestellstatus</h2>
+			{/* The notice is the shared copy from `lib/shop.ts`, rendered on the same
+			    condition as on the product, cart and checkout pages. The sentence
+			    below stands in both states, so this section never becomes an
+			    implicit statement that ordering, payment or shipping is available. */}
+			{!ORDERS_ENABLED && <OrdersClosedNotice contact={false} />}
+			<p>
+				Diese Seite trifft keine Aussage darüber, ob Bestellung, Zahlung oder
+				Versand zur Verfügung stehen. Der jeweils geltende Stand wird im Shop
+				selbst ausgewiesen.
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.policy {
+			max-width: 900px;
+		}
+		.policy h1 {
+			font-size: clamp(1.9rem, 4vw, 2.5rem);
+			font-weight: 800;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.lead {
+			font-size: 1.05rem;
+			color: var(--c-muted);
+			max-width: 64ch;
+			margin: 0 0 1.25rem;
+		}
+
+		/* Neutral surface rather than the warning palette: the page is complete and
+		   readable, it simply has not been reviewed yet. */
+		.draft {
+			background: var(--c-surface);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.15rem;
+			max-width: 68ch;
+		}
+		.draft__heading {
+			font-weight: 700;
+			margin: 0 0 0.35rem;
+		}
+		.draft p:last-child {
+			margin: 0;
+			font-size: 0.92rem;
+			color: var(--c-muted);
+		}
+
+		.section {
+			padding-block: 1.5rem;
+			max-width: 68ch;
+		}
+		.section h2 {
+			font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+			margin-bottom: 0.75rem;
+			scroll-margin-top: 5rem;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.section p {
+			margin: 0 0 1rem;
+		}
+		.section__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+		.section a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.section a:focus-visible,
+		.btn:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+		/* `.section a` above would otherwise repaint the button label green on a
+		   green fill — the link rule is more specific than the global `.btn--green`. */
+		.section a.btn {
+			color: var(--c-white);
+		}
+
+		.list {
+			margin: 0 0 1rem;
+			padding-left: 1.25rem;
+			display: grid;
+			gap: 0.3rem;
+		}
+		.list li {
+			font-size: 0.95rem;
+		}
+	</style>
+</BaseLayout>

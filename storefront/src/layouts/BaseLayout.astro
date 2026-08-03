@@ -157,6 +157,10 @@ const {
 					<a href="/datenschutz/">Datenschutz</a>
 					<a href="/agb/">AGB</a>
 					<a href="/widerruf/">Widerruf</a>
+					{/* Not a legal notice in the § 5 DDG sense, but the page that
+					    collects the research-use restrictions the shop states — it
+					    belongs with the other conditions rather than with support. */}
+					<a href="/forschungszwecke/">Forschungszwecke</a>
 					{/* Consent must stay revocable, so the dialog needs a permanent
 					    way back. A button rather than a link: it opens a dialog on
 					    this page instead of navigating anywhere. Hidden entirely
@@ -175,7 +179,7 @@ const {
 		<script>
 			// Keep the header cart badge in sync across pages and after any mutation.
 			//
-			// Imports `cart-state` rather than `cart`: this runs on all 37 pages, and
+			// Imports `cart-state` rather than `cart`: this runs on all 38 pages, and
 			// `cart.ts` reaches the 141 kB Medusa SDK, which would then be downloaded
 			// and evaluated by every visitor on every page. Everything the badge needs
 			// to *render* is here; the SDK is only needed to *read* a cart from the
