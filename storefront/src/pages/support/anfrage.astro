@@ -17,10 +17,13 @@
  * so the mailto link appears only when a real address is configured. Nothing
  * here hard-codes one.
  *
- * `noindex` because the page is operational routing rather than something a
- * search result should surface, and because the surfaces it routes to are
- * themselves still provisional. It is absent from `content-index.ts`, so no
- * sitemap and no llms.txt lists it.
+ * Indexable since 2026-08-03, by explicit decision, and listed in
+ * `content-index.ts` so the pages sitemap and llms.txt carry it. Two of the
+ * pages it routes to — `/versand-zahlung/` and `/retouren-reklamation/` —
+ * deliberately stay `noindex` while their procedures are unfinished. Linking to
+ * a noindex page from an indexed one is fine: the links are for the visitor who
+ * is already here, and the routing targets themselves are not being offered to
+ * search.
  */
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import OrdersClosedNotice from "../../components/OrdersClosedNotice.astro";
@@ -137,7 +140,6 @@ const jsonLd = [
 	title={META_TITLE}
 	description={META_DESCRIPTION}
 	rawTitle
-	noindex
 	jsonLd={jsonLd}
 >
 	<div class="support">

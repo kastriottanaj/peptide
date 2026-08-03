@@ -7,11 +7,13 @@
  * procedure, a guaranteed certificate, or an available order flow. The source
  * scans below pin that, and they always run.
  *
- * The second risk is the page becoming indexable. It has had no legal review,
- * so `noindex` and its absence from every sitemap are load-bearing, exactly as
- * `draft` is on the four legal pages. Those checks read the built output and are
- * skipped without `dist/` — `npm test` must not require a build (which needs the
- * Medusa backend on :9000). Run `npm run build` first to exercise them.
+ * The page is indexed since 2026-08-03 by explicit decision, so the second risk
+ * is now the opposite one: the visible notice about the missing legal review is
+ * the only caveat a search visitor gets, and the checks below pin that it is
+ * still there and no longer claims the page is withheld from search. Those
+ * checks read the built output and are skipped without `dist/` — `npm test`
+ * must not require a build (which needs the Medusa backend on :9000). Run
+ * `npm run build` first to exercise them.
  */
 
 import { test } from "node:test";
@@ -121,12 +123,19 @@ test("the order-status section is derived from ORDERS_ENABLED, not asserted", ()
 	assert.match(text, /!ORDERS_ENABLED && <OrdersClosedNotice/);
 });
 
-test("the page is withheld from the sitemap and llms.txt inventory", () => {
+test("the page is listed in the content index exactly once", () => {
 	// `content-index.ts` is the single place that decides which URLs are
-	// published. A noindex page listed there would be a contradictory signal.
+	// published, so an indexable page has to be there — and exactly once.
 	const index = readFileSync(join(SRC, "lib/content-index.ts"), "utf8");
 
-	assert.doesNotMatch(index, /forschungszwecke/);
+	assert.equal([...index.matchAll(/path:\s*"\/forschungszwecke"/g)].length, 1);
+});
+
+test("the page is in no noindex registry", () => {
+	const metadata = readFileSync(join(SRC, "lib/metadata-output.test.ts"), "utf8");
+	const registry = /const MUST_STAY_NOINDEX = \[([\s\S]*?)\];/.exec(metadata)?.[1] ?? "";
+
+	assert.doesNotMatch(registry, /forschungszwecke/);
 });
 
 test("the footer links to the page, with the trailing slash", () => {
@@ -164,13 +173,13 @@ test("the page ships the approved title and description", { skip }, () => {
 	assert.deepEqual(descriptions, [DESCRIPTION]);
 });
 
-test("REGRESSION: the page stays noindex, nofollow", { skip }, () => {
-	// The only thing keeping text that has not had legal review out of the index,
-	// the same role `draft` plays on the legal pages. Removing it to satisfy an
-	// SEO audit is the mistake this pins.
+test("REGRESSION: the page is indexable — no robots directive at all", { skip }, () => {
+	// Indexed by explicit decision on 2026-08-03. `/versand-zahlung/` and
+	// `/retouren-reklamation/` stayed noindex in the same change; if this page is
+	// ever pulled back out of the index, this test is the place that says so.
 	const robots = [...html().matchAll(/<meta name="robots" content="([^"]*)"/g)].map((m) => m[1]);
 
-	assert.deepEqual(robots, ["noindex, nofollow"]);
+	assert.deepEqual(robots, []);
 });
 
 test("the canonical is self-referencing and slashed", { skip }, () => {
@@ -185,17 +194,23 @@ test("the canonical is self-referencing and slashed", { skip }, () => {
 	assert.equal(url.search, "");
 });
 
-test("the page appears in no sitemap and in no llms inventory", { skip }, () => {
-	const files = readdirSync(DIST, { withFileTypes: true })
-		.filter((entry) => entry.isFile())
-		.map((entry) => entry.name)
-		.filter((name) => /^sitemap.*\.xml$/.test(name) || /^llms(-full)?\.txt$/.test(name));
+test("the page appears exactly once, in the pages sitemap, and in llms.txt", { skip }, () => {
+	const sitemaps = readdirSync(DIST, { withFileTypes: true })
+		.filter((entry) => entry.isFile() && /^sitemap.*\.xml$/.test(entry.name))
+		.map((entry) => entry.name);
 
-	const leaking = files.filter((name) =>
-		readFileSync(join(DIST, name), "utf8").includes("forschungszwecke"),
-	);
+	const hits: string[] = [];
+	for (const name of sitemaps) {
+		const locs = [
+			...readFileSync(join(DIST, name), "utf8").matchAll(/<loc>([^<]+)<\/loc>/g),
+		].map((m) => m[1]);
+		for (const loc of locs) {
+			if (new URL(loc).pathname === PATH) hits.push(name);
+		}
+	}
 
-	assert.deepEqual(leaking, [], `noindex page listed in: ${leaking.join(", ")}`);
+	assert.deepEqual(hits, ["sitemap-pages.xml"], `unexpected sitemap placement: ${hits}`);
+	assert.match(readFileSync(join(DIST, "llms.txt"), "utf8"), /forschungszwecke/);
 });
 
 test("the footer link resolves directly, with no redirect", { skip }, () => {
@@ -245,8 +260,13 @@ test("the rendered page states the restrictions it exists for", { skip }, () => 
 		assert.ok(text.includes(phrase), `${PATH}: section "${phrase}" is missing`);
 	}
 
-	// The draft notice has to remain visible while the noindex is in force.
+	// The notice stays visible now that the page is indexed — more so, not less:
+	// it is the only thing telling a search visitor this text has had no legal
+	// review. What it may no longer say is that the page is kept out of search.
 	assert.match(text, /keine Rechtsberatung/);
+	assert.match(text, /eine solche Prüfung dieser Seite liegt bislang nicht vor/);
+	assert.doesNotMatch(text, /nicht für die Aufnahme in\s+Suchmaschinen freigegeben/);
+	assert.doesNotMatch(text, /Suchmaschinen freigegeben/);
 });
 
 test("REGRESSION: the rendered page makes no forbidden claim", { skip }, () => {

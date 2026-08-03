@@ -10,12 +10,16 @@
  * batch guarantees, or where the business model is lawful — none of that is
  * established anywhere in this repository.
  *
- * `noindex` is set directly rather than through `LegalLayout`'s `draft` prop:
- * this page carries no `[Platzhalter]` fields, so the layout's draft banner
- * ("Diese Seite enthält Platzhalter") would not describe it. The reason for the
- * noindex is the same one though — the text has not had legal review — and it
- * must stay until it has. The page is consequently absent from
- * `content-index.ts`, so no sitemap and no llms.txt lists it.
+ * Indexable since 2026-08-03, by explicit decision: the page collects
+ * restrictions that are already stated elsewhere on the site and is the URL
+ * people should be able to find. It is listed in `content-index.ts`, so the
+ * pages sitemap and llms.txt carry it.
+ *
+ * That does **not** make it reviewed legal text. It still has had no legal
+ * review, the visible notice says so, and it must keep saying so. What it may
+ * no longer claim is that it is withheld from search engines — it is not.
+ * `LegalLayout`'s `draft` prop is untouched on the four legal pages, which
+ * still carry `[Platzhalter]` company data and stay out of the index.
  *
  * The order-status block reads `ORDERS_ENABLED`, the same switch the shop
  * surfaces read, so this page cannot go on describing a shop that has moved on
@@ -85,7 +89,6 @@ const jsonLd = [
 	title={META_TITLE}
 	description={META_DESCRIPTION}
 	rawTitle
-	noindex
 	jsonLd={jsonLd}
 >
 	<div class="policy">
@@ -95,15 +98,16 @@ const jsonLd = [
 			Produkte bestimmt sind und welche Verwendungen ausgeschlossen sind.
 		</p>
 
-		{/* Short, factual, and not alarmist: it says what the page is and what it
-		    is not, which is also the reason it stays out of the index. */}
+		{/* Short, factual, and not alarmist. The limitation it states — no legal
+		    review — is unchanged; only the sentence about search engines went,
+		    because the page is indexed since 2026-08-03 and that claim would now
+		    be false. */}
 		<aside class="draft" role="note">
 			<p class="draft__heading">Informationsseite, keine Rechtsberatung</p>
 			<p>
 				Der Text gibt bestehende Hinweise aus dem Shop in gebündelter Form
 				wieder. Er stellt keine Rechtsberatung dar und ersetzt keine juristische
-				Prüfung; bis diese vorliegt, ist die Seite nicht für die Aufnahme in
-				Suchmaschinen freigegeben.
+				Prüfung; eine solche Prüfung dieser Seite liegt bislang nicht vor.
 			</p>
 		</aside>
 

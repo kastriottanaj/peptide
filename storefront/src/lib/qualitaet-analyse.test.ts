@@ -143,10 +143,19 @@ test("contact details are read from configuration, never written into the page",
 	assert.doesNotMatch(text, /\bmailto:|\btel:/, "hard-coded contact link");
 });
 
-test("the page is withheld from the sitemap and llms.txt inventory", () => {
+test("the page is listed in the content index exactly once", () => {
+	// `content-index.ts` is the single place that decides which URLs are
+	// published, so an indexable page has to be there — and exactly once.
 	const index = readFileSync(join(SRC, "lib/content-index.ts"), "utf8");
 
-	assert.doesNotMatch(index, /qualitaet-analyse/);
+	assert.equal([...index.matchAll(/path:\s*"\/qualitaet-analyse"/g)].length, 1);
+});
+
+test("the page is in no noindex registry", () => {
+	const metadata = readFileSync(join(SRC, "lib/metadata-output.test.ts"), "utf8");
+	const registry = /const MUST_STAY_NOINDEX = \[([\s\S]*?)\];/.exec(metadata)?.[1] ?? "";
+
+	assert.doesNotMatch(registry, /qualitaet-analyse/);
 });
 
 test("the footer links to the page, with the trailing slash", () => {
@@ -184,10 +193,13 @@ test("the page ships the approved title and description", { skip }, () => {
 	assert.deepEqual(descriptions, [DESCRIPTION]);
 });
 
-test("REGRESSION: the page stays noindex, nofollow", { skip }, () => {
+test("REGRESSION: the page is indexable — no robots directive at all", { skip }, () => {
+	// Indexed by explicit decision on 2026-08-03. `/versand-zahlung/` and
+	// `/retouren-reklamation/` stayed noindex in the same change; if this page is
+	// ever pulled back out of the index, this test is the place that says so.
 	const robots = [...html().matchAll(/<meta name="robots" content="([^"]*)"/g)].map((m) => m[1]);
 
-	assert.deepEqual(robots, ["noindex, nofollow"]);
+	assert.deepEqual(robots, []);
 });
 
 test("the canonical is self-referencing and slashed", { skip }, () => {
@@ -202,17 +214,23 @@ test("the canonical is self-referencing and slashed", { skip }, () => {
 	assert.equal(url.search, "");
 });
 
-test("the page appears in no sitemap and in no llms inventory", { skip }, () => {
-	const files = readdirSync(DIST, { withFileTypes: true })
-		.filter((entry) => entry.isFile())
-		.map((entry) => entry.name)
-		.filter((name) => /^sitemap.*\.xml$/.test(name) || /^llms(-full)?\.txt$/.test(name));
+test("the page appears exactly once, in the pages sitemap, and in llms.txt", { skip }, () => {
+	const sitemaps = readdirSync(DIST, { withFileTypes: true })
+		.filter((entry) => entry.isFile() && /^sitemap.*\.xml$/.test(entry.name))
+		.map((entry) => entry.name);
 
-	const leaking = files.filter((name) =>
-		readFileSync(join(DIST, name), "utf8").includes("qualitaet-analyse"),
-	);
+	const hits: string[] = [];
+	for (const name of sitemaps) {
+		const locs = [
+			...readFileSync(join(DIST, name), "utf8").matchAll(/<loc>([^<]+)<\/loc>/g),
+		].map((m) => m[1]);
+		for (const loc of locs) {
+			if (new URL(loc).pathname === PATH) hits.push(name);
+		}
+	}
 
-	assert.deepEqual(leaking, [], `noindex page listed in: ${leaking.join(", ")}`);
+	assert.deepEqual(hits, ["sitemap-pages.xml"], `unexpected sitemap placement: ${hits}`);
+	assert.match(readFileSync(join(DIST, "llms.txt"), "utf8"), /qualitaet-analyse/);
 });
 
 /** Every path the built output answers with 200. */

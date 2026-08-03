@@ -114,6 +114,33 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 		priority: 0.5,
 	},
 	{
+		path: "/forschungszwecke",
+		title: "Forschungszwecke und Produktbeschränkungen",
+		description:
+			"Vorgesehener Forschungs- und Analysezusammenhang, ausgeschlossene Verwendungen und die Grenzen der Auskunft.",
+		keywords: ["Forschungszwecke", "Laborbedarf", "ausgeschlossene Verwendung"],
+		changeFrequency: "yearly",
+		priority: 0.5,
+	},
+	{
+		path: "/qualitaet-analyse",
+		title: "Qualität, Analysedaten und Dokumentation",
+		description:
+			"Wie COA, HPLC, Massenspektrometrie sowie Reinheit, Identität und Gehalt zu lesen sind.",
+		keywords: ["COA", "HPLC", "Massenspektrometrie", "Reinheit", "Charge"],
+		changeFrequency: "monthly",
+		priority: 0.55,
+	},
+	{
+		path: "/support/anfrage",
+		title: "Support-Anfrage",
+		description:
+			"Welche Anliegen wohin gehören und welche Angaben eine Anfrage einordnen.",
+		keywords: ["Support", "Anfrage", "Hilfe", "Kontakt"],
+		changeFrequency: "monthly",
+		priority: 0.35,
+	},
+	{
 		path: "/barrierefreiheit",
 		title: "Barrierefreiheit",
 		description:

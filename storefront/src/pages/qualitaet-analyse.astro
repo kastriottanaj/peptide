@@ -16,11 +16,11 @@
  * massenspektrometrie,reinheit}.md` and `wissen/reinheit-und-coa.md`) and link
  * to them, rather than introducing a second, drifting account of HPLC or MS.
  *
- * `noindex` is set directly rather than through `LegalLayout`'s `draft` prop:
- * this page carries no `[Platzhalter]` fields, so that layout's banner would
- * not describe it. It stays noindex while the catalog's analytical data is
- * placeholder. The page is consequently absent from `content-index.ts`, so no
- * sitemap and no llms.txt lists it.
+ * Indexable since 2026-08-03, by explicit decision, and listed in
+ * `content-index.ts` so the pages sitemap and llms.txt carry it. The catalog's
+ * analytical data is still placeholder — which is precisely why this page
+ * states no product-specific fact and points at the product page for every one
+ * of them. Nothing about that reticence changes now that it is indexed.
  */
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
@@ -92,7 +92,6 @@ const jsonLd = [
 	title={META_TITLE}
 	description={META_DESCRIPTION}
 	rawTitle
-	noindex
 	jsonLd={jsonLd}
 >
 	<div class="quality">
