@@ -1,0 +1,351 @@
+---
+/**
+ * Versand und Zahlung — the shipping and payment information page.
+ *
+ * Everything on this page is either read from an authoritative source in this
+ * repository or stated as still open. The three money values come from
+ * `lib/pricing.ts`, the same constants the cart and `/about/` render, so this
+ * page cannot quote a fee the checkout does not use. The order-status block
+ * reads `ORDERS_ENABLED` and the contact copy reads `CONTACT`, so neither can
+ * go on describing a shop that has moved on without them.
+ *
+ * What is deliberately **not** here: a carrier name, a dispatch or delivery
+ * time, tracking, customs or country exclusions, and bank details. None of them
+ * exists in this repository to cite (docs/go-live-checklist.md §1, §4), and a
+ * plausible-sounding placeholder for any of them is a promise the business
+ * would be held to. Each is named as outstanding instead.
+ *
+ * `noindex` is set directly rather than through `LegalLayout`'s `draft` prop:
+ * this page carries no `[Platzhalter]` fields, so that layout's banner would
+ * not describe it. The reason is the same though — the operational details are
+ * not final — and it must stay until they are. The page is consequently absent
+ * from `content-index.ts`, so no sitemap and no llms.txt lists it.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+import OrdersClosedNotice from "../components/OrdersClosedNotice.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+import { ORDERS_ENABLED } from "../lib/shop";
+import { CONTACT } from "../lib/company";
+import {
+	FREE_SHIPPING_THRESHOLD_EUR,
+	SHIPPING_FEE_EUR,
+	SHIPPING_FEE_OUTSIDE_GERMANY_EUR,
+	formatEur,
+} from "../lib/pricing";
+
+// The name and description of the page *as an entity*, used by the WebPage node
+// below and matching the visible heading.
+const TITLE = "Versand und Zahlung";
+const DESCRIPTION =
+	"Versandgebiete, Versandkosten, Zahlungsweise und der aktuelle Bestellstatus " +
+	"bei Peptide Einkaufen.";
+
+// Head metadata. Complete as written, so no brand suffix.
+const META_TITLE = "Versand und Zahlung";
+const META_DESCRIPTION =
+	"Informationen zu Versandkosten, Liefergebieten, Zahlungsweise und dem " +
+	"aktuellen Bestellstatus.";
+
+/**
+ * The delivery areas, as configured. Two zones exist and nothing in this
+ * repository names an excluded country, so none is listed.
+ */
+const shippingAreas = [
+	{
+		area: "Deutschland",
+		fee: formatEur(SHIPPING_FEE_EUR),
+	},
+	{
+		area: "Übriges Europa",
+		fee: formatEur(SHIPPING_FEE_OUTSIDE_GERMANY_EUR),
+	},
+];
+
+// --- SEO ---------------------------------------------------------------
+// A plain WebPage node describing this document, plus the breadcrumb trail —
+// the same shape the other information pages use, with the Organization
+// referenced by @id rather than restated.
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": `${canonicalUrl("/versand-zahlung")}#webpage`,
+		url: canonicalUrl("/versand-zahlung"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Versand und Zahlung", "/versand-zahlung"],
+	]),
+];
+---
+
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	noindex
+	jsonLd={jsonLd}
+>
+	<div class="shipping">
+		<h1>Versand und Zahlung</h1>
+		<p class="lead">
+			Welche Liefergebiete vorgesehen sind, welche Versandkosten gelten und wie
+			bezahlt wird — sowie der Stand der Angaben, die noch offen sind.
+		</p>
+
+		{/* Professional and specific: it names what is provisional and when it will
+		    be settled, rather than warning in the abstract. */}
+		<aside class="draft" role="note">
+			<p class="draft__heading">Angaben noch nicht abschließend</p>
+			<p>
+				Die Angaben auf dieser Seite werden vervollständigt, bevor der
+				Bestellvorgang aktiviert wird. Punkte, die noch offen sind, sind unten
+				ausdrücklich als offen gekennzeichnet und nicht durch vorläufige Werte
+				ersetzt.
+			</p>
+		</aside>
+
+		<section class="section" id="versandgebiete">
+			<h2>Versandgebiete</h2>
+			<p>Geliefert wird in zwei Gebiete:</p>
+			<ul class="list">
+				<li>Deutschland</li>
+				<li>Übriges Europa</li>
+			</ul>
+			<p class="section__note">
+				Weitere Einschränkungen einzelner Länder sind hier nicht hinterlegt.
+				Sollte sich vor Aktivierung des Bestellvorgangs etwas daran ändern, wird
+				es an dieser Stelle ergänzt.
+			</p>
+		</section>
+
+		<section class="section" id="versandkosten">
+			<h2>Versandkosten</h2>
+			{/* Rendered from `lib/pricing.ts` — the constants the cart and the
+			    checkout summary read. A second, hand-typed copy here is how a page
+			    ends up quoting a fee the order does not charge. */}
+			<dl class="facts">
+				{
+					shippingAreas.map((zone) => (
+						<div>
+							<dt>{zone.area}</dt>
+							<dd>{zone.fee}</dd>
+						</div>
+					))
+				}
+				<div>
+					<dt>Versandkostenfrei</dt>
+					<dd>
+						Ab {formatEur(FREE_SHIPPING_THRESHOLD_EUR)} Warenwert nach Abzug der
+						Mengenrabatte entfallen die Versandkosten.
+					</dd>
+				</div>
+			</dl>
+			<p class="section__note">
+				Maßgeblich ist der Warenwert nach Rabatt, nicht der Betrag vor Abzug.
+				Die Versandkosten werden vor dem Absenden einer Bestellung vollständig
+				ausgewiesen.
+			</p>
+		</section>
+
+		<section class="section" id="lieferzeit">
+			<h2>Lieferzeit</h2>
+			<p>
+				Zur Lieferzeit liegt noch keine bestätigte Angabe vor. Informationen zu
+				Versand und Lieferzeit werden vor Aktivierung des Bestellvorgangs
+				veröffentlicht.
+			</p>
+			<p class="section__note">
+				Eine vorläufige Schätzung nennen wir bewusst nicht: eine Zeitangabe, die
+				sich nachträglich ändert, ist für eine Bestellentscheidung schlechter
+				als keine.
+			</p>
+		</section>
+
+		<section class="section" id="versanddienstleister">
+			<h2>Versanddienstleister und Sendungsverfolgung</h2>
+			<p>
+				Welcher Versanddienstleister eingesetzt wird und ob eine
+				Sendungsverfolgung zur Verfügung steht, ist noch nicht festgelegt. Beides
+				wird hier angegeben, bevor der Bestellvorgang aktiviert wird.
+			</p>
+			<p class="section__note">
+				Bis dahin nennen wir weder einen Dienstleister noch eine Zusage zur
+				Sendungsverfolgung.
+			</p>
+		</section>
+
+		<section class="section" id="zahlungsweise">
+			<h2>Zahlungsweise</h2>
+			<p>
+				Vorgesehen ist ausschließlich Vorkasse per Banküberweisung. Es ist kein
+				Zahlungsdienstleister zwischengeschaltet; Karten- oder sonstige
+				Zahlungsdaten werden nicht verarbeitet.
+			</p>
+			<p>
+				Die für eine Überweisung erforderlichen Angaben und der Verwendungszweck
+				werden erst bereitgestellt, wenn der Bestellvorgang aktiviert ist. Auf
+				dieser Seite stehen keine Bankdaten.
+			</p>
+		</section>
+
+		<section class="section" id="bestellstatus">
+			<h2>Aktueller Bestellstatus</h2>
+			{/* The shared copy from `lib/shop.ts`, rendered on the same condition as
+			    on the product, cart and checkout pages. The paragraph after it holds
+			    in both states, so this section never becomes an implicit statement
+			    that ordering or payment is available. */}
+			{!ORDERS_ENABLED && <OrdersClosedNotice contact={false} />}
+			<p>
+				Solange der Bestellvorgang nicht verfügbar ist, sollte keine Zahlung
+				angewiesen werden. Sortiment, Packgrößen und Preise können weiterhin
+				eingesehen werden.
+			</p>
+			<p>
+				<a href="/produkte/" class="btn btn--green">Sortiment ansehen</a>
+			</p>
+		</section>
+
+		<section class="section" id="sendungen">
+			<h2>Beschädigte oder fehlende Sendungen</h2>
+			<p>
+				Ist eine Sendung beschädigt oder unvollständig, wenden Sie sich bitte
+				über die <a href="/contact/">Kontaktseite</a> an uns. Hilfreich ist,
+				soweit vorhanden, die Bestellnummer oder der Verwendungszweck aus der
+				Überweisung.
+			</p>
+			<p class="section__note">
+				Bitte senden Sie uns keine Gesundheitsdaten oder sonstigen Angaben
+				besonderer Kategorien nach Art. 9 DSGVO — für die Bearbeitung sind sie
+				nicht erforderlich.
+			</p>
+		</section>
+
+		<section class="section" id="kontakt">
+			<h2>Kontakt</h2>
+			{/* Reads `CONTACT` rather than naming a channel: no address, number or
+			    opening hours exists in this repository, and the contact page is the
+			    one place that publishes whatever is configured. */}
+			<p>
+				{
+					CONTACT.any
+						? "Fragen zu Versand, Zahlung oder einer bestehenden Bestellung beantwortet die Kontaktseite; dort stehen die verfügbaren Kontaktwege."
+						: "Welche Kontaktwege derzeit zur Verfügung stehen, ist auf der Kontaktseite aufgeführt."
+				}
+			</p>
+			<p>
+				<a href="/contact/" class="btn btn--green">Zur Kontaktseite</a>
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.shipping {
+			max-width: 900px;
+		}
+		.shipping h1 {
+			font-size: clamp(1.9rem, 4vw, 2.5rem);
+			font-weight: 800;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.lead {
+			font-size: 1.05rem;
+			color: var(--c-muted);
+			max-width: 64ch;
+			margin: 0 0 1.25rem;
+		}
+
+		/* Neutral surface rather than the warning palette: the page is accurate as
+		   far as it goes, it simply has open points. */
+		.draft {
+			background: var(--c-surface);
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius-sm);
+			padding: 1rem 1.15rem;
+			max-width: 68ch;
+		}
+		.draft__heading {
+			font-weight: 700;
+			margin: 0 0 0.35rem;
+		}
+		.draft p:last-child {
+			margin: 0;
+			font-size: 0.92rem;
+			color: var(--c-muted);
+		}
+
+		.section {
+			padding-block: 1.5rem;
+			max-width: 68ch;
+		}
+		.section h2 {
+			font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+			margin-bottom: 0.75rem;
+			scroll-margin-top: 5rem;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.section p {
+			margin: 0 0 1rem;
+		}
+		.section__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+		.section a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.section a:focus-visible,
+		.btn:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+		/* `.section a` above would otherwise repaint the button label green on a
+		   green fill — the link rule is more specific than the global `.btn--green`. */
+		.section a.btn {
+			color: var(--c-white);
+		}
+
+		/* Same definition-list treatment the contact page gives its facts, so the
+		   two read as one table of facts across the site. */
+		.facts {
+			margin: 0 0 1rem;
+			display: grid;
+			gap: 0.9rem;
+		}
+		.facts dt {
+			font-size: 0.74rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.05em;
+			color: var(--c-muted);
+		}
+		.facts dd {
+			margin: 0.2rem 0 0;
+			font-size: 0.95rem;
+		}
+		.facts > div {
+			border-bottom: 1px solid var(--c-border);
+			padding-bottom: 0.75rem;
+		}
+		.facts > div:last-child {
+			border-bottom: none;
+			padding-bottom: 0;
+		}
+
+		.list {
+			margin: 0 0 1rem;
+			padding-left: 1.25rem;
+			display: grid;
+			gap: 0.3rem;
+		}
+		.list li {
+			font-size: 0.95rem;
+		}
+	</style>
+</BaseLayout>
