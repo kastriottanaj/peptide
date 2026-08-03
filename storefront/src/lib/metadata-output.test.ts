@@ -64,6 +64,11 @@ const EXPECTED: Record<string, PageMeta> = {
 		description:
 			"Erfahren Sie mehr über Forschungspeptide, transparente Produktangaben, COA-Status und diskreten Versand. Jetzt Sortiment ansehen!",
 	},
+	"/redaktionsrichtlinien/": {
+		title: "Redaktionsrichtlinien und wissenschaftliche Quellen",
+		description:
+			"Informationen zu Quellenwahl, wissenschaftlicher Einordnung, Aktualisierung und Korrekturen der redaktionellen Inhalte.",
+	},
 	"/faq/": {
 		title: "Häufige Fragen zu Forschungspeptiden",
 		description:

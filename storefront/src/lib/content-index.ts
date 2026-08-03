@@ -114,6 +114,15 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 		priority: 0.5,
 	},
 	{
+		path: "/redaktionsrichtlinien",
+		title: "Redaktionsrichtlinien",
+		description:
+			"Wie die redaktionellen Inhalte entstehen: Quellenwahl, wissenschaftliche Einordnung, Aktualisierung und Korrekturen.",
+		keywords: ["Redaktion", "Quellen", "Korrekturen", "Transparenz"],
+		changeFrequency: "yearly",
+		priority: 0.4,
+	},
+	{
 		path: "/faq",
 		title: "Häufige Fragen",
 		description:

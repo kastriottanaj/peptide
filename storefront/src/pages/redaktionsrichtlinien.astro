@@ -1,0 +1,284 @@
+---
+/**
+ * Redaktionsrichtlinien — how the editorial content is prepared and maintained.
+ *
+ * An editorial-standards page is where trust signals get invented: a medical
+ * reviewer, a named editor, an external peer review, a quarterly review cycle,
+ * "every claim is sourced". None of that exists in this repository, so none of
+ * it appears here. What the page states is limited to what the code and the
+ * content actually show:
+ *
+ * - `src/content/wissen/*.md` carries `datePublished` and `dateModified`, and
+ *   the article layout renders "Aktualisiert am …" from it. So the update date
+ *   is claimed for Wissen articles only — the Lexikon layout renders no date,
+ *   which is why this page does not claim one for it.
+ * - The separation of editorial and commercial content is visible in the route
+ *   structure (`/wissen/**` vs `/produkte/**`) and is stated as such.
+ * - Everything else is written as a *rule the content follows*, not as a
+ *   completed audit. The page says explicitly that it does not assert every
+ *   statement already carries an inline citation.
+ *
+ * Indexable, so it also belongs in `content-index.ts` — the single place that
+ * decides which URLs are published.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+
+const TITLE = "Redaktionsrichtlinien";
+const DESCRIPTION =
+	"Wie die redaktionellen Inhalte im Wissensbereich und im Lexikon erstellt, " +
+	"eingeordnet und aktualisiert werden.";
+
+// Search-result copy: complete as written, so no brand suffix.
+const META_TITLE = "Redaktionsrichtlinien und wissenschaftliche Quellen";
+const META_DESCRIPTION =
+	"Informationen zu Quellenwahl, wissenschaftlicher Einordnung, Aktualisierung " +
+	"und Korrekturen der redaktionellen Inhalte.";
+
+/** Source types considered suitable, in descending order of preference. */
+const sourceTypes = [
+	"peer-reviewte wissenschaftliche Publikationen",
+	"amtliche Quellen von Institutionen und Aufsichtsbehörden",
+	"anerkannte analytische und technische Dokumentation",
+	"Primärquellen, soweit verfügbar",
+];
+
+// --- SEO ---------------------------------------------------------------
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": `${canonicalUrl("/redaktionsrichtlinien")}#webpage`,
+		url: canonicalUrl("/redaktionsrichtlinien"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([
+		["Startseite", "/"],
+		["Redaktionsrichtlinien", "/redaktionsrichtlinien"],
+	]),
+];
+---
+
+<BaseLayout
+	title={META_TITLE}
+	description={META_DESCRIPTION}
+	rawTitle
+	jsonLd={jsonLd}
+>
+	<div class="editorial">
+		<h1>Redaktionsrichtlinien</h1>
+		<p class="lead">
+			Nach welchen Grundsätzen die Inhalte im Wissensbereich und im Lexikon
+			erstellt, eingeordnet und aktualisiert werden.
+		</p>
+
+		<section class="section" id="zweck">
+			<h2>Zweck der Richtlinien</h2>
+			<p>
+				Diese Seite beschreibt, wie die informativen Inhalte dieser Website
+				entstehen und gepflegt werden — die Fachartikel im{" "}
+				<a href="/wissen/">Wissensbereich</a> und die Kurzdefinitionen im{" "}
+				<a href="/wissen/lexikon/">Peptid-Lexikon</a>.
+			</p>
+			<p class="section__note">
+				Sie hält fest, woran sich diese Inhalte messen lassen sollen. Eine
+				abgeschlossene Prüfung aller vorhandenen Texte wird damit nicht behauptet.
+			</p>
+		</section>
+
+		<section class="section" id="trennung">
+			<h2>Trennung von Information und Produktdarstellung</h2>
+			<p>
+				Redaktionelle Inhalte und Produktseiten verfolgen unterschiedliche
+				Zwecke. Der Wissensbereich erklärt Begriffe, Verfahren und Laborpraxis;
+				die <a href="/produkte/">Produktseiten</a> stellen Artikel mit
+				Packgrößen, Angaben und Preisen dar. Beides ist über die
+				Seitenstruktur voneinander getrennt.
+			</p>
+			<p>
+				Redaktionelle Inhalte sind weder medizinische Beratung noch eine
+				Kaufempfehlung. Sie sollen eine Einordnung ermöglichen, nicht zu einer
+				Bestellung führen.
+			</p>
+		</section>
+
+		<section class="section" id="quellen">
+			<h2>Auswahl von Quellen</h2>
+			<p>Als geeignete Quellen gelten insbesondere:</p>
+			<ul class="list">
+				{sourceTypes.map((type) => <li>{type}</li>)}
+			</ul>
+			<p class="section__note">
+				Diese Seite behauptet nicht, dass bereits heute jede einzelne Aussage in
+				jedem Beitrag mit einer Einzelquelle belegt ist. Sie beschreibt, welche
+				Art von Quelle herangezogen wird, wenn eine Aussage belegt wird.
+			</p>
+		</section>
+
+		<section class="section" id="einordnung">
+			<h2>Wissenschaftliche Einordnung</h2>
+			<p>
+				Studienergebnisse, Laborbefunde und Fachbegriffe werden mit ihrem
+				Kontext dargestellt: worauf sich eine Angabe bezieht, unter welchen
+				Bedingungen sie erhoben wurde und wo ihre Grenzen liegen. Bestehende
+				Unsicherheit wird benannt und nicht weggelassen.
+			</p>
+			<p>
+				Aus vorläufigen oder eng begrenzten Befunden werden keine belegten
+				Wirkungen gemacht. Formulierungen, die einen Forschungsstand stärker
+				erscheinen lassen, als er ist, gehören nicht in diese Inhalte.
+			</p>
+		</section>
+
+		<section class="section" id="sprache">
+			<h2>Sprache und Terminologie</h2>
+			<p>
+				Fachbegriffe dürfen zugunsten der Lesbarkeit vereinfacht werden, solange
+				ihre fachliche Bedeutung dabei unverändert bleibt. Wo eine Vereinfachung
+				die Aussage verändern würde, bleibt der Fachbegriff stehen und wird
+				erklärt.
+			</p>
+			<p class="section__note">
+				Ausführliche Darstellungen stehen im <a href="/wissen/">Wissensbereich</a>,
+				kurze Definitionen einzelner Begriffe im{" "}
+				<a href="/wissen/lexikon/">Peptid-Lexikon</a>.
+			</p>
+		</section>
+
+		<section class="section" id="produktdaten">
+			<h2>Produkt- und Analysedaten</h2>
+			<p>
+				Produktbezogene Dokumentation ist chargenbezogen; Umfang und Art der
+				vorliegenden Unterlagen können sich je nach Produkt und Charge
+				unterscheiden. Redaktionelle Inhalte erklären, wie solche Angaben zu
+				lesen sind, treffen aber keine Aussage darüber, welche Unterlagen zu
+				einem bestimmten Artikel vorliegen.
+			</p>
+			<p class="section__note">
+				Wie Reinheitsangaben, Analysezertifikate und Chargendokumentation
+				einzuordnen sind, steht auf der Seite{" "}
+				<a href="/qualitaet-analyse/">Qualität, Analysedaten und Dokumentation</a>.
+			</p>
+		</section>
+
+		<section class="section" id="aktualisierungen">
+			<h2>Aktualisierungen</h2>
+			<p>
+				Inhalte werden überarbeitet, wenn sich sachliche Angaben, Begriffe oder
+				Abläufe auf dieser Website ändern. Eine Überarbeitung kann einzelne
+				Absätze oder einen ganzen Beitrag betreffen.
+			</p>
+			<p>
+				Die Fachartikel im Wissensbereich weisen ein Aktualisierungsdatum aus;
+				es wird beim Beitrag angezeigt und stammt aus dem jeweiligen Dokument.
+			</p>
+			<p class="section__note">
+				Ein fester Prüfrhythmus ist damit nicht verbunden, und ein Datum sagt
+				nichts darüber aus, ob ein Beitrag inhaltlich vollständig neu bewertet
+				wurde.
+			</p>
+		</section>
+
+		<section class="section" id="korrekturen">
+			<h2>Korrekturen</h2>
+			<p>
+				Hinweise auf sachliche oder technische Fehler sind willkommen. Sie
+				lassen sich über die <a href="/contact/">Kontaktseite</a> melden;
+				hilfreich sind die Adresse der betreffenden Seite und die konkrete
+				Textstelle.
+			</p>
+			<p class="section__note">
+				Eine bestimmte Bearbeitungs- oder Korrekturdauer ist damit nicht
+				zugesagt.
+			</p>
+		</section>
+
+		<section class="section" id="interessenkonflikte">
+			<h2>Interessenkonflikte und kommerzieller Kontext</h2>
+			<p>
+				Diese Website betreibt zugleich einen Shop: Sie stellt Produkte dar und
+				ist darauf ausgerichtet, sie zu verkaufen. Redaktionelle Inhalte
+				entstehen also nicht in einem neutralen Umfeld, sondern im Umfeld eines
+				Anbieters.
+			</p>
+			<p>
+				Deshalb sollen beide Bereiche unterscheidbar bleiben: Ein Fachartikel
+				bewirbt kein Produkt, und eine Produktseite ersetzt keine fachliche
+				Einordnung. Wo ein Text auf ein Produkt verweist, ist dieser Verweis als
+				solcher erkennbar.
+			</p>
+		</section>
+
+		<section class="section" id="keine-beratung">
+			<h2>Keine medizinische Beratung</h2>
+			<p>
+				Die Inhalte dieser Website geben keine Diagnose, keine
+				Behandlungsempfehlung, keine Dosierungsangabe, keine Angaben zur
+				Verabreichung und keine Anwendungsprotokolle. Sie sind
+				wissenschaftlicher Hintergrund und keine Handlungsanleitung.
+			</p>
+			<p class="section__note">
+				Wofür die angebotenen Produkte bestimmt sind und welche Verwendungen
+				ausgeschlossen sind, steht auf der Seite{" "}
+				<a href="/forschungszwecke/">Forschungszwecke und Produktbeschränkungen</a>.
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.editorial {
+			max-width: 900px;
+		}
+		.editorial h1 {
+			font-size: clamp(1.9rem, 4vw, 2.5rem);
+			font-weight: 800;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.lead {
+			font-size: 1.05rem;
+			color: var(--c-muted);
+			max-width: 64ch;
+			margin: 0 0 1.25rem;
+		}
+
+		.section {
+			padding-block: 1.5rem;
+			max-width: 68ch;
+		}
+		.section h2 {
+			font-size: clamp(1.3rem, 2.2vw, 1.6rem);
+			margin-bottom: 0.75rem;
+			scroll-margin-top: 5rem;
+			overflow-wrap: break-word;
+			hyphens: auto;
+		}
+		.section p {
+			margin: 0 0 1rem;
+		}
+		.section__note {
+			font-size: 0.9rem;
+			color: var(--c-muted);
+		}
+		.section a {
+			color: var(--c-green-dark);
+			font-weight: 600;
+		}
+		.section a:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 2px;
+		}
+
+		.list {
+			margin: 0 0 1rem;
+			padding-left: 1.25rem;
+			display: grid;
+			gap: 0.3rem;
+		}
+		.list li {
+			font-size: 0.95rem;
+		}
+	</style>
+</BaseLayout>
