@@ -38,12 +38,16 @@ const S = {
 	payment: { id: "zahlung", heading: "6. Zahlung per Banküberweisung" },
 	lookup: { id: "bestellungssuche", heading: "7. Bestellungssuche" },
 	support: { id: "kontaktaufnahme", heading: "8. Kontaktaufnahme" },
-	recipients: { id: "empfaenger", heading: "9. Empfänger und Drittlandsübermittlung" },
-	retention: { id: "speicherdauer", heading: "10. Speicherdauer" },
-	analytics: { id: "analyse", heading: "11. Analyse und Tracking" },
-	rights: { id: "rechte", heading: "12. Ihre Rechte" },
-	complaint: { id: "beschwerde", heading: "13. Beschwerderecht" },
-	required: { id: "erforderlichkeit", heading: "14. Erforderlichkeit der Angaben" },
+	inbox: {
+		id: "support-postfach",
+		heading: "9. Verarbeitung von Support-E-Mails im internen Verwaltungssystem",
+	},
+	recipients: { id: "empfaenger", heading: "10. Empfänger und Drittlandsübermittlung" },
+	retention: { id: "speicherdauer", heading: "11. Speicherdauer" },
+	analytics: { id: "analyse", heading: "12. Analyse und Tracking" },
+	rights: { id: "rechte", heading: "13. Ihre Rechte" },
+	complaint: { id: "beschwerde", heading: "14. Beschwerderecht" },
+	required: { id: "erforderlichkeit", heading: "15. Erforderlichkeit der Angaben" },
 } as const satisfies Record<string, LegalSection>;
 
 const SECTIONS: LegalSection[] = Object.values(S);
@@ -206,6 +210,85 @@ const SECTIONS: LegalSection[] = Object.values(S);
 		)
 	}
 
+	<h2 id={S.inbox.id}>{S.inbox.heading}</h2>
+	<p>
+		E-Mails an{" "}
+		{CONTACT.email ? (
+			<Fragment>
+				unsere Support-Adresse <strong>{CONTACT.email}</strong>
+			</Fragment>
+		) : (
+			"unser Support-Postfach"
+		)}{" "}
+		gehen im E-Mail-Postfach unseres E-Mail-Anbieters Hostinger ein und
+		verbleiben dort. Zusätzlich werden sie über eine ausschließlich lesende
+		IMAP-Verbindung in unser internes, passwortgeschütztes Verwaltungssystem
+		(Medusa Admin) importiert. Der Import verändert das Postfach nicht:
+		Nachrichten werden dort weder gelöscht noch verschoben, und ihr
+		Gelesen-Status bleibt unverändert.
+	</p>
+
+	<p><strong>Welche Daten dabei gespeichert werden:</strong></p>
+	<ul>
+		<li>
+			Absender- und Empfängerangaben, also die E-Mail-Adressen und — soweit in
+			der Nachricht enthalten — die angegebenen Namen,
+		</li>
+		<li>der Betreff der Nachricht,</li>
+		<li>Zeitstempel, insbesondere der Zeitpunkt des Eingangs,</li>
+		<li>
+			technische Kennungen zur Zuordnung von Nachrichten (Message-ID sowie die
+			Verweise auf vorherige Nachrichten desselben Verlaufs),
+		</li>
+		<li>der Nachrichtentext in bereinigter Form als reiner Text,</li>
+		<li>
+			der Bearbeitungsstand in unserem System, also gelesen oder ungelesen, die
+			Zuordnung zu einem Vorgang und dessen Status (offen, erledigt oder als
+			Spam gekennzeichnet),
+		</li>
+		<li>Metadaten zu Anhängen, nämlich Dateiname, Dateityp und Dateigröße.</li>
+	</ul>
+
+	<p>
+		<strong>Was ausdrücklich nicht verarbeitet wird:</strong> HTML-Inhalte von
+		E-Mails werden weder gespeichert noch dargestellt. Bilder, Zählpixel und
+		sonstige Inhalte von fremden Servern werden dabei nicht geladen. Die Inhalte
+		von Anhängen werden nicht heruntergeladen, nicht gespeichert und nicht
+		angezeigt; erfasst werden ausschließlich die oben genannten Metadaten.
+	</p>
+
+	<p>
+		<strong>Zwecke:</strong> Bearbeitung und Dokumentation Ihres Anliegens,
+		Abwicklung und Nachweis vertraglicher Vorgänge, Bearbeitung von Anfragen zum
+		Datenschutz sowie Beantwortung technischer Anfragen und technische
+		Verwaltung des Postfachs.
+	</p>
+
+	<p>
+		<strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO, soweit Ihr
+		Anliegen einen Vertrag oder dessen Anbahnung betrifft; im Übrigen Art. 6
+		Abs. 1 lit. f DSGVO (berechtigtes Interesse an der Beantwortung allgemeiner
+		Support-Anfragen und an der technischen Verwaltung des Postfachs).{" "}
+		<span class="todo">
+			[Entwurf — die Angabe der Rechtsgrundlagen steht unter dem Vorbehalt der
+			rechtlichen Prüfung.]
+		</span>
+	</p>
+
+	<p>
+		<strong>Speicherdauer:</strong> Wir speichern diese Nachrichten nur so lange,
+		wie es für die Bearbeitung Ihres Anliegens und für etwaige Anschlussfragen
+		erforderlich ist, sowie darüber hinaus, soweit gesetzliche
+		Aufbewahrungspflichten bestehen (siehe Abschnitt 11). Eine automatische
+		Löschung nach einer festen Frist ist derzeit nicht eingerichtet.
+	</p>
+
+	<p>
+		Zugriff auf das Verwaltungssystem haben ausschließlich berechtigte,
+		angemeldete Administratoren. Eine automatisierte Entscheidungsfindung
+		einschließlich Profiling findet nicht statt.
+	</p>
+
 	<h2 id={S.recipients.id}>{S.recipients.heading}</h2>
 	<p>Personenbezogene Daten geben wir weiter an:</p>
 	<ul>
@@ -223,6 +306,14 @@ const SECTIONS: LegalSection[] = Object.values(S);
 			einer Auftragsverarbeitung nach Art. 28 DSGVO,
 		</li>
 		<li>
+			die Hostinger als Anbieterin unseres E-Mail-Postfachs, weisungsgebunden im
+			Rahmen einer Auftragsverarbeitung nach Art. 28 DSGVO (siehe Abschnitt 9){" "}
+			<span class="todo">
+				[Auftragsverarbeitungsvertrag mit dem E-Mail-Anbieter prüfen und die
+				vollständige Firmierung ergänzen]
+			</span>,
+		</li>
+		<li>
 			Steuerberatung und Finanzbehörden, soweit wir gesetzlich zur Vorlage
 			verpflichtet sind.
 		</li>
@@ -232,7 +323,7 @@ const SECTIONS: LegalSection[] = Object.values(S);
 					die Google Ireland Limited als Anbieterin von Google Analytics,
 					weisungsgebunden im Rahmen einer Auftragsverarbeitung nach
 					Art. 28 DSGVO — aber nur, wenn Sie in die Statistik-Auswertung
-					eingewilligt haben (siehe Abschnitt 11).
+					eingewilligt haben (siehe Abschnitt 12).
 				</li>
 			)
 		}
