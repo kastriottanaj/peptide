@@ -11,9 +11,20 @@ import {
   inboxCronExpression,
   inboxEnabled,
   resolveInboxConfig,
+  resolveSmtpConfig,
+  smtpEnabled,
+  smtpPassword,
 } from "../config";
 
 const INBOX_KEYS = [
+  "INBOX_SMTP_ENABLED",
+  "INBOX_SMTP_HOST",
+  "INBOX_SMTP_PORT",
+  "INBOX_SMTP_SECURE",
+  "INBOX_SMTP_USER",
+  "INBOX_SMTP_PASSWORD",
+  "INBOX_SMTP_FROM",
+  "INBOX_MAX_REPLY_CHARS",
   "INBOX_ENABLED",
   "INBOX_IMAP_HOST",
   "INBOX_IMAP_PORT",
@@ -228,5 +239,113 @@ describe("the job schedule", () => {
   it("does not need a complete configuration", () => {
     process.env.INBOX_POLL_INTERVAL_SECONDS = "300";
     expect(() => inboxCronExpression()).not.toThrow();
+  });
+});
+
+/* ------------------------------------------------------------------ smtp -- */
+
+function smtpConfigured(overrides: Record<string, string> = {}) {
+  process.env.INBOX_SMTP_HOST = "smtp.example.test";
+  process.env.INBOX_SMTP_USER = "info@example.test";
+  process.env.INBOX_SMTP_PASSWORD = "smtp-not-real";
+  process.env.INBOX_SMTP_FROM = "info@example.test";
+  Object.assign(process.env, overrides);
+}
+
+describe("the sending switch", () => {
+  /**
+   * Reading mail and sending mail are separate decisions. An inbox that has
+   * been importing for a month must not gain the ability to email customers
+   * because someone reused one variable.
+   */
+  it("is independent of the importer's switch", () => {
+    process.env.INBOX_ENABLED = "true";
+    expect(smtpEnabled()).toBe(false);
+  });
+
+  it("is off when unset", () => {
+    expect(smtpEnabled()).toBe(false);
+  });
+
+  it.each(["false", "0", "yes", "1", "on", " "])("is off for %p", (value) => {
+    process.env.INBOX_SMTP_ENABLED = value;
+    expect(smtpEnabled()).toBe(false);
+  });
+
+  it.each(["true", "TRUE", " true "])("is on for %p", (value) => {
+    process.env.INBOX_SMTP_ENABLED = value;
+    expect(smtpEnabled()).toBe(true);
+  });
+});
+
+describe("smtp validation", () => {
+  it("reports each missing setting in turn", () => {
+    expect(resolveSmtpConfig()).toEqual({ ok: false, problem: "MISSING_SMTP_HOST" });
+
+    process.env.INBOX_SMTP_HOST = "smtp.example.test";
+    expect(resolveSmtpConfig()).toEqual({ ok: false, problem: "MISSING_SMTP_USER" });
+
+    process.env.INBOX_SMTP_USER = "info@example.test";
+    expect(resolveSmtpConfig()).toEqual({
+      ok: false,
+      problem: "MISSING_SMTP_PASSWORD",
+    });
+
+    process.env.INBOX_SMTP_PASSWORD = "smtp-not-real";
+    expect(resolveSmtpConfig()).toEqual({ ok: false, problem: "MISSING_SMTP_FROM" });
+  });
+
+  it.each(["not-an-address", "two@at@signs.test", "has space@example.test", "@example.test"])(
+    "refuses the sender address %p",
+    (from) => {
+      smtpConfigured({ INBOX_SMTP_FROM: from });
+      expect(resolveSmtpConfig()).toEqual({ ok: false, problem: "INVALID_SMTP_FROM" });
+    },
+  );
+
+  it.each(["0", "70000", "-1", "465.5"])("refuses port %p", (port) => {
+    smtpConfigured({ INBOX_SMTP_PORT: port });
+    expect(resolveSmtpConfig()).toEqual({ ok: false, problem: "INVALID_SMTP_PORT" });
+  });
+
+  it("accepts a complete configuration and defaults the rest", () => {
+    smtpConfigured();
+    const result = resolveSmtpConfig();
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.config).toMatchObject({
+      host: "smtp.example.test",
+      port: 465,
+      secure: true,
+      from: "info@example.test",
+      maxReplyChars: 10_000,
+    });
+  });
+
+  it("clamps a nonsense reply limit rather than failing", () => {
+    smtpConfigured({ INBOX_MAX_REPLY_CHARS: "3" });
+    const result = resolveSmtpConfig();
+    expect(result.ok && result.config.maxReplyChars).toBe(500);
+  });
+});
+
+describe("smtp credentials", () => {
+  it("never put the password on the resolved config", () => {
+    smtpConfigured();
+    const result = resolveSmtpConfig();
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(JSON.stringify(result.config)).not.toContain("smtp-not-real");
+    expect(Object.values(result.config)).not.toContain("smtp-not-real");
+    expect(result.config).toHaveProperty("passwordConfigured", true);
+  });
+
+  it("expose the password only through the dedicated accessor", () => {
+    smtpConfigured();
+    expect(smtpPassword()).toBe("smtp-not-real");
   });
 });

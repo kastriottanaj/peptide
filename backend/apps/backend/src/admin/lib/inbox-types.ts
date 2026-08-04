@@ -41,10 +41,17 @@ export type InboxAttachment = {
   size: number;
 };
 
+export type InboxDeliveryStatus = "pending" | "sent" | "failed";
+export type InboxMessageDirection = "inbound" | "outbound";
+
 export type InboxMessage = {
   id: string;
+  /** `outbound` is a reply this admin sent; `inbound` is imported mail. */
+  direction: InboxMessageDirection;
   from_name: string | null;
   from_email: string | null;
+  /** `Reply-To`, when the sender set one; the composer prefers it over `from`. */
+  reply_to: string | null;
   recipients: InboxRecipient[];
   subject: string;
   received_at: string | null;
@@ -54,6 +61,11 @@ export type InboxMessage = {
   is_read: boolean;
   attachments: InboxAttachment[];
   size_bytes: number;
+  /** Outbound only. `null` on imported mail, which has no status of ours. */
+  delivery_status: InboxDeliveryStatus | null;
+  /** A label from a fixed set — never the mail server's own sentence. */
+  failure_reason: string | null;
+  sent_at: string | null;
 };
 
 export type InboxThreadDetail = {
@@ -69,6 +81,22 @@ export type InboxCounts = {
   unread_messages: number;
   /** Whether the *importer* is switched on. A boolean, and nothing more. */
   enabled: boolean;
+  /** Whether replying is switched on. Also just a boolean. */
+  smtp_enabled: boolean;
+};
+
+export type InboxReplyResponse = {
+  message: {
+    id: string;
+    thread_id: string;
+    subject: string;
+    to_email: string;
+    delivery_status: InboxDeliveryStatus;
+    failure_reason: string | null;
+    sent_at: string | null;
+  };
+  /** True when an existing send was returned instead of a new one being made. */
+  duplicate: boolean;
 };
 
 export type InboxSyncStatus =

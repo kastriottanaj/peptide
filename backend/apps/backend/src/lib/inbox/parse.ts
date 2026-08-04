@@ -40,6 +40,7 @@ export type ParsedMailLike = {
   subject?: string | null;
   date?: Date | string | null;
   from?: ParsedAddressList;
+  replyTo?: ParsedAddressList;
   to?: ParsedAddressList;
   cc?: ParsedAddressList;
   text?: string | null;
@@ -114,6 +115,11 @@ export function normalizeParsedMessage(
   const fromEmail = sanitizeEmail(from.address);
   const fromName = sanitizeDisplayName(from.name);
 
+  // Only the first Reply-To is kept: this application replies to exactly one
+  // address, so a header listing several has to resolve to one anyway, and the
+  // first is the one mail clients use.
+  const replyTo = sanitizeEmail(addresses(parsed.replyTo ?? null)[0]?.address);
+
   const recipients = sanitizeRecipients([
     { kind: "to", addresses: addresses(parsed.to ?? null) },
     { kind: "cc", addresses: addresses(parsed.cc ?? null) },
@@ -140,6 +146,7 @@ export function normalizeParsedMessage(
     references,
     from_name: fromName,
     from_email: fromEmail,
+    reply_to: replyTo,
     recipients,
     subject,
     normalized_subject: normalizeSubject(subject),

@@ -18,6 +18,9 @@ export type InboxErrorCode =
   | "INBOX_NOT_FOUND"
   | "INBOX_INVALID_REQUEST"
   | "INBOX_NOT_CONFIGURED"
+  | "INBOX_SEND_FAILED"
+  | "INBOX_NO_RECIPIENT"
+  | "INBOX_REPLY_IN_PROGRESS"
   | "UNAUTHORIZED"
   | "UNKNOWN";
 
@@ -53,8 +56,12 @@ export function codeForStatus(status: number | undefined): {
   }
   if (status === 400) return { code: "INBOX_INVALID_REQUEST", retryable: false };
   if (status === 404) return { code: "INBOX_NOT_FOUND", retryable: false };
+  if (status === 409) return { code: "INBOX_REPLY_IN_PROGRESS", retryable: false };
+  if (status === 422) return { code: "INBOX_NO_RECIPIENT", retryable: false };
   if (status === 429) return { code: "INBOX_BUSY", retryable: true };
-  if (status === 502) return { code: "INBOX_UNAVAILABLE", retryable: true };
+  // The send endpoint is the only 502 that is not the importer's, and it is the
+  // one an admin acts on: the reply is saved as failed and can be retried.
+  if (status === 502) return { code: "INBOX_SEND_FAILED", retryable: true };
   if (status === 503) return { code: "INBOX_NOT_CONFIGURED", retryable: false };
   return { code: "UNKNOWN", retryable: true };
 }
@@ -103,6 +110,20 @@ const GUIDANCE: Record<InboxErrorCode, { title: string; detail: string }> = {
     title: "The inbox importer is not configured",
     detail:
       "The mailbox settings on the server are incomplete, so no new mail is being imported. Nothing on this screen can fix it.",
+  },
+  INBOX_SEND_FAILED: {
+    title: "The reply was not sent",
+    detail:
+      "It is saved with the conversation as failed and can be retried. Nothing was delivered to the customer.",
+  },
+  INBOX_NO_RECIPIENT: {
+    title: "No reply address",
+    detail:
+      "This conversation carries no usable sender address, so a reply cannot be sent from here. Answer it in webmail instead.",
+  },
+  INBOX_REPLY_IN_PROGRESS: {
+    title: "That reply is already being sent",
+    detail: "Wait for it to finish rather than sending again.",
   },
   UNAUTHORIZED: {
     title: "Session expired",

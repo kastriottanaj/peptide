@@ -24,11 +24,20 @@ import { toIso } from "../route";
  * Authentication is structural; see the comment in `../route.ts`.
  */
 
-/** A message as the admin sees it. The allowlist *is* the security boundary. */
+/**
+ * A message as the admin sees it. The allowlist *is* the security boundary.
+ *
+ * Inbound and outbound messages share this shape so the thread renders as one
+ * chronological conversation. The outbound-only fields are `null` on imported
+ * mail, which has no delivery status of ours, and the IMAP coordinates never
+ * appear at all.
+ */
 function toMessagePayload(message: {
   id: string;
+  direction: string | null;
   from_name: string | null;
   from_email: string | null;
+  reply_to: string | null;
   recipients: unknown;
   subject: string;
   received_at: Date;
@@ -37,11 +46,18 @@ function toMessagePayload(message: {
   is_read: boolean;
   attachments: unknown;
   size_bytes: number;
+  delivery_status: string | null;
+  failure_reason: string | null;
+  sent_at: Date | null;
 }) {
   return {
     id: message.id,
+    direction: message.direction === "outbound" ? "outbound" : "inbound",
     from_name: message.from_name,
     from_email: message.from_email,
+    // Shown so the composer can name the address a reply will actually go to —
+    // the same rule the server applies when it sends.
+    reply_to: message.reply_to,
     recipients: Array.isArray(message.recipients) ? message.recipients : [],
     subject: message.subject,
     received_at: toIso(message.received_at),
@@ -50,6 +66,11 @@ function toMessagePayload(message: {
     is_read: Boolean(message.is_read),
     attachments: Array.isArray(message.attachments) ? message.attachments : [],
     size_bytes: message.size_bytes ?? 0,
+    delivery_status: message.delivery_status ?? null,
+    // A label from a fixed set (`auth`, `tls`, `rejected`, `unreachable`,
+    // `temporary`), never the mail server's own sentence.
+    failure_reason: message.failure_reason ?? null,
+    sent_at: toIso(message.sent_at),
   };
 }
 

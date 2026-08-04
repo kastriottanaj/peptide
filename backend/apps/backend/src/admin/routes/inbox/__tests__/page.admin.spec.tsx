@@ -33,6 +33,7 @@ jest.mock("../../../lib/inbox-queries", () => ({
   useUpdateThread: jest.fn(),
   useSetMessageRead: jest.fn(),
   useSyncInbox: jest.fn(),
+  useSendReply: jest.fn(),
   COUNTS_POLL_MS: 60_000,
 }));
 
@@ -97,8 +98,10 @@ const detail: InboxThreadDetail = {
   messages: [
     {
       id: "imsg_1",
+      direction: "inbound",
       from_name: HOSTILE_NAME,
       from_email: "max@example.org",
+      reply_to: null,
       recipients: [{ kind: "to", name: null, email: "info@example.org" }],
       subject: HOSTILE_SUBJECT,
       received_at: "2026-08-01T10:00:00.000Z",
@@ -109,9 +112,39 @@ const detail: InboxThreadDetail = {
         { filename: "Rechnung.pdf", content_type: "application/pdf", size: 4096 },
       ],
       size_bytes: 5_000,
+      delivery_status: null,
+      failure_reason: null,
+      sent_at: null,
     },
   ],
 };
+
+/** The same thread, after we answered it. */
+const OUTBOUND_MESSAGE: InboxThreadDetail["messages"][number] = {
+  id: "imsg_out_1",
+  direction: "outbound",
+  from_name: null,
+  from_email: "info@example.test",
+  reply_to: null,
+  recipients: [{ kind: "to", name: null, email: "max@example.org" }],
+  subject: "Re: Anfrage",
+  received_at: "2026-08-01T12:00:00.000Z",
+  body_text: "Guten Tag,\n\ndas Peptid ist auf Lager.",
+  body_truncated: false,
+  is_read: true,
+  attachments: [],
+  size_bytes: 120,
+  delivery_status: "sent",
+  failure_reason: null,
+  sent_at: "2026-08-01T12:00:00.000Z",
+};
+
+const withReply = (
+  overrides: Partial<InboxThreadDetail["messages"][number]> = {},
+): InboxThreadDetail => ({
+  ...detail,
+  messages: [...detail.messages, { ...OUTBOUND_MESSAGE, ...overrides }],
+});
 
 const counts: InboxCounts = {
   open: 12,
@@ -120,6 +153,7 @@ const counts: InboxCounts = {
   unread_threads: 4,
   unread_messages: 7,
   enabled: true,
+  smtp_enabled: true,
 };
 
 /* ------------------------------------------------------------- helpers -- */
@@ -169,6 +203,13 @@ const mutations = {
   update: { mutate: jest.fn(), isPending: false },
   read: { mutate: jest.fn(), isPending: false },
   sync: { mutate: jest.fn(), isPending: false, data: undefined, error: null },
+  reply: {
+    mutate: jest.fn(),
+    reset: jest.fn(),
+    isPending: false,
+    data: undefined as unknown,
+    error: null as unknown,
+  },
 };
 
 function healthy() {
@@ -178,6 +219,7 @@ function healthy() {
   mocked.useUpdateThread.mockReturnValue(mutations.update as never);
   mocked.useSetMessageRead.mockReturnValue(mutations.read as never);
   mocked.useSyncInbox.mockReturnValue(mutations.sync as never);
+  mocked.useSendReply.mockReturnValue(mutations.reply as never);
 }
 
 function renderPage(initialUrl = "/app/inbox") {
@@ -195,6 +237,9 @@ beforeEach(() => {
   mutations.sync.isPending = false;
   mutations.update.isPending = false;
   mutations.read.isPending = false;
+  mutations.reply.isPending = false;
+  mutations.reply.data = undefined;
+  mutations.reply.error = null;
   healthy();
 });
 
@@ -505,8 +550,12 @@ describe("hostile content is text, never markup", () => {
 });
 
 describe("what the page does not offer", () => {
-  /** Version one is a reader. These controls must not exist. */
-  it.each(["Reply", "Antworten", "Forward", "Weiterleiten", "Compose", "Download", "Herunterladen"])(
+  /**
+   * Replying is supported; everything else that would turn this page into a
+   * mail client is not. A forward or a compose button would need a recipient
+   * field, which is exactly what the endpoint refuses to accept.
+   */
+  it.each(["Forward", "Weiterleiten", "Compose", "Neue Nachricht", "Download", "Herunterladen"])(
     "has no %s control",
     (label) => {
       renderPage("/app/inbox?thread=ithr_1");
@@ -516,16 +565,16 @@ describe("what the page does not offer", () => {
     },
   );
 
-  it("has no text area to type a message into", () => {
+  /** One textarea — the reply body — and no other input on the message form. */
+  it("offers no recipient, subject, cc or attachment field", () => {
     const { container } = renderPage("/app/inbox?thread=ithr_1");
-    expect(container.querySelector("textarea")).toBeNull();
-  });
 
-  it("says plainly that replies happen elsewhere", () => {
-    renderPage();
-    expect(
-      screen.getByText(/Replies are sent from the mailbox itself/i),
-    ).toBeInTheDocument();
+    expect(container.querySelectorAll("textarea")).toHaveLength(1);
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+
+    for (const label of [/^to$/i, /^cc$/i, /^bcc$/i, /^subject$/i, /^from$/i]) {
+      expect(screen.queryByLabelText(label)).not.toBeInTheDocument();
+    }
   });
 });
 
@@ -589,5 +638,94 @@ describe("the unread count", () => {
 
     renderPage();
     expect(screen.getByText("No unread messages")).toBeInTheDocument();
+  });
+});
+
+describe("replies in the conversation", () => {
+  it("renders an outbound reply after the inbound message it answers", () => {
+    mocked.useInboxThread.mockReturnValue(asResult(loaded(withReply())));
+    const { container } = renderPage("/app/inbox?thread=ithr_1");
+
+    const bodies = [...container.querySelectorAll(".pi-body")].map(
+      (node) => node.textContent ?? "",
+    );
+
+    expect(bodies).toHaveLength(2);
+    expect(bodies[0]).toContain("Guten Tag,");
+    expect(bodies[1]).toContain("das Peptid ist auf Lager.");
+    expect(screen.getByText("Sent by us")).toBeInTheDocument();
+  });
+
+  it("marks a delivered reply as delivered", () => {
+    mocked.useInboxThread.mockReturnValue(asResult(loaded(withReply())));
+    renderPage("/app/inbox?thread=ithr_1");
+
+    expect(screen.getByText(/Delivered to the mail server/i)).toBeInTheDocument();
+  });
+
+  /** A failed send is never dressed up as a sent one. */
+  it("shows a failed reply as failed, with retryability in words", () => {
+    mocked.useInboxThread.mockReturnValue(
+      asResult(
+        loaded(withReply({ delivery_status: "failed", failure_reason: "temporary", sent_at: null })),
+      ),
+    );
+    renderPage("/app/inbox?thread=ithr_1");
+
+    expect(screen.getByText(/Failed — temporary problem, can be retried/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Delivered to the mail server/i)).not.toBeInTheDocument();
+  });
+
+  it("describes a server-side failure without naming the server", () => {
+    mocked.useInboxThread.mockReturnValue(
+      asResult(loaded(withReply({ delivery_status: "failed", failure_reason: "auth", sent_at: null }))),
+    );
+    const { container } = renderPage("/app/inbox?thread=ithr_1");
+
+    expect(screen.getByText(/mail login rejected/i)).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/smtp\.|535|password/i);
+  });
+
+  it("shows a reply still in flight as sending, not sent", () => {
+    mocked.useInboxThread.mockReturnValue(
+      asResult(loaded(withReply({ delivery_status: "pending", sent_at: null }))),
+    );
+    renderPage("/app/inbox?thread=ithr_1");
+
+    expect(screen.getByText("Sending…")).toBeInTheDocument();
+  });
+
+  /** Our own message has no unread state to toggle. */
+  it("offers no read toggle on a reply we sent", () => {
+    mocked.useInboxThread.mockReturnValue(asResult(loaded(withReply())));
+    renderPage("/app/inbox?thread=ithr_1");
+
+    expect(screen.getAllByRole("button", { name: /^Mark (read|unread)$/ })).toHaveLength(1);
+  });
+
+  it("sends the reply through the mutation with the thread id", async () => {
+    const user = userEvent.setup();
+    renderPage("/app/inbox?thread=ithr_1");
+
+    await user.type(screen.getByLabelText(/Reply text/i), "Danke für Ihre Anfrage");
+    await user.click(screen.getByRole("button", { name: "Send reply" }));
+
+    expect(mutations.reply.mutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        threadId: "ithr_1",
+        body: "Danke für Ihre Anfrage",
+        idempotencyKey: expect.stringMatching(/^[A-Za-z0-9_-]{8,128}$/),
+      }),
+    );
+  });
+
+  it("hides the composer when the server has sending switched off", () => {
+    mocked.useInboxCounts.mockReturnValue(
+      asResult(loaded({ ...counts, smtp_enabled: false })),
+    );
+    const { container } = renderPage("/app/inbox?thread=ithr_1");
+
+    expect(container.querySelector("textarea")).toBeNull();
+    expect(screen.getByText(/Replying is switched off/i)).toBeInTheDocument();
   });
 });

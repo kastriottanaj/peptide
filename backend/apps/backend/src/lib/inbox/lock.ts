@@ -65,15 +65,31 @@ function resolveLocking(container: MedusaContainer): LockingService | null {
 }
 
 /**
- * Try to take the sync lock without waiting.
+ * How long a reply lock is held.
  *
- * Any failure to acquire — held by another run, or a provider that is itself
- * unhappy — is reported as "not acquired". Guessing that an error means the
- * lock is free is how two importers end up running.
+ * Bounded by the SMTP timeouts in `smtp.ts` plus the two database writes around
+ * the send, with room to spare. Short, because a stuck lock on an idempotency
+ * key would block the retry that fixes it.
  */
-export async function acquireInboxSyncLock(
+export const INBOX_REPLY_LOCK_TTL_SECONDS = 60;
+
+/** The lock key for one logical reply, keyed by its idempotency key. */
+export function replyLockKey(idempotencyKey: string): string {
+  return `peptides:inbox:reply:${idempotencyKey}`;
+}
+
+/**
+ * Try to take a lock without waiting.
+ *
+ * Any failure to acquire — held by someone else, or a provider that is itself
+ * unhappy — is reported as "not acquired". Guessing that an error means the
+ * lock is free is how two importers end up running, or one reply is sent twice.
+ */
+export async function acquireInboxLock(
   container: MedusaContainer,
+  key: string,
   ownerId: string,
+  expireSeconds: number,
 ): Promise<InboxLock> {
   const locking = resolveLocking(container);
 
@@ -82,10 +98,7 @@ export async function acquireInboxSyncLock(
   }
 
   try {
-    await locking.acquire(INBOX_SYNC_LOCK_KEY, {
-      ownerId,
-      expire: INBOX_SYNC_LOCK_TTL_SECONDS,
-    });
+    await locking.acquire(key, { ownerId, expire: expireSeconds });
   } catch {
     return { acquired: false, release: async () => {} };
   }
@@ -94,11 +107,23 @@ export async function acquireInboxSyncLock(
     acquired: true,
     release: async () => {
       try {
-        await locking.release(INBOX_SYNC_LOCK_KEY, { ownerId });
+        await locking.release(key, { ownerId });
       } catch {
         // The lock expires on its own; failing to release is not worth
-        // failing a completed import over.
+        // failing completed work over.
       }
     },
   };
+}
+
+export function acquireInboxSyncLock(
+  container: MedusaContainer,
+  ownerId: string,
+): Promise<InboxLock> {
+  return acquireInboxLock(
+    container,
+    INBOX_SYNC_LOCK_KEY,
+    ownerId,
+    INBOX_SYNC_LOCK_TTL_SECONDS,
+  );
 }

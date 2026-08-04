@@ -120,6 +120,66 @@ export function subjectIsThreadable(normalizedSubject: string): boolean {
   return normalizedSubject.length >= MIN_SUBJECT_THREAD_LENGTH;
 }
 
+/**
+ * The subject of a reply.
+ *
+ * `Re:` is prepended **only when the subject does not already carry a reply
+ * prefix** — including the German ones. `Re: AW: Anfrage` is what a client that
+ * does not check produces, and after three exchanges the subject line is longer
+ * than the message. An empty subject becomes a bare `Re:` rather than nothing,
+ * because a blank subject on an outgoing reply reads as a broken system.
+ */
+export function replySubject(subject: string): string {
+  const cleaned = (subject ?? "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "Re:";
+
+  // The same prefix set the threading key strips, so "already a reply" means
+  // exactly the same thing in both directions.
+  return PREFIX_PATTERN.test(cleaned) ? cleaned : `Re: ${cleaned}`;
+}
+
+/**
+ * A Message-ID for an outbound reply, generated before the send.
+ *
+ * Generated here rather than left to the SMTP server because it has to be
+ * stored with the message: it is what a later reply's `In-Reply-To` will point
+ * at, so a thread whose outbound ids are unknown is a thread that breaks the
+ * moment the customer answers.
+ *
+ * The right-hand side is the sender's own domain, which is what receiving
+ * servers expect; the left is time plus randomness. Returned **without**
+ * angle brackets, matching how every other id in this feature is stored.
+ */
+export function generateMessageId(
+  fromAddress: string,
+  now: Date = new Date(),
+  randomPart: string = Math.random().toString(36).slice(2, 12),
+): string {
+  const at = fromAddress.lastIndexOf("@");
+  const domain = at >= 0 ? fromAddress.slice(at + 1) : "localhost";
+  const safeDomain = domain.replace(/[^A-Za-z0-9.-]/g, "") || "localhost";
+
+  return `${now.getTime()}.${randomPart}@${safeDomain}`;
+}
+
+/**
+ * The `References` chain for a reply: the parent's chain, then the parent.
+ *
+ * Capped at the same limit as inbound parsing, keeping the newest — a header
+ * that grows without bound is how long threads start getting rejected by
+ * receiving servers.
+ */
+export function buildReferences(
+  parentReferences: readonly string[],
+  parentMessageId: string | null,
+): string[] {
+  const chain = [...parentReferences];
+  if (parentMessageId && !chain.includes(parentMessageId)) {
+    chain.push(parentMessageId);
+  }
+  return chain.slice(-INBOX_LIMITS.maxReferences);
+}
+
 export type ThreadResolution = {
   thread: ThreadRef | null;
   /** Which signal decided it — logged as a counter, useful when tuning. */

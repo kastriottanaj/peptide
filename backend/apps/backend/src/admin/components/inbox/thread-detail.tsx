@@ -27,10 +27,12 @@ import {
   ErrorState,
   Pill,
   SkeletonBlocks,
+  deliveryTone,
   formatBytes,
   formatTimestamp,
   statusTone,
 } from "./primitives";
+import { ReplyComposer, type ReplyComposerProps } from "./reply-composer";
 
 export function ThreadDetail({
   detail,
@@ -41,6 +43,7 @@ export function ThreadDetail({
   onSetStatus,
   onSetThreadRead,
   onSetMessageRead,
+  reply,
 }: {
   detail: InboxThreadDetail | undefined;
   loading: boolean;
@@ -50,6 +53,8 @@ export function ThreadDetail({
   onSetStatus: (status: "open" | "resolved" | "spam") => void;
   onSetThreadRead: (read: boolean) => void;
   onSetMessageRead: (messageId: string, read: boolean) => void;
+  /** Everything the reply box needs, passed through from the page. */
+  reply: Omit<ReplyComposerProps, "recipient">;
 }) {
   if (!detail && error) {
     return (
@@ -156,9 +161,36 @@ export function ThreadDetail({
             />
           ))
         )}
+
+        {/*
+          The composer sits below the conversation, where the next message
+          would go. Its recipient is derived here rather than passed in, so the
+          address on screen is the same one the server will resolve: the newest
+          inbound message's Reply-To, falling back to its From.
+        */}
+        <ReplyComposer {...reply} recipient={replyRecipient(messages)} />
       </div>
     </>
   );
+}
+
+/**
+ * The address a reply will go to.
+ *
+ * Mirrors the server's rule (`lib/inbox/reply.ts`): the newest **inbound**
+ * message decides, `Reply-To` before `From`. Outbound messages are skipped —
+ * threading off our own reply would address the mail to ourselves.
+ */
+export function replyRecipient(messages: readonly InboxMessage[]): string | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.direction === "outbound") continue;
+
+    const address = message.reply_to ?? message.from_email;
+    if (address) return address;
+  }
+
+  return null;
 }
 
 function MessageCard({
@@ -173,10 +205,16 @@ function MessageCard({
   const recipients = message.recipients.filter((entry) => entry.kind === "to");
   const copied = message.recipients.filter((entry) => entry.kind === "cc");
 
+  const outbound = message.direction === "outbound";
+
+  const className = outbound
+    ? "pi-message pi-message--outbound"
+    : message.is_read
+      ? "pi-message"
+      : "pi-message pi-message--unread";
+
   return (
-    <article
-      className={message.is_read ? "pi-message" : "pi-message pi-message--unread"}
-    >
+    <article className={className}>
       <div className="pi-message__head">
         <div>
           <div className="pi-message__from">
@@ -188,7 +226,7 @@ function MessageCard({
             )}
           </div>
           <div className="pi-card__hint">
-            {formatTimestamp(message.received_at)}
+            {formatTimestamp(outbound ? (message.sent_at ?? message.received_at) : message.received_at)}
             {recipients.length > 0 && (
               <> · to {recipients.map((entry) => entry.email).join(", ")}</>
             )}
@@ -199,15 +237,28 @@ function MessageCard({
         </div>
 
         <div className="pi-header__actions">
-          {!message.is_read && <Pill tone="accent">Unread</Pill>}
-          <button
-            type="button"
-            className="pi-button"
-            disabled={busy}
-            onClick={() => onSetRead(message.id, !message.is_read)}
-          >
-            {message.is_read ? "Mark unread" : "Mark read"}
-          </button>
+          {outbound ? (
+            <>
+              <Pill tone="neutral">Sent by us</Pill>
+              {message.delivery_status && (
+                <Pill tone={deliveryTone(message.delivery_status)}>
+                  {deliveryLabel(message.delivery_status, message.failure_reason)}
+                </Pill>
+              )}
+            </>
+          ) : (
+            <>
+              {!message.is_read && <Pill tone="accent">Unread</Pill>}
+              <button
+                type="button"
+                className="pi-button"
+                disabled={busy}
+                onClick={() => onSetRead(message.id, !message.is_read)}
+              >
+                {message.is_read ? "Mark unread" : "Mark read"}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -241,4 +292,30 @@ function MessageCard({
       )}
     </article>
   );
+}
+
+/**
+ * What a delivery status says to the person reading it.
+ *
+ * `failure_reason` is one of a fixed set of labels from the server, never an
+ * SMTP sentence, so it is mapped here rather than printed. The distinction that
+ * matters is whether trying again is worth their time.
+ */
+function deliveryLabel(status: string, reason: string | null): string {
+	if (status === "sent") return "Delivered to the mail server";
+	if (status === "pending") return "Sending…";
+
+	switch (reason) {
+		case "auth":
+			return "Failed — mail login rejected (server-side fix)";
+		case "tls":
+			return "Failed — secure connection refused (server-side fix)";
+		case "rejected":
+			return "Failed — the recipient's server refused it";
+		case "unreachable":
+		case "temporary":
+			return "Failed — temporary problem, can be retried";
+		default:
+			return "Failed";
+	}
 }

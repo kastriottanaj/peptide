@@ -15,6 +15,17 @@
 import { readdirSync, statSync } from "fs";
 import { join } from "path";
 
+/**
+ * The reply endpoint's own orchestration is tested in `reply.unit.spec.ts`
+ * against a fake SMTP transport. Here it is mocked, because what this file is
+ * about is the handler: what it accepts, what it refuses, and what it hands
+ * back.
+ */
+jest.mock("../service", () => ({
+  ...jest.requireActual("../service"),
+  sendInboxReply: jest.fn(),
+}));
+
 import { GET as threadsGET } from "../../../api/admin/inbox/threads/route";
 import {
   GET as threadGET,
@@ -23,6 +34,23 @@ import {
 import { GET as countsGET } from "../../../api/admin/inbox/counts/route";
 import { PATCH as readPATCH } from "../../../api/admin/inbox/messages/[id]/read/route";
 import { POST as syncPOST } from "../../../api/admin/inbox/sync/route";
+import { POST as replyPOST } from "../../../api/admin/inbox/threads/[id]/reply/route";
+import { sendInboxReply } from "../service";
+import { InboxError } from "../errors";
+
+const mockedSendReply = sendInboxReply as jest.MockedFunction<typeof sendInboxReply>;
+
+const SENT_MESSAGE = {
+  id: "imsg_out_1",
+  thread_id: "ithr_1",
+  message_id: "generated@example.test",
+  to_email: "kunde@example.org",
+  subject: "Re: Anfrage",
+  delivery_status: "sent" as const,
+  failure_reason: null,
+  idempotency_key: "idem-key-0000001",
+  sent_at: new Date("2026-08-05T09:00:00.000Z"),
+};
 
 type FakeRes = {
   statusCode: number;
@@ -463,7 +491,10 @@ describe("GET /admin/inbox/counts", () => {
       spam: 0,
       unread_threads: 2,
       unread_messages: 4,
+      // Two independent switches: importing and replying are different risks
+      // and are reported separately.
       enabled: false,
+      smtp_enabled: false,
     });
   });
 
@@ -542,8 +573,8 @@ describe("route placement", () => {
       file.includes(`${"inbox"}`),
     );
 
-    // Five files, six endpoints — `threads/[id]` serves both GET and PATCH.
-    expect(inboxRoutes.length).toBe(5);
+    // Six files, seven endpoints — `threads/[id]` serves both GET and PATCH.
+    expect(inboxRoutes.length).toBe(6);
     for (const file of inboxRoutes) {
       expect(file).toContain(join("api", "admin", "inbox"));
     }
@@ -552,5 +583,161 @@ describe("route placement", () => {
   it("exposes no store route mentioning the inbox", () => {
     const storeRoutes = routeFiles(join(apiRoot, "store"));
     expect(storeRoutes.filter((file) => file.includes("inbox"))).toEqual([]);
+  });
+});
+
+describe("POST /admin/inbox/threads/:id/reply", () => {
+  beforeEach(() => {
+    mockedSendReply.mockReset();
+    mockedSendReply.mockResolvedValue({ message: SENT_MESSAGE, duplicate: false });
+  });
+
+  it("passes the body and idempotency key through, and nothing else", async () => {
+    const res = fakeRes();
+
+    await replyPOST(
+      fakeReq({
+        params: { id: "ithr_1" },
+        body: {
+          body: "Guten Tag",
+          idempotency_key: "idem-key-0000001",
+          // Everything a caller might try to smuggle in. None of it is read.
+          to: "attacker@example.com",
+          cc: "attacker@example.com",
+          bcc: "attacker@example.com",
+          from: "ceo@example.com",
+          subject: "Rechnung",
+          html: "<script>alert(1)</script>",
+          attachments: [{ filename: "x.pdf" }],
+        },
+      }),
+      res as never,
+    );
+
+    expect(res.statusCode).toBe(201);
+    expect(mockedSendReply).toHaveBeenCalledTimes(1);
+
+    const [, request] = mockedSendReply.mock.calls[0];
+    expect(Object.keys(request).sort()).toEqual(["body", "idempotencyKey", "threadId"]);
+    expect(request).toMatchObject({
+      threadId: "ithr_1",
+      body: "Guten Tag",
+      idempotencyKey: "idem-key-0000001",
+    });
+  });
+
+  it("answers 200 rather than 201 when an existing send is returned", async () => {
+    mockedSendReply.mockResolvedValue({ message: SENT_MESSAGE, duplicate: true });
+    const res = fakeRes();
+
+    await replyPOST(
+      fakeReq({
+        params: { id: "ithr_1" },
+        body: { body: "Guten Tag", idempotency_key: "idem-key-0000001" },
+      }),
+      res as never,
+    );
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({ duplicate: true });
+  });
+
+  it.each([undefined, 42, null, { text: "hi" }])(
+    "rejects a non-string body (%p) with 400",
+    async (body) => {
+      const res = fakeRes();
+
+      await replyPOST(
+        fakeReq({
+          params: { id: "ithr_1" },
+          body: { body, idempotency_key: "idem-key-0000001" },
+        }),
+        res as never,
+      );
+
+      expect(res.statusCode).toBe(400);
+      expect(mockedSendReply).not.toHaveBeenCalled();
+    },
+  );
+
+  it("returns the fixed error for a send that failed", async () => {
+    mockedSendReply.mockRejectedValue(new InboxError("INBOX_SEND_FAILED"));
+    const res = fakeRes();
+
+    await replyPOST(
+      fakeReq({
+        params: { id: "ithr_1" },
+        body: { body: "Guten Tag", idempotency_key: "idem-key-0000001" },
+      }),
+      res as never,
+    );
+
+    expect(res.statusCode).toBe(502);
+    expect(res.body).toMatchObject({ error: { code: "INBOX_SEND_FAILED" } });
+  });
+
+  it.each([
+    ["INBOX_SMTP_DISABLED", 503],
+    ["INBOX_SMTP_NOT_CONFIGURED", 503],
+    ["INBOX_NO_RECIPIENT", 422],
+    ["INBOX_RATE_LIMITED", 429],
+    ["INBOX_REPLY_IN_PROGRESS", 409],
+    ["INBOX_NOT_FOUND", 404],
+  ] as Array<[code: string, status: number]>)(
+    "maps %s to %i",
+    async (code, status) => {
+      mockedSendReply.mockRejectedValue(new InboxError(code as never));
+      const res = fakeRes();
+
+      await replyPOST(
+        fakeReq({
+          params: { id: "ithr_1" },
+          body: { body: "Guten Tag", idempotency_key: "idem-key-0000001" },
+        }),
+        res as never,
+      );
+
+      expect(res.statusCode).toBe(status);
+      expect(res.body).toMatchObject({ error: { code } });
+    },
+  );
+
+  /** An unexpected throw must not escape as a stack trace or an SMTP sentence. */
+  it("does not let an internal failure reach the client", async () => {
+    mockedSendReply.mockRejectedValue(
+      new Error("smtp.hostinger.com 535 auth failed for info@peptideeinkaufen.de"),
+    );
+    const res = fakeRes();
+
+    await replyPOST(
+      fakeReq({
+        params: { id: "ithr_1" },
+        body: { body: "Guten Tag", idempotency_key: "idem-key-0000001" },
+      }),
+      res as never,
+    );
+
+    const serialized = JSON.stringify(res.body);
+    expect(serialized).not.toContain("hostinger");
+    expect(serialized).not.toContain("peptideeinkaufen.de");
+    expect(serialized).not.toContain("535");
+  });
+
+  it("returns no credential and no transport detail on success", async () => {
+    const res = fakeRes();
+
+    await replyPOST(
+      fakeReq({
+        params: { id: "ithr_1" },
+        body: { body: "Guten Tag", idempotency_key: "idem-key-0000001" },
+      }),
+      res as never,
+    );
+
+    const payload = (res.body as { message: Record<string, unknown> }).message;
+    expect(Object.keys(payload).sort()).toEqual(
+      ["delivery_status", "failure_reason", "id", "sent_at", "subject", "thread_id", "to_email"].sort(),
+    );
+    expect(JSON.stringify(res.body)).not.toMatch(/password|smtp\.|idempotency_key/i);
   });
 });

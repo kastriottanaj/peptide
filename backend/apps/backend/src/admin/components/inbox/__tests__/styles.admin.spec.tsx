@@ -214,22 +214,40 @@ describe("email content is never rendered as markup", () => {
   });
 });
 
-describe("the feature ships no way to send or download", () => {
+describe("the feature ships no way to forward or download", () => {
   /**
-   * Version one is a reader. These are the words a reply box, a forward button
-   * or an attachment download would be built out of; none may appear as an
-   * endpoint or a handler.
+   * Replying to a thread is supported as of the reply release; everything else
+   * that puts mail out of this server, or files into it, still is not. These
+   * are the endpoints a forward button, an attachment download or a bulk
+   * sender would need, and none of them exists.
+   *
+   * The one permitted send path is `POST /admin/inbox/threads/:id/reply`, whose
+   * request body is a text body and an idempotency key — no address, no
+   * subject, no attachment. It is asserted positively below rather than
+   * excluded here.
    */
-  it("calls no send, reply, forward or download endpoint", () => {
+  it("calls no forward, attachment or bulk-send endpoint", () => {
     const offenders = inboxSources
       .filter(({ code }) =>
-        /\/admin\/inbox\/(send|reply|forward|attachments|messages\/[^"'`]*\/(attachment|download))/.test(
+        /\/admin\/inbox\/(send|forward|broadcast|templates|attachments|messages\/[^"'`]*\/(attachment|download))/.test(
           code,
         ),
       )
       .map(({ file }) => file);
 
     expect(offenders).toEqual([]);
+  });
+
+  /** The reply request carries a body and a key. Nothing else may be sent. */
+  it("sends no address, subject or attachment field with a reply", () => {
+    const api = inboxSources.find(({ file }) => file.endsWith("inbox-api.ts"));
+    expect(api).toBeDefined();
+
+    const reply = api!.code.slice(api!.code.indexOf("postReply"));
+    for (const forbidden of ["cc:", "bcc:", "to:", "from:", "subject:", "html:", "attachments:"]) {
+      expect(reply.includes(forbidden)).toBe(false);
+    }
+    expect(reply).toMatch(/idempotency_key/);
   });
 
   it("triggers no file download", () => {
@@ -259,9 +277,18 @@ describe("no credential reaches the browser bundle", () => {
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * Hostnames and mailbox addresses, not the words. `imap.` on its own matches
+   * a sentence ending in "…writes to IMAP.", which is prose explaining a
+   * safeguard rather than a leak — the pattern requires an actual host.
+   */
   it("mentions no mail host or mailbox user", () => {
     const offenders = inboxSources
-      .filter(({ text }) => /imap\.|hostinger|info@peptideeinkaufen/i.test(text))
+      .filter(({ text }) =>
+        /(imap|smtp)\.[a-z0-9-]+\.[a-z]{2,}|hostinger|info@peptideeinkaufen/i.test(
+          text,
+        ),
+      )
       .map(({ file }) => file);
 
     expect(offenders).toEqual([]);

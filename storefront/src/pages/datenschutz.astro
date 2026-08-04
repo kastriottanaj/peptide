@@ -284,6 +284,21 @@ const SECTIONS: LegalSection[] = Object.values(S);
 	</p>
 
 	<p>
+		<strong>Antworten aus dem Verwaltungssystem:</strong> Berechtigte
+		Administratoren können Ihre Anfrage direkt aus dem Verwaltungssystem
+		beantworten. Die Antwort wird als reiner Text über den SMTP-Dienst unseres
+		E-Mail-Anbieters Hostinger versendet, der die Zustellung in unserem Auftrag
+		übernimmt; Absenderadresse ist stets{" "}
+		{CONTACT.email ? <strong>{CONTACT.email}</strong> : "unsere Support-Adresse"}.
+		Empfänger ist ausschließlich die Adresse, von der Ihre Nachricht stammt
+		(bzw. die von Ihnen angegebene Antwortadresse). Gespeichert werden der
+		gesendete Text, Empfänger, Betreff, Zeitpunkt, die technischen Kennungen zur
+		Zuordnung des Verlaufs sowie der Zustellstatus (in Zustellung, gesendet oder
+		fehlgeschlagen samt Fehlerkategorie). Anhänge, HTML-Inhalte und
+		Serienversand sind dabei nicht möglich.
+	</p>
+
+	<p>
 		Zugriff auf das Verwaltungssystem haben ausschließlich berechtigte,
 		angemeldete Administratoren. Eine automatisierte Entscheidungsfindung
 		einschließlich Profiling findet nicht statt.
@@ -306,8 +321,9 @@ const SECTIONS: LegalSection[] = Object.values(S);
 			einer Auftragsverarbeitung nach Art. 28 DSGVO,
 		</li>
 		<li>
-			die Hostinger als Anbieterin unseres E-Mail-Postfachs, weisungsgebunden im
-			Rahmen einer Auftragsverarbeitung nach Art. 28 DSGVO (siehe Abschnitt 9){" "}
+			die Hostinger als Anbieterin unseres E-Mail-Postfachs und als
+			Zustelldienst für unsere Antworten, weisungsgebunden im Rahmen einer
+			Auftragsverarbeitung nach Art. 28 DSGVO (siehe Abschnitt 9){" "}
 			<span class="todo">
 				[Auftragsverarbeitungsvertrag mit dem E-Mail-Anbieter prüfen und die
 				vollständige Firmierung ergänzen]

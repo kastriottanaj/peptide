@@ -454,6 +454,93 @@
   font-size: 11px;
 }
 
+/*
+ * A reply this admin sent.
+ *
+ * Indented and tinted so a conversation reads as a conversation — who said
+ * what, at a glance — without relying on the "Sent by us" pill alone.
+ */
+.pi-message--outbound {
+  border-color: var(--pi-border-strong);
+  background: var(--pi-surface-muted);
+  margin-left: 24px;
+}
+
+@media (max-width: 720px) {
+  .pi-message--outbound {
+    margin-left: 0;
+  }
+}
+
+/* -------------------------------------------------------------- composer -- */
+
+.pi-composer {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pi-composer__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--pi-text-muted);
+  font-size: 12px;
+}
+
+.pi-composer__to {
+  overflow-wrap: anywhere;
+}
+
+.pi-composer__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--pi-text-faint);
+  white-space: nowrap;
+}
+
+.pi-composer__count--over {
+  color: var(--pi-danger);
+  font-weight: 600;
+}
+
+.pi-composer__input {
+  width: 100%;
+  resize: vertical;
+  min-height: 96px;
+  font: inherit;
+  /* Plain text in, plain text out: a proportional font here would imply
+     formatting the message will not carry. */
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--pi-text);
+  background: var(--pi-bg);
+  border: 1px solid var(--pi-border-strong);
+  border-radius: var(--pi-radius-sm);
+  padding: 8px 10px;
+}
+
+.pi-composer__input:focus-visible {
+  outline: 2px solid var(--pi-accent);
+  outline-offset: 1px;
+}
+
+.pi-composer__input:disabled {
+  opacity: 0.6;
+}
+
+.pi-composer__hint {
+  margin: 0;
+  color: var(--pi-text-faint);
+  font-size: 11px;
+}
+
 /* ----------------------------------------------------------------- pills -- */
 
 .pi-pill {

@@ -152,6 +152,26 @@ export function SkeletonBlocks({ blocks = 3 }: { blocks?: number }) {
   );
 }
 
+/**
+ * Colour for a delivery status.
+ *
+ * Green only for `sent`: a pending send is amber because it is unfinished, and
+ * a failed one is red because a customer is waiting for something that never
+ * left. Nothing here paints an unsent message in the colour of a sent one.
+ */
+export function deliveryTone(status: string): PillTone {
+	switch (status) {
+		case "sent":
+			return "success";
+		case "pending":
+			return "warning";
+		case "failed":
+			return "danger";
+		default:
+			return "neutral";
+	}
+}
+
 /* ------------------------------------------------------------ formatting -- */
 
 /**

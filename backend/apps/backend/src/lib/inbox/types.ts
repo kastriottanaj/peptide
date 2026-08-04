@@ -48,6 +48,8 @@ export type NormalizedMessage = {
   references: string[];
   from_name: string | null;
   from_email: string | null;
+  /** `Reply-To`, when the sender set one. Preferred over `from_email` on reply. */
+  reply_to: string | null;
   recipients: InboxRecipient[];
   subject: string;
   /** Prefix-stripped, lowercased. The last-resort threading key. */
@@ -110,6 +112,74 @@ export interface InboxStore {
 
   /** Retention. Returns what it removed; never called when unset. */
   purgeBefore(cutoff: Date): Promise<{ messages: number; threads: number }>;
+}
+
+/* --------------------------------------------------------------- replies -- */
+
+export const INBOX_DELIVERY_STATUSES = ["pending", "sent", "failed"] as const;
+export type InboxDeliveryStatus = (typeof INBOX_DELIVERY_STATUSES)[number];
+
+/** The inbound message a reply answers: recipient and threading, in one place. */
+export type ReplyParent = {
+  id: string;
+  message_id: string | null;
+  references: string[];
+  subject: string;
+  from_email: string | null;
+  reply_to: string | null;
+  received_at: Date;
+};
+
+export type OutboundRecord = {
+  id: string;
+  thread_id: string;
+  message_id: string;
+  to_email: string;
+  subject: string;
+  delivery_status: InboxDeliveryStatus;
+  failure_reason: string | null;
+  idempotency_key: string | null;
+  created_at?: Date;
+  sent_at?: Date | null;
+};
+
+export type CreateOutboundInput = {
+  thread_id: string;
+  message_id: string;
+  in_reply_to: string | null;
+  references: string[];
+  from_email: string;
+  to_email: string;
+  subject: string;
+  body_text: string;
+  idempotency_key: string;
+  created_at: Date;
+};
+
+/**
+ * What sending a reply needs from the database.
+ *
+ * Deliberately separate from `InboxStore`: the importer and the reply path
+ * touch the same table for unrelated reasons, and a single fat interface would
+ * mean the sync's test double has to grow methods it never calls to keep
+ * compiling.
+ */
+export interface ReplyStore {
+  threadExists(threadId: string): Promise<boolean>;
+  /** Newest inbound message in the thread — the one a reply answers. */
+  latestInboundMessage(threadId: string): Promise<ReplyParent | null>;
+
+  findOutboundByIdempotencyKey(key: string): Promise<OutboundRecord | null>;
+  createOutbound(input: CreateOutboundInput): Promise<OutboundRecord>;
+  /** Move a failed row back to `pending` for a retry, reusing its id. */
+  markOutboundPending(id: string): Promise<OutboundRecord>;
+  markOutboundSent(id: string, sentAt: Date): Promise<OutboundRecord>;
+  markOutboundFailed(id: string, reason: string): Promise<OutboundRecord>;
+
+  /** For the per-thread interval. */
+  lastOutboundAt(threadId: string): Promise<Date | null>;
+  /** For the global window. */
+  countOutboundSince(since: Date): Promise<number>;
 }
 
 /** Why a sync run ended. Safe to log and to return to an admin. */

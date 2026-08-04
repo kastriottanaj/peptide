@@ -263,6 +263,41 @@ export function sanitizeBody(
   };
 }
 
+/**
+ * The text of an outgoing reply.
+ *
+ * Written by an authenticated admin rather than by a stranger, which changes
+ * the threat but does not remove it: the body is still typed into a browser and
+ * still ends up inside a MIME message, so the same invisible characters get
+ * stripped and the same length bound applies.
+ *
+ * Line endings are normalised to `\n` and **bare carriage returns are removed
+ * entirely**. That is the header-injection defence at the body level: a
+ * transport that mishandled `\r\n` in a body could otherwise be talked into
+ * seeing `\r\nBcc:` as a new header. Nodemailer does not, and this makes it
+ * impossible either way.
+ *
+ * Returns `null` for a body that is empty once cleaned — an empty reply is a
+ * misclick, not a message.
+ */
+export function sanitizeReplyBody(
+  value: unknown,
+  maxChars: number,
+): { text: string; tooLong: boolean } | null {
+  if (typeof value !== "string") return null;
+
+  const cleaned = stripControls(value)
+    .replace(/\r\n?/g, "\n")
+    .replace(/[^\S\n]+\n/g, "\n")
+    .replace(/\n{4,}/g, "\n\n\n")
+    .trim();
+
+  if (!cleaned) return null;
+  if (cleaned.length > maxChars) return { text: cleaned, tooLong: true };
+
+  return { text: cleaned, tooLong: false };
+}
+
 /* ----------------------------------------------------------- structured -- */
 
 /**

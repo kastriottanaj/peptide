@@ -24,13 +24,19 @@ import InboxSyncState from "./models/sync-state";
 import InboxThread from "./models/thread";
 
 import { searchTextFor } from "../../lib/inbox/parse";
+import { OUTBOUND_MAILBOX } from "../../lib/inbox/reply";
 import type {
+  CreateOutboundInput,
   CreateThreadInput,
+  InboxDeliveryStatus,
   InboxStore,
   InboxSyncStatePatch,
   InboxSyncStateRecord,
   InboxThreadStatus,
   NormalizedMessage,
+  OutboundRecord,
+  ReplyParent,
+  ReplyStore,
   ThreadRef,
 } from "../../lib/inbox/types";
 
@@ -68,7 +74,7 @@ export type InboxCounts = {
 
 class InboxModuleService
   extends MedusaService({ InboxThread, InboxMessage, InboxSyncState })
-  implements InboxStore
+  implements InboxStore, ReplyStore
 {
   /* ============================================================= store == */
 
@@ -211,10 +217,12 @@ class InboxModuleService
       // `thread` (the id of the parent) and writes `thread_id` itself. Both
       // work at runtime; only this one typechecks.
       thread: threadId,
+      direction: "inbound",
       mailbox: message.mailbox,
       uid: message.uid,
       message_id: message.message_id,
       in_reply_to: message.in_reply_to,
+      reply_to: message.reply_to,
       references: message.references.length
         ? message.references.join(" ").slice(0, 4_000)
         : null,
@@ -306,6 +314,154 @@ class InboxModuleService
     }
 
     return { messages: stale.length, threads: removedThreads };
+  }
+
+  /* =========================================================== replies == */
+
+  async threadExists(threadId: string): Promise<boolean> {
+    const [thread] = await this.listInboxThreads(
+      { id: threadId },
+      { take: 1, select: ["id"] },
+    );
+    return Boolean(thread);
+  }
+
+  /**
+   * The newest **inbound** message in a thread.
+   *
+   * Inbound only, and deliberately so: a reply answers what the customer wrote,
+   * not what we last sent. Threading off our own outbound message would still
+   * work, but the recipient would come from a row whose `from` is our own
+   * address — a loop that only shows up in production.
+   */
+  async latestInboundMessage(threadId: string): Promise<ReplyParent | null> {
+    const [message] = await this.listInboxMessages(
+      { thread_id: threadId, direction: "inbound" },
+      { take: 1, order: { received_at: "DESC" } },
+    );
+
+    if (!message) return null;
+
+    return {
+      id: message.id,
+      message_id: message.message_id ?? null,
+      references: message.references ? String(message.references).split(/\s+/).filter(Boolean) : [],
+      subject: message.subject ?? "",
+      from_email: message.from_email ?? null,
+      reply_to: message.reply_to ?? null,
+      received_at: new Date(message.received_at),
+    };
+  }
+
+  async findOutboundByIdempotencyKey(key: string): Promise<OutboundRecord | null> {
+    const [message] = await this.listInboxMessages(
+      { idempotency_key: key },
+      { take: 1 },
+    );
+
+    return message ? toOutboundRecord(message as never) : null;
+  }
+
+  /**
+   * The outbound row, written **before** the send is attempted.
+   *
+   * `mailbox`/`uid` carry sentinel values because this message is not in the
+   * mailbox — no IMAP write and no Sent-folder copy exists in this release. The
+   * uid counts down from zero so the `(mailbox, uid)` unique index stays
+   * meaningful for rows that have no real UID.
+   */
+  async createOutbound(input: CreateOutboundInput): Promise<OutboundRecord> {
+    const [lowest] = await this.listInboxMessages(
+      { mailbox: OUTBOUND_MAILBOX },
+      { take: 1, select: ["uid"], order: { uid: "ASC" } },
+    );
+    const uid = Math.min(0, Number(lowest?.uid ?? 0)) - 1;
+
+    const created = await this.createInboxMessages({
+      thread: input.thread_id,
+      direction: "outbound",
+      mailbox: OUTBOUND_MAILBOX,
+      uid,
+      message_id: input.message_id,
+      in_reply_to: input.in_reply_to,
+      references: input.references.length
+        ? input.references.join(" ").slice(0, 4_000)
+        : null,
+      from_name: null,
+      from_email: input.from_email,
+      reply_to: null,
+      recipients: [
+        { kind: "to", name: null, email: input.to_email },
+      ] as unknown as Record<string, unknown>,
+      subject: input.subject,
+      received_at: input.created_at,
+      body_text: input.body_text,
+      body_truncated: false,
+      size_bytes: Buffer.byteLength(input.body_text, "utf8"),
+      attachments: [] as unknown as Record<string, unknown>,
+      // Our own message: unread makes no sense for something we wrote.
+      is_read: true,
+      delivery_status: "pending",
+      idempotency_key: input.idempotency_key,
+    });
+
+    // A reply is thread activity: it moves the conversation to the top of the
+    // list and reopens it if it had been resolved, exactly as an inbound
+    // message would — but it does not touch the unread counter.
+    const thread = await this.retrieveInboxThread(input.thread_id);
+    await this.updateInboxThreads({
+      id: input.thread_id,
+      message_count: (thread.message_count ?? 0) + 1,
+      last_message_at: input.created_at,
+      status: thread.status === "resolved" ? "open" : thread.status,
+    });
+
+    return toOutboundRecord(created as never);
+  }
+
+  async markOutboundPending(id: string): Promise<OutboundRecord> {
+    await this.updateInboxMessages({
+      id,
+      delivery_status: "pending",
+      failure_reason: null,
+    });
+    return toOutboundRecord((await this.retrieveInboxMessage(id)) as never);
+  }
+
+  async markOutboundSent(id: string, sentAt: Date): Promise<OutboundRecord> {
+    await this.updateInboxMessages({
+      id,
+      delivery_status: "sent",
+      sent_at: sentAt,
+      failure_reason: null,
+    });
+    return toOutboundRecord((await this.retrieveInboxMessage(id)) as never);
+  }
+
+  async markOutboundFailed(id: string, reason: string): Promise<OutboundRecord> {
+    await this.updateInboxMessages({
+      id,
+      delivery_status: "failed",
+      failure_reason: reason,
+    });
+    return toOutboundRecord((await this.retrieveInboxMessage(id)) as never);
+  }
+
+  async lastOutboundAt(threadId: string): Promise<Date | null> {
+    const [message] = await this.listInboxMessages(
+      { thread_id: threadId, direction: "outbound" },
+      { take: 1, select: ["id", "created_at"], order: { created_at: "DESC" } },
+    );
+
+    return message?.created_at ? new Date(message.created_at) : null;
+  }
+
+  async countOutboundSince(since: Date): Promise<number> {
+    const [, count] = await this.listAndCountInboxMessages(
+      { direction: "outbound", created_at: { $gte: since } },
+      { take: 1, select: ["id"] },
+    );
+    return count;
   }
 
   /* ============================================================ reader == */
@@ -451,6 +607,37 @@ class InboxModuleService
 /** `%` and `_` are wildcards in `LIKE`; a search term is neither. */
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
+/** The outbound fields, in the shape the reply path works with. */
+function toOutboundRecord(message: {
+  id: string;
+  thread_id: string;
+  message_id: string | null;
+  subject: string;
+  recipients: unknown;
+  delivery_status: string | null;
+  failure_reason: string | null;
+  idempotency_key: string | null;
+  created_at?: Date;
+  sent_at?: Date | null;
+}): OutboundRecord {
+  const recipients = Array.isArray(message.recipients)
+    ? (message.recipients as Array<{ email?: string }>)
+    : [];
+
+  return {
+    id: message.id,
+    thread_id: String(message.thread_id),
+    message_id: message.message_id ?? "",
+    to_email: recipients[0]?.email ?? "",
+    subject: message.subject ?? "",
+    delivery_status: (message.delivery_status ?? "pending") as InboxDeliveryStatus,
+    failure_reason: message.failure_reason ?? null,
+    idempotency_key: message.idempotency_key ?? null,
+    created_at: message.created_at,
+    sent_at: message.sent_at ?? null,
+  };
 }
 
 function toThreadListItem(thread: {

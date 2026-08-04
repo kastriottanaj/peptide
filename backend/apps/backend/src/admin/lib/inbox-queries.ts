@@ -24,11 +24,13 @@ import {
   fetchThreads,
   patchMessageRead,
   patchThread,
+  postReply,
   postSync,
 } from "./inbox-api";
 import type { InboxRequestError } from "./inbox-errors";
 import type {
   InboxCounts,
+  InboxReplyResponse,
   InboxSyncResponse,
   InboxThreadDetail,
   InboxThreadList,
@@ -136,5 +138,35 @@ export function useSyncInbox() {
   return useMutation<InboxSyncResponse, InboxRequestError, void>({
     mutationFn: () => postSync(),
     onSuccess: () => invalidate(),
+  });
+}
+
+/**
+ * Send a reply.
+ *
+ * `retry` is deliberately off. A reply is not a read that can be repeated for
+ * free: react-query retrying a request whose response was lost would be the
+ * one case where the idempotency key is doing all the work, and a UI that
+ * quietly re-sends mail is worse than one that says "try again".
+ *
+ * The thread is invalidated on both success *and* failure, because a failed
+ * send still writes a row — the conversation now contains a message marked
+ * failed, and the reader has to see it.
+ */
+export function useSendReply() {
+  const invalidate = useInvalidateInbox();
+
+  return useMutation<
+    InboxReplyResponse,
+    InboxRequestError,
+    { threadId: string; body: string; idempotencyKey: string }
+  >({
+    mutationFn: (input) =>
+      postReply(input.threadId, {
+        body: input.body,
+        idempotencyKey: input.idempotencyKey,
+      }),
+    retry: false,
+    onSettled: (_data, _error, input) => invalidate(input.threadId),
   });
 }

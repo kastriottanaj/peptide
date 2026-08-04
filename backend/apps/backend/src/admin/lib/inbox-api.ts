@@ -14,6 +14,7 @@ import { sdk } from "./sdk";
 import { toInboxError } from "./inbox-errors";
 import type {
   InboxCounts,
+  InboxReplyResponse,
   InboxSyncResponse,
   InboxThreadDetail,
   InboxThreadList,
@@ -105,4 +106,26 @@ export function patchMessageRead(
 
 export function postSync(): Promise<InboxSyncResponse> {
   return request<InboxSyncResponse>("/admin/inbox/sync", { method: "POST" });
+}
+
+/**
+ * Send a reply.
+ *
+ * Two fields, and neither is an address: the recipient, sender, subject and
+ * threading headers all come from the stored conversation. `idempotencyKey`
+ * stays the same across a retry of the *same* draft, which is what makes a
+ * double click or a retried request return the existing message instead of
+ * sending a second one.
+ */
+export function postReply(
+  threadId: string,
+  input: { body: string; idempotencyKey: string },
+): Promise<InboxReplyResponse> {
+  return request<InboxReplyResponse>(
+    `/admin/inbox/threads/${encodeURIComponent(threadId)}/reply`,
+    {
+      method: "POST",
+      body: { body: input.body, idempotency_key: input.idempotencyKey },
+    },
+  );
 }

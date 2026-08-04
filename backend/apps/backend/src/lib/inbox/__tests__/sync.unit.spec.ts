@@ -11,6 +11,9 @@
  * mailbox must not throw.
  */
 
+import { readFileSync, readdirSync } from "fs";
+import { join } from "path";
+
 import {
   FakeImapSession,
   FakeInboxStore,
@@ -586,4 +589,73 @@ describe("what gets logged", () => {
       expect(logged).not.toContain(secret);
     }
   });
+});
+
+/**
+ * The reply feature must not have made the importer writable.
+ *
+ * Adding outbound mail meant touching the same table and the same module, so
+ * this is the guard that the *mailbox* side of it stayed exactly as it was: no
+ * IMAP write, no Sent-folder copy, no flag change. It reads the shipped sources
+ * rather than exercising a code path, because what is being asserted is the
+ * absence of one.
+ */
+describe("sending a reply did not make IMAP writable", () => {
+	const libDir = join(__dirname, "..");
+
+	const sources = readdirSync(libDir)
+		.filter((name) => /\.ts$/.test(name))
+		.map((name) => ({
+			name,
+			text: readFileSync(join(libDir, name), "utf8"),
+		}));
+
+	it("finds the inbox library sources", () => {
+		expect(sources.length).toBeGreaterThanOrEqual(10);
+	});
+
+	/** The IMAP session interface is the whole permission surface. */
+	it("adds no write method to the IMAP session", () => {
+		const imap = sources.find(({ name }) => name === "imap.ts")!.text;
+		const iface = imap.slice(
+			imap.indexOf("export interface ImapSession"),
+			imap.indexOf("export type ImapSessionFactory"),
+		);
+
+		const methods = [...iface.matchAll(/^\s{2}(\w+)\(/gm)].map((match) => match[1]);
+		expect(methods.sort()).toEqual(
+			["close", "download", "listSince", "listSinceDate", "open"].sort(),
+		);
+	});
+
+	it("calls no IMAP mutation anywhere in the feature", () => {
+		const forbidden =
+			/\b(messageFlagsAdd|messageFlagsRemove|messageFlagsSet|messageDelete|messageMove|messageCopy|mailboxCreate|append)\s*\(/;
+
+		const offenders = sources
+			.filter(({ text }) => forbidden.test(text.replace(/\/\*[\s\S]*?\*\//g, "")))
+			.map(({ name }) => name);
+
+		expect(offenders).toEqual([]);
+	});
+
+	it("still opens the mailbox read-only", () => {
+		const imap = sources.find(({ name }) => name === "imap.ts")!.text;
+		expect(imap).toMatch(/mailboxOpen\([^)]*\{\s*readOnly:\s*true\s*\}/);
+	});
+
+	/** The sending path has no business importing the IMAP client at all. */
+	it("keeps the reply path clear of the IMAP client", () => {
+		for (const name of ["reply.ts", "smtp.ts"]) {
+			const source = sources.find((entry) => entry.name === name)!.text;
+			expect(source).not.toMatch(/from "\.\/imap"/);
+			expect(source).not.toMatch(/imapflow/);
+		}
+	});
+
+	/** An outbound row is marked as not being in the mailbox. */
+	it("stores outbound mail under a sentinel mailbox rather than a real one", () => {
+		const reply = sources.find(({ name }) => name === "reply.ts")!.text;
+		expect(reply).toMatch(/OUTBOUND_MAILBOX\s*=\s*"OUTBOUND"/);
+	});
 });

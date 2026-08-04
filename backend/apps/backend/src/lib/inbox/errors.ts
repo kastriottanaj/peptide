@@ -19,6 +19,15 @@ export const INBOX_ERROR_CODES = [
   "INBOX_BUSY",
   "INBOX_NOT_FOUND",
   "INBOX_INVALID_REQUEST",
+  // Sending. Separate codes from the importer's, because the two fail for
+  // unrelated reasons and an admin acting on one must not be sent to fix the
+  // other.
+  "INBOX_SMTP_DISABLED",
+  "INBOX_SMTP_NOT_CONFIGURED",
+  "INBOX_NO_RECIPIENT",
+  "INBOX_SEND_FAILED",
+  "INBOX_RATE_LIMITED",
+  "INBOX_REPLY_IN_PROGRESS",
 ] as const;
 
 export type InboxErrorCode = (typeof INBOX_ERROR_CODES)[number];
@@ -38,6 +47,16 @@ const STATUS_BY_CODE: Record<InboxErrorCode, number> = {
   INBOX_BUSY: 429,
   INBOX_NOT_FOUND: 404,
   INBOX_INVALID_REQUEST: 400,
+  INBOX_SMTP_DISABLED: 503,
+  INBOX_SMTP_NOT_CONFIGURED: 503,
+  // 422, not 400: the request is well-formed, the conversation simply has no
+  // address that can be replied to.
+  INBOX_NO_RECIPIENT: 422,
+  INBOX_SEND_FAILED: 502,
+  INBOX_RATE_LIMITED: 429,
+  // 409: the same reply is already being sent. Retrying with the same key once
+  // that finishes returns the existing message rather than sending a second.
+  INBOX_REPLY_IN_PROGRESS: 409,
 };
 
 /**
@@ -54,6 +73,18 @@ const MESSAGE_BY_CODE: Record<InboxErrorCode, string> = {
   INBOX_BUSY: "A mailbox sync is already running. Try again in a moment.",
   INBOX_NOT_FOUND: "This conversation no longer exists.",
   INBOX_INVALID_REQUEST: "The request could not be understood.",
+  INBOX_SMTP_DISABLED:
+    "Sending replies is switched off on this server. The conversation is unchanged.",
+  INBOX_SMTP_NOT_CONFIGURED:
+    "Sending replies is switched on but the mail settings are incomplete. This has to be fixed on the server.",
+  INBOX_NO_RECIPIENT:
+    "This conversation has no usable reply address, so no reply can be sent from here.",
+  INBOX_SEND_FAILED:
+    "The reply could not be sent. It is saved as failed and can be retried.",
+  INBOX_RATE_LIMITED:
+    "Too many replies in a short time. Wait a moment and try again.",
+  INBOX_REPLY_IN_PROGRESS:
+    "This reply is already being sent. Wait for it to finish rather than sending again.",
 };
 
 export class InboxError extends Error {
@@ -158,6 +189,60 @@ export function isTransientImapFailure(error: unknown): boolean {
 export function classifyInboxError(error: unknown): InboxError {
   if (isInboxError(error)) return error;
   return new InboxError("INBOX_UNAVAILABLE", isTransientImapFailure(error));
+}
+
+/**
+ * Why a send failed, as a fixed label.
+ *
+ * This is what gets stored on the outbound row and shown to an admin, so it
+ * must never be the mail server's own sentence: `535 5.7.8 Authentication
+ * failed for info@peptideeinkaufen.de` is exactly the kind of useful,
+ * unshippable text a bounce produces.
+ *
+ * The distinction that matters to the reader is whether retrying is worth it.
+ * `auth`, `rejected` and `tls` are not; `temporary` and `unreachable` are.
+ */
+export type SendFailureReason =
+  | "auth"
+  | "tls"
+  | "rejected"
+  | "unreachable"
+  | "temporary";
+
+export function classifySendFailure(error: unknown): SendFailureReason {
+  const syscall = syscallCode(error);
+  if (syscall && TRANSIENT_SYSCALLS.has(syscall)) return "unreachable";
+  if (syscall && (syscall.startsWith("ERR_TLS") || syscall.startsWith("CERT_"))) {
+    return "tls";
+  }
+
+  const message =
+    typeof error === "object" && error !== null
+      ? String((error as { message?: unknown }).message ?? "")
+      : "";
+
+  // SMTP reply codes: 5xx is permanent, 4xx is worth another attempt.
+  const status = (error as { responseCode?: unknown })?.responseCode;
+  if (typeof status === "number") {
+    if (status === 535 || status === 530 || status === 534) return "auth";
+    if (status >= 500) return "rejected";
+    if (status >= 400) return "temporary";
+  }
+
+  if (/auth|credentials|535|password/i.test(message)) return "auth";
+  if (/certificate|self.signed|unable to verify/i.test(message)) return "tls";
+  if (/mailbox unavailable|does not exist|no such user|rejected|blocked|spam/i.test(message)) {
+    return "rejected";
+  }
+
+  // Unrecognised failures are treated as temporary: telling an admin their
+  // password is wrong when it is not sends them to rotate a live credential.
+  return "temporary";
+}
+
+/** Whether a stored failure is worth a retry button doing anything. */
+export function isRetryableFailure(reason: string | null | undefined): boolean {
+  return reason === "temporary" || reason === "unreachable";
 }
 
 /**

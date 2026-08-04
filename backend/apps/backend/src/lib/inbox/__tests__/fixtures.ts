@@ -16,14 +16,20 @@
  */
 
 import type {
+  CreateOutboundInput,
   CreateThreadInput,
+  InboxDeliveryStatus,
   InboxStore,
   InboxSyncStatePatch,
   InboxSyncStateRecord,
   NormalizedMessage,
+  OutboundRecord,
+  ReplyParent,
+  ReplyStore,
   ThreadRef,
 } from "../types";
 import type { ImapEnvelope, ImapMailboxInfo, ImapSession } from "../imap";
+import type { MailSender, OutboundMail } from "../smtp";
 import type { InboxConfig } from "../config";
 
 /* ------------------------------------------------------------------ store -- */
@@ -312,4 +318,187 @@ export const testConfig: InboxConfig = {
 
 export function testLogger() {
   return { info: jest.fn(), warn: jest.fn(), error: jest.fn() };
+}
+
+/* ---------------------------------------------------------------- replies -- */
+
+type StoredOutbound = CreateOutboundInput & {
+  id: string;
+  delivery_status: InboxDeliveryStatus;
+  failure_reason: string | null;
+  sent_at: Date | null;
+};
+
+/**
+ * A working `ReplyStore` over two arrays.
+ *
+ * Enforces the one rule the database enforces — an idempotency key belongs to
+ * at most one row — and records every status transition, because "the record
+ * was pending before it was sent" is a property worth asserting rather than
+ * assuming.
+ */
+export class FakeReplyStore implements ReplyStore {
+  threads = new Set<string>(["ithr_1"]);
+  inbound: ReplyParent[] = [];
+  outbound: StoredOutbound[] = [];
+  /** Every delivery status ever written, in order. */
+  statusHistory: string[] = [];
+  /** Overridable answers for the two rate-limit queries. */
+  lastOutbound: Date | null = null;
+  globalCount = 0;
+
+  #nextId = 1;
+
+  /** A thread with one inbound message, which is the normal case. */
+  static withInbound(overrides: Partial<ReplyParent> = {}): FakeReplyStore {
+    const store = new FakeReplyStore();
+    store.inbound.push({
+      id: "imsg_1",
+      message_id: "kunde-1@example.org",
+      references: ["older@example.org"],
+      subject: "Anfrage Semaglutid",
+      from_email: "kunde@example.org",
+      reply_to: null,
+      received_at: new Date("2026-08-05T08:00:00.000Z"),
+      ...overrides,
+    });
+    return store;
+  }
+
+  async threadExists(threadId: string): Promise<boolean> {
+    return this.threads.has(threadId);
+  }
+
+  async latestInboundMessage(): Promise<ReplyParent | null> {
+    return (
+      [...this.inbound].sort(
+        (a, b) => b.received_at.getTime() - a.received_at.getTime(),
+      )[0] ?? null
+    );
+  }
+
+  async findOutboundByIdempotencyKey(key: string): Promise<OutboundRecord | null> {
+    const found = this.outbound.find((row) => row.idempotency_key === key);
+    return found ? toRecord(found) : null;
+  }
+
+  async createOutbound(input: CreateOutboundInput): Promise<OutboundRecord> {
+    if (this.outbound.some((row) => row.idempotency_key === input.idempotency_key)) {
+      throw new Error("duplicate idempotency key");
+    }
+
+    const row: StoredOutbound = {
+      ...input,
+      id: `imsg_out_${this.#nextId++}`,
+      delivery_status: "pending",
+      failure_reason: null,
+      sent_at: null,
+    };
+
+    this.outbound.push(row);
+    this.statusHistory.push("pending");
+    this.lastOutbound = input.created_at;
+
+    return toRecord(row);
+  }
+
+  async markOutboundPending(id: string): Promise<OutboundRecord> {
+    return this.#update(id, { delivery_status: "pending", failure_reason: null });
+  }
+
+  async markOutboundSent(id: string, sentAt: Date): Promise<OutboundRecord> {
+    return this.#update(id, { delivery_status: "sent", sent_at: sentAt });
+  }
+
+  async markOutboundFailed(id: string, reason: string): Promise<OutboundRecord> {
+    return this.#update(id, { delivery_status: "failed", failure_reason: reason });
+  }
+
+  async lastOutboundAt(): Promise<Date | null> {
+    return this.lastOutbound;
+  }
+
+  async countOutboundSince(): Promise<number> {
+    return this.globalCount;
+  }
+
+  /** Pretend a send with this key is already in flight. */
+  forcePendingFor(key: string): void {
+    this.outbound.push({
+      id: `imsg_out_${this.#nextId++}`,
+      thread_id: "ithr_1",
+      message_id: "pending@example.test",
+      in_reply_to: null,
+      references: [],
+      from_email: "info@example.test",
+      to_email: "kunde@example.org",
+      subject: "Re: Anfrage",
+      body_text: "in flight",
+      idempotency_key: key,
+      created_at: new Date(),
+      delivery_status: "pending",
+      failure_reason: null,
+      sent_at: null,
+    });
+  }
+
+  #update(id: string, patch: Partial<StoredOutbound>): OutboundRecord {
+    const row = this.outbound.find((entry) => entry.id === id);
+    if (!row) throw new Error(`unknown outbound ${id}`);
+
+    Object.assign(row, patch);
+    if (patch.delivery_status) this.statusHistory.push(patch.delivery_status);
+
+    return toRecord(row);
+  }
+}
+
+function toRecord(row: StoredOutbound): OutboundRecord {
+  return {
+    id: row.id,
+    thread_id: row.thread_id,
+    message_id: row.message_id,
+    to_email: row.to_email,
+    subject: row.subject,
+    delivery_status: row.delivery_status,
+    failure_reason: row.failure_reason,
+    idempotency_key: row.idempotency_key,
+    created_at: row.created_at,
+    sent_at: row.sent_at,
+  };
+}
+
+/**
+ * A mail transport that records instead of sending.
+ *
+ * `sent` holds the exact objects the code asked to put on the wire, which is
+ * what makes "no cc", "no attachments" and "the right threading headers"
+ * assertions about behaviour rather than about mocks.
+ */
+export function fakeSender(sendImpl?: () => Promise<{ accepted: number }>): {
+  sent: OutboundMail[];
+  closed: number;
+  send: MailSender["send"];
+  close: MailSender["close"];
+} {
+  const sender = {
+    sent: [] as OutboundMail[],
+    closed: 0,
+    async send(mail: OutboundMail) {
+      if (sendImpl) {
+        // Recorded before the failure: a send that threw was still attempted,
+        // and the retry tests depend on knowing that.
+        const result = await sendImpl();
+        sender.sent.push(mail);
+        return result;
+      }
+      sender.sent.push(mail);
+      return { accepted: 1 };
+    },
+    async close() {
+      sender.closed += 1;
+    },
+  };
+
+  return sender;
 }

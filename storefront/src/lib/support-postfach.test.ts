@@ -350,3 +350,83 @@ test("a published support address is the one this section describes", { skip }, 
 		"the published address does not appear in the disclosure",
 	);
 });
+
+// ---------------------------------------------------------------------------
+// Replying — the outbound half of the same processing
+// ---------------------------------------------------------------------------
+
+/**
+ * Admins can answer a conversation from inside the admin, which is a second
+ * processing with a second data set: the text we send, who we send it to, and
+ * whether it arrived. A policy that describes only the inbound half is wrong
+ * from the moment the reply box ships.
+ */
+/**
+ * Admins can answer a conversation from inside the admin, which is a second
+ * processing with a second data set: the text we send, who we send it to, and
+ * whether it arrived. A policy that describes only the inbound half is wrong
+ * from the moment the reply box ships.
+ */
+test("it says that administrators can answer from the system", () => {
+	assert.match(sectionSource(), /Administratoren k(ö|oe)nnen[\s\S]{0,80}beantworten/i);
+});
+
+test("it names the delivery processor", () => {
+	assert.match(
+		sectionSource(),
+		/SMTP[\s\S]{0,80}Hostinger|Hostinger[\s\S]{0,80}Zustellung/i,
+		"the outbound mail provider is not disclosed",
+	);
+});
+
+test("it names what is stored about an outgoing reply", () => {
+	const text = sectionSource();
+
+	for (const [label, pattern] of [
+		["the sent text", /gesendete Text/i],
+		["recipient", /Empf(ä|ae)nger/],
+		["subject", /Betreff/],
+		["timestamp", /Zeitpunkt/],
+		["threading identifiers", /technischen Kennungen zur Zuordnung/i],
+		["delivery status", /Zustellstatus/i],
+		["failure category", /fehlgeschlagen/i],
+	] as Array<[string, RegExp]>) {
+		assert.match(text, pattern, `the reply disclosure omits: ${label}`);
+	}
+});
+
+/** The same limits the implementation enforces, stated to the reader. */
+test("it states that replies carry no attachments, HTML or bulk send", () => {
+	assert.match(
+		sectionSource(),
+		/Anh(ä|ae)nge, HTML-Inhalte und Serienversand[\s\S]{0,40}nicht m(ö|oe)glich/i,
+	);
+});
+
+test("it states that the recipient is the address that wrote to us", () => {
+	assert.match(sectionSource(), /Empf(ä|ae)nger ist ausschlie(ß|ss)lich die Adresse/i);
+});
+
+test("it names the sending address from configuration, never hard-coded", () => {
+	const text = sectionSource();
+	const reply = text.slice(text.indexOf("Antworten aus dem Verwaltungssystem"));
+
+	assert.match(reply, /CONTACT\.email/, "the sender address is not read from configuration");
+	assert.equal(
+		/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(reply.replace(/\[[^\]]*\]/g, "")),
+		false,
+		"an email address is hard-coded into the reply disclosure",
+	);
+});
+
+test("the shipped page describes replying", { skip }, () => {
+	const page = flat(html());
+
+	for (const phrase of [
+		"Antworten aus dem Verwaltungssystem",
+		"Zustellstatus",
+		"Serienversand",
+	]) {
+		assert.ok(page.includes(phrase), `the built page is missing: ${phrase}`);
+	}
+});

@@ -22,6 +22,7 @@ function message(overrides: Partial<NormalizedMessage> = {}): NormalizedMessage 
     references: [],
     from_name: "A Sender",
     from_email: "sender@example.org",
+    reply_to: null,
     recipients: [{ kind: "to", name: null, email: "info@example.org" }],
     subject,
     normalized_subject: normalizeSubject(subject),

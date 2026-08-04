@@ -24,9 +24,22 @@ import type { MedusaContainer } from "@medusajs/framework/types";
 import { INBOX_MODULE } from "../../modules/inbox";
 import type InboxModuleService from "../../modules/inbox/service";
 import { inboxEnabled, resolveInboxConfig } from "./config";
+import { InboxError } from "./errors";
 import type { InboxLogger } from "./http";
 import { createImapSession } from "./imap";
-import { acquireInboxSyncLock } from "./lock";
+import {
+  INBOX_REPLY_LOCK_TTL_SECONDS,
+  acquireInboxLock,
+  acquireInboxSyncLock,
+  replyLockKey,
+} from "./lock";
+import {
+  requireSendingEnabled,
+  sendReply,
+  validateIdempotencyKey,
+  type ReplyResult,
+} from "./reply";
+import { createMailSender, type MailSenderFactory } from "./smtp";
 import { runInboxSyncWith, type SourceParser } from "./sync";
 import type { InboxSyncResult } from "./types";
 
@@ -71,6 +84,70 @@ function resolveLogger(container: MedusaContainer): InboxLogger {
     return container.resolve(ContainerRegistrationKeys.LOGGER) as InboxLogger;
   } catch {
     return { info: () => {}, warn: () => {}, error: () => {} };
+  }
+}
+
+/* --------------------------------------------------------------- replies -- */
+
+export type SendReplyOptions = {
+  /** Test seam. Production always uses the real SMTP transport. */
+  createSender?: MailSenderFactory;
+  now?: () => Date;
+  randomPart?: () => string;
+};
+
+/**
+ * The one entry point that sends a reply.
+ *
+ * Three things happen here that `reply.ts` deliberately does not know about:
+ * the container, the distributed lock, and the logger. Everything else — the
+ * validation, the threading, the persistence, the failure handling — lives in
+ * `sendReply`, where it can be tested without either.
+ *
+ * The lock is keyed on the **idempotency key**, not the thread: two admins
+ * answering different conversations must not queue behind each other, but two
+ * requests carrying the same key are the same logical send and exactly one of
+ * them may proceed. The database's unique index is the backstop; this is what
+ * makes the common case (a double click) fail fast and safely.
+ */
+export async function sendInboxReply(
+  container: MedusaContainer,
+  request: { threadId: string; body: unknown; idempotencyKey: unknown },
+  options: SendReplyOptions = {},
+): Promise<ReplyResult> {
+  const logger = resolveLogger(container);
+
+  // Before anything else, and before any lock or query: with sending switched
+  // off nothing here opens a socket, writes a row or loads a mail library.
+  requireSendingEnabled();
+
+  // Validated before it becomes a lock name.
+  const idempotencyKey = validateIdempotencyKey(request.idempotencyKey);
+
+  const store = container.resolve(INBOX_MODULE) as InboxModuleService;
+
+  const lock = await acquireInboxLock(
+    container,
+    replyLockKey(idempotencyKey),
+    `inbox-reply:${process.pid}:${Date.now()}`,
+    INBOX_REPLY_LOCK_TTL_SECONDS,
+  );
+
+  if (!lock.acquired) throw new InboxError("INBOX_REPLY_IN_PROGRESS");
+
+  try {
+    return await sendReply(
+      { threadId: request.threadId, body: request.body, idempotencyKey },
+      {
+        store,
+        createSender: options.createSender ?? createMailSender,
+        logger,
+        now: options.now,
+        randomPart: options.randomPart,
+      },
+    );
+  } finally {
+    await lock.release();
   }
 }
 

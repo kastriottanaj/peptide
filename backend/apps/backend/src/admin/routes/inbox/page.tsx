@@ -6,11 +6,13 @@
  * Medusa admin shell through `defineRouteConfig`, the same supported extension
  * mechanism the Analytics dashboard uses, and styled to match it.
  *
- * **What this page cannot do is as deliberate as what it can.** There is no
- * reply box, no forward button, no attachment download and no compose control,
- * because version one is a reader — see
- * `docs/specs/2026-08-04-admin-email-inbox.md`. Nothing here renders HTML from
- * an email either; message bodies are plain text in a `<pre>`.
+ * **What this page cannot do is as deliberate as what it can.** An admin can
+ * answer a conversation — plain text, to the address that wrote in — and that
+ * is the only way mail leaves this system. There is no forward button, no
+ * compose control, no attachment picker and no recipient field, because the
+ * reply endpoint accepts a body and an idempotency key and nothing else. See
+ * `docs/inbox.md` § Replying. Nothing here renders HTML from an email either;
+ * message bodies are plain text in a `<pre>`.
  *
  * **State lives in the URL.** `?status=open&q=rechnung&thread=ithr_…&offset=25`
  * survives a refresh, a bookmark and a link sent to a colleague. `replace` is
@@ -33,6 +35,7 @@ import {
   useInboxCounts,
   useInboxThread,
   useInboxThreads,
+  useSendReply,
   useSetMessageRead,
   useSyncInbox,
   useUpdateThread,
@@ -44,6 +47,14 @@ import {
 } from "../../lib/inbox-types";
 
 const PAGE_SIZE = 25;
+
+/**
+ * Mirrors `INBOX_MAX_REPLY_CHARS`'s default on the server.
+ *
+ * The server is the authority — it rejects an over-long body regardless — but
+ * a counter that only turns red after a round trip is a counter nobody trusts.
+ */
+const REPLY_MAX_CHARS = 10_000;
 
 const InboxPage = () => {
   const [params, setParams] = useSearchParams();
@@ -85,6 +96,7 @@ const InboxPage = () => {
   const updateThread = useUpdateThread();
   const setMessageRead = useSetMessageRead();
   const sync = useSyncInbox();
+  const reply = useSendReply();
 
   const busy = updateThread.isPending || setMessageRead.isPending;
 
@@ -116,6 +128,23 @@ const InboxPage = () => {
     },
     [selectedId, setMessageRead],
   );
+
+  const handleSendReply = useCallback(
+    (input: { body: string; idempotencyKey: string }) => {
+      if (!selectedId) return;
+      reply.mutate({ threadId: selectedId, ...input });
+    },
+    [selectedId, reply],
+  );
+
+  // Switching conversations must not carry the previous one's "sent" banner or
+  // error across, so the mutation state is cleared with the selection.
+  // `reset` is captured by value because the mutation object itself is a new
+  // reference on every render, which would make this effect run constantly.
+  const resetReply = reply.reset;
+  useEffect(() => {
+    resetReply();
+  }, [selectedId, resetReply]);
 
   const unread = counts.data?.unread_messages ?? 0;
 
@@ -297,6 +326,15 @@ const InboxPage = () => {
               onSetStatus={handleStatus}
               onSetThreadRead={handleThreadRead}
               onSetMessageRead={handleMessageRead}
+              reply={{
+                enabled: counts.data?.smtp_enabled !== false,
+                sending: reply.isPending,
+                error: reply.error,
+                sentAt: reply.data?.message.sent_at ?? null,
+                maxChars: REPLY_MAX_CHARS,
+                onSend: handleSendReply,
+                onDismissResult: () => reply.reset(),
+              }}
             />
           )}
         </Card>
@@ -304,7 +342,9 @@ const InboxPage = () => {
 
       <p className="pi-card__hint" style={{ marginTop: 12 }}>
         Messages are shown as plain text; email HTML, images and attachments are
-        never loaded. Replies are sent from the mailbox itself, not from here.
+        never loaded. Replies are sent as plain text from the support address
+        and stored with the conversation here — they do not appear in the
+        mailbox's Sent folder.
       </p>
     </div>
   );
