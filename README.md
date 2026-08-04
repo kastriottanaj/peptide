@@ -106,6 +106,19 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 `medusa-config.ts` refuses to boot with `NODE_ENV=production` unless both are set to
 something other than the old `supersecret` placeholder.
 
+**The admin email inbox is off by default.** `INBOX_ENABLED` unset means the mailbox
+importer never connects, and `/app/inbox` shows an empty state — the backend runs
+exactly as it did without the feature. Turning it on connects Medusa to the existing
+`info@peptideeinkaufen.de` mailbox over IMAP, **read-only**: it never marks a message
+read, never deletes and never moves one, so the mailbox stays exactly as webmail
+shows it. Read state in the admin is Medusa's own and is not written back. The
+address is public; the mailbox password lives only in `.env`, never in the
+repository. `INBOX_IMPORT_EXISTING=false` means the first connection records the
+mailbox's current position and imports only mail that arrives *after* it — existing
+history is left alone. Retention is unset, so nothing is ever deleted; enabling it
+needs a retention decision *and* a Datenschutz update first. See
+[docs/inbox.md](docs/inbox.md).
+
 ### 2. Install dependencies
 
 ```bash

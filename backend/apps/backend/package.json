@@ -38,6 +38,8 @@
     "@medusajs/ui": "4.2.0",
     "@medusajs/workflow-engine-redis": "2.18.0",
     "@tanstack/react-query": "5.64.2",
+    "imapflow": "^1.6.5",
+    "mailparser": "^3.9.14",
     "react-i18next": "13.5.0",
     "react-router-dom": "6.30.4",
     "zod": "4.2.0"
@@ -51,6 +53,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/jest": "^29.5.13",
+    "@types/mailparser": "^3.4.6",
     "@types/node": "^20.12.11",
     "@types/react": "^18.3.2",
     "@types/react-dom": "^18.2.25",

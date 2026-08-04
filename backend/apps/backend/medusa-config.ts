@@ -213,5 +213,12 @@ module.exports = defineConfig({
   modules: {
     ...redisModules(),
     ...fileModule(),
+    // The inbound email inbox. Registered unconditionally: `INBOX_ENABLED`
+    // governs whether mail is *imported*, not whether already-imported mail can
+    // be read, so switching the importer off must not make /app/inbox start
+    // failing on the messages it already holds. See docs/inbox.md.
+    inbox: {
+      resolve: './src/modules/inbox',
+    },
   },
 })

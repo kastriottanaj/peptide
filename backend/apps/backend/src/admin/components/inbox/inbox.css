@@ -1,0 +1,638 @@
+/*
+ * Scoped styling for the Inbox page.
+ *
+ * Same contract as `analytics.css`, and the same reason for it: every rule is
+ * under `.pi` and every token is declared on `.pi`, never on `:root`. This file
+ * cannot change the colour of a button on the orders page, and removing the
+ * Inbox route removes its styling with it.
+ *
+ * The palette is copied from the Analytics dashboard on purpose rather than
+ * imported from it. Importing would couple two independent admin routes — the
+ * Inbox would inherit whatever the Analytics page becomes, and deleting one
+ * would break the other. Copying costs a block of custom properties and keeps
+ * the two features genuinely separable; the *values* are shared because the two
+ * pages are meant to look like one product.
+ *
+ * Dark mode is a real requirement: the admin ships a theme toggle that puts
+ * `.dark` on the html element, and a page that stays bright white inside a dark
+ * admin reads as broken.
+ */
+
+.pi {
+  --pi-bg: #f7f8f6;
+  --pi-surface: #ffffff;
+  --pi-surface-muted: #eef2ec;
+  --pi-nav: #e8eee6;
+  --pi-border: #e2e6df;
+  --pi-border-strong: #cfd6c9;
+
+  --pi-text: #1b241d;
+  --pi-text-muted: #5d6b60;
+  --pi-text-faint: #8b968e;
+
+  --pi-accent: #1f5136;
+  --pi-accent-soft: #d9e8de;
+  --pi-success: #2f7d54;
+  --pi-success-soft: #d8f0e1;
+  --pi-warning: #9a6413;
+  --pi-warning-soft: #fbeccc;
+  --pi-danger: #97331f;
+  --pi-danger-soft: #f8ddd6;
+  --pi-primary: #1c2b26;
+
+  --pi-radius: 8px;
+  --pi-radius-sm: 5px;
+  --pi-pad: 18px;
+  --pi-gap: 12px;
+  --pi-shadow: 0 1px 2px rgba(20, 32, 24, 0.06), 0 1px 1px rgba(20, 32, 24, 0.04);
+
+  background: var(--pi-bg);
+  color: var(--pi-text);
+  font-size: 13px;
+  line-height: 1.45;
+  padding: 16px;
+  min-height: 100%;
+}
+
+.dark .pi {
+  --pi-bg: #171a18;
+  --pi-surface: #1e2320;
+  --pi-surface-muted: #232a26;
+  --pi-nav: #212722;
+  --pi-border: #2f3833;
+  --pi-border-strong: #3d4842;
+
+  --pi-text: #e7ede9;
+  --pi-text-muted: #a3b0a8;
+  --pi-text-faint: #7d8a83;
+
+  --pi-accent: #7fc79c;
+  --pi-accent-soft: #24382d;
+  --pi-success: #7fc79c;
+  --pi-success-soft: #1f3629;
+  --pi-warning: #e0b463;
+  --pi-warning-soft: #38301c;
+  --pi-danger: #e59180;
+  --pi-danger-soft: #3a2320;
+  --pi-primary: #e7ede9;
+
+  --pi-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+.pi * {
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------- header -- */
+
+.pi-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--pi-gap);
+  margin-bottom: 14px;
+}
+
+.pi-header__title {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+  color: var(--pi-text);
+}
+
+.pi-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  color: var(--pi-text-muted);
+  font-size: 12px;
+}
+
+.pi-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pi-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+}
+
+.pi-dot--ok {
+  background: var(--pi-success);
+}
+.pi-dot--warn {
+  background: var(--pi-warning);
+}
+.pi-dot--error {
+  background: var(--pi-danger);
+}
+.pi-dot--idle {
+  background: var(--pi-text-faint);
+}
+
+/* -------------------------------------------------------------- controls -- */
+
+.pi-segment {
+  display: inline-flex;
+  background: var(--pi-nav);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius);
+  padding: 2px;
+  gap: 2px;
+}
+
+.pi-segment__button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--pi-text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 11px;
+  border-radius: var(--pi-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pi-segment__button:hover {
+  color: var(--pi-text);
+}
+
+.pi-segment__button[aria-pressed="true"] {
+  background: var(--pi-surface);
+  color: var(--pi-accent);
+  box-shadow: var(--pi-shadow);
+}
+
+.pi-segment__button:focus-visible {
+  outline: 2px solid var(--pi-accent);
+  outline-offset: 1px;
+}
+
+.pi-button {
+  appearance: none;
+  border: 1px solid var(--pi-border-strong);
+  background: var(--pi-surface);
+  color: var(--pi-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: var(--pi-radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pi-button:hover:not(:disabled) {
+  background: var(--pi-surface-muted);
+}
+
+.pi-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pi-button--primary {
+  background: var(--pi-primary);
+  border-color: var(--pi-primary);
+  color: #ffffff;
+}
+
+.dark .pi-button--primary {
+  color: #171a18;
+}
+
+.pi-button--primary:hover:not(:disabled) {
+  opacity: 0.9;
+  background: var(--pi-primary);
+}
+
+.pi-button:focus-visible {
+  outline: 2px solid var(--pi-accent);
+  outline-offset: 1px;
+}
+
+.pi-search {
+  appearance: none;
+  border: 1px solid var(--pi-border-strong);
+  background: var(--pi-surface);
+  color: var(--pi-text);
+  font: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: var(--pi-radius-sm);
+  min-width: 220px;
+}
+
+.pi-search:focus-visible {
+  outline: 2px solid var(--pi-accent);
+  outline-offset: 1px;
+}
+
+.pi-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--pi-text-muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------------- layout -- */
+
+.pi-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 5fr) 7fr;
+  gap: var(--pi-gap);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .pi-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pi-card {
+  background: var(--pi-surface);
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius);
+  box-shadow: var(--pi-shadow);
+  overflow: hidden;
+}
+
+.pi-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--pi-gap);
+  padding: 14px var(--pi-pad);
+  border-bottom: 1px solid var(--pi-border);
+}
+
+.pi-card__title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  color: var(--pi-text);
+  overflow-wrap: anywhere;
+}
+
+.pi-card__hint {
+  margin: 3px 0 0;
+  color: var(--pi-text-muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.pi-card__body {
+  padding: var(--pi-pad);
+}
+
+/* ------------------------------------------------------------ thread list -- */
+
+.pi-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pi-list__item {
+  border-bottom: 1px solid var(--pi-border);
+}
+
+.pi-list__item:last-child {
+  border-bottom: 0;
+}
+
+.pi-list__button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  padding: 11px var(--pi-pad);
+  cursor: pointer;
+  display: block;
+}
+
+.pi-list__button:hover {
+  background: var(--pi-surface-muted);
+}
+
+.pi-list__button[aria-current="true"] {
+  background: var(--pi-accent-soft);
+}
+
+.pi-list__button:focus-visible {
+  outline: 2px solid var(--pi-accent);
+  outline-offset: -2px;
+}
+
+.pi-row__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pi-row__sender {
+  font-weight: 600;
+  color: var(--pi-text);
+  overflow-wrap: anywhere;
+}
+
+.pi-row__sender--unread::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--pi-accent);
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.pi-row__time {
+  color: var(--pi-text-faint);
+  font-size: 11px;
+  white-space: nowrap;
+  flex: none;
+}
+
+.pi-row__subject {
+  color: var(--pi-text);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.pi-row__meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  color: var(--pi-text-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------- messages -- */
+
+.pi-message {
+  border: 1px solid var(--pi-border);
+  border-radius: var(--pi-radius-sm);
+  margin-bottom: 10px;
+  background: var(--pi-surface);
+}
+
+.pi-message:last-child {
+  margin-bottom: 0;
+}
+
+.pi-message--unread {
+  border-color: var(--pi-accent);
+  background: var(--pi-accent-soft);
+}
+
+.pi-message__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--pi-border);
+}
+
+.pi-message__from {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.pi-message__address {
+  color: var(--pi-text-muted);
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The message body.
+ *
+ * `white-space: pre-wrap` is what makes plain text readable — it is also the
+ * only "formatting" this page will ever do. There is no HTML here to style,
+ * because none is stored.
+ */
+.pi-body {
+  margin: 0;
+  padding: 12px;
+  font: inherit;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--pi-text);
+  background: transparent;
+}
+
+.pi-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 12px;
+  color: var(--pi-text-muted);
+  font-size: 11px;
+}
+
+/* ----------------------------------------------------------------- pills -- */
+
+.pi-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.pi-pill--neutral {
+  background: var(--pi-surface-muted);
+  color: var(--pi-text-muted);
+  border-color: var(--pi-border);
+}
+
+.pi-pill--success {
+  background: var(--pi-success-soft);
+  color: var(--pi-success);
+}
+
+.pi-pill--warning {
+  background: var(--pi-warning-soft);
+  color: var(--pi-warning);
+}
+
+.pi-pill--danger {
+  background: var(--pi-danger-soft);
+  color: var(--pi-danger);
+}
+
+.pi-pill--accent {
+  background: var(--pi-accent-soft);
+  color: var(--pi-accent);
+}
+
+/* ------------------------------------------------------------- messaging -- */
+
+.pi-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 34px 18px;
+  color: var(--pi-text-muted);
+  font-size: 12px;
+}
+
+.pi-empty__title {
+  color: var(--pi-text);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.pi-notice {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-surface-muted);
+  color: var(--pi-text-muted);
+  font-size: 12px;
+  border: 1px solid var(--pi-border);
+}
+
+.pi-notice--warning {
+  background: var(--pi-warning-soft);
+  color: var(--pi-warning);
+  border-color: transparent;
+}
+
+.pi-error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: var(--pi-radius-sm);
+  background: var(--pi-danger-soft);
+  color: var(--pi-danger);
+}
+
+.pi-error__title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+}
+
+.pi-error__body {
+  margin: 0;
+  color: var(--pi-text-muted);
+}
+
+.pi-error__code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--pi-text-faint);
+}
+
+/* ------------------------------------------------------------- skeletons -- */
+
+.pi-skel {
+  background: linear-gradient(
+    90deg,
+    var(--pi-surface-muted) 25%,
+    var(--pi-nav) 37%,
+    var(--pi-surface-muted) 63%
+  );
+  background-size: 400% 100%;
+  animation: pi-shimmer 1.4s ease infinite;
+  border-radius: var(--pi-radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-skel {
+    animation: none;
+  }
+}
+
+@keyframes pi-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.pi-skel--row {
+  height: 46px;
+  margin: 10px var(--pi-pad);
+}
+
+.pi-skel--block {
+  height: 120px;
+  margin: 0 0 10px;
+}
+
+/* ------------------------------------------------------------ pagination -- */
+
+.pi-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px var(--pi-pad);
+  border-top: 1px solid var(--pi-border);
+  color: var(--pi-text-muted);
+  font-size: 12px;
+}
+
+/*
+ * A refetch in progress. The rows stay readable and stay clickable — this only
+ * says "a newer answer is on its way", it does not disable the list.
+ */
+.pi-dim {
+  opacity: 0.55;
+  transition: opacity 120ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-dim {
+    transition: none;
+  }
+}
+
+.pi-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
