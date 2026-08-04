@@ -1,6 +1,7 @@
 ---
+import { Picture } from "astro:assets";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import ProductCard from "../components/ProductCard.astro";
+import heroImage from "../assets/homepage-scientific-hero.png";
 import { ORGANIZATION_ID, SITE_NAME, SITE_URL } from "../lib/site";
 import { categoryPath, productPath } from "../lib/links";
 import { productImageAlt } from "../lib/product-image-alt";
@@ -11,117 +12,151 @@ import {
 
 const allProducts = await listProductsInSourceOrder({ limit: 20 });
 
-// Prefer peptides (products carrying a research_code) for the homepage so the
-// intended design is showcased; fall back to whatever exists otherwise.
-const isPeptide = (p: (typeof allProducts)[number]) =>
-	typeof (p.metadata as Record<string, unknown> | null)?.research_code ===
-	"string";
-const peptides = allProducts.filter(isPeptide);
-const products = (peptides.length ? peptides : allProducts).slice(0, 6);
+// Source order is the catalog's only current editorial signal. Prefer a product
+// carrying the peptide-specific research code, then fall back to the first real
+// catalog record. No popularity or "top product" claim is inferred here.
+const spotlight =
+	allProducts.find(
+		(product) =>
+			typeof (product.metadata as Record<string, unknown> | null)
+				?.research_code === "string",
+	) ?? allProducts[0];
 
-const spotlight = products[0];
+const spotlightMeta = (spotlight?.metadata ?? {}) as Record<string, unknown>;
+const spotlightCode =
+	typeof spotlightMeta.research_code === "string"
+		? spotlightMeta.research_code
+		: null;
+const spotlightSizes = (spotlight?.variants ?? [])
+	.map((variant) => variant.title?.trim())
+	.filter((title): title is string => Boolean(title));
 
-function priceOf(product: (typeof products)[number] | undefined) {
+function priceOf(product: (typeof allProducts)[number] | undefined) {
 	if (!product) return null;
-	const amounts = (product.variants ?? [])
-		.map((v) => v.calculated_price?.calculated_amount)
-		.filter((a): a is number => typeof a === "number");
-	if (!amounts.length) return null;
-	const currency =
-		product.variants?.[0]?.calculated_price?.currency_code ?? "eur";
+	const priced = (product.variants ?? [])
+		.map((variant) => ({
+			amount: variant.calculated_price?.calculated_amount,
+			currency: variant.calculated_price?.currency_code ?? "eur",
+		}))
+		.filter(
+			(value): value is { amount: number; currency: string } =>
+				typeof value.amount === "number",
+		);
+	if (!priced.length) return null;
+	const lowest = priced.reduce((a, b) => (a.amount <= b.amount ? a : b));
 	return new Intl.NumberFormat("de-DE", {
 		style: "currency",
-		currency: currency.toUpperCase(),
-	}).format(Math.min(...amounts));
+		currency: lowest.currency.toUpperCase(),
+	}).format(lowest.amount);
 }
 
 const spotlightPrice = priceOf(spotlight);
 
-const features = [
+const qualityCards = [
 	{
-		title: "Analyse geprüft",
-		body: "Chargenbezogene Qualitätsprüfung mit nachvollziehbarer Zertifikatszuordnung.",
+		title: "Qualitäts- und Analyseinformationen",
+		body: "Einordnung der Angaben zu Reinheit, Analytik und produktbezogener Dokumentation.",
+		href: "/qualitaet-analyse/",
+		icon: "flask",
 	},
 	{
-		title: "Lyophilisierte Vials",
-		body: "Peptide als Pulvervials für Forschungs- und Analysezwecke.",
+		title: "Zertifikate und Dokumentation",
+		body: "Hinweise dazu, wie vorhandene Zertifikate und Analyseangaben dargestellt werden.",
+		href: "/wissen/reinheit-und-coa/",
+		icon: "document",
 	},
 	{
-		// No carrier is contracted and no dispatch SLA exists, so the former
-		// "1–3 Werktagen" was a promise nothing could keep — AGB § 6 leaves the
-		// delivery time as a placeholder for exactly that reason.
-		title: "Diskreter Versand",
-		body: "Neutral verpackt. Informationen zu Versand und Lieferzeit werden vor Aktivierung des Bestellvorgangs veröffentlicht.",
-	},
-	{
-		title: "Support & COA",
-		body: "Support zu Produktdaten und verfügbaren Packgrößen.",
+		title: "Versandinformationen",
+		body: "Informationen zu Versand und Lieferzeit werden vor Aktivierung des Bestellvorgangs veröffentlicht.",
+		href: "/versand-zahlung/",
+		icon: "package",
 	},
 ];
 
-/**
- * Category cards are derived from the categories that actually exist in Medusa,
- * so a new category appears here automatically and none of these can become a
- * link to nowhere. Editorial copy is keyed by category name; anything without an
- * entry falls back to its own description.
- *
- * The previous hardcoded list included "Peptid-Stacks" and "Laborbedarf", which
- * have no products behind them — they are gone until they do.
- */
-const CATEGORY_COPY: Record<string, { label: string; body: string }> = {
-	Regenerationsforschung: {
-		label: "Forschungsbereich",
-		body: "Peptide und Fragmente für Zellkommunikations-, Gewebe- und Signalwegmodelle.",
+const transparencyCards = [
+	{
+		title: "Analyseangaben einordnen",
+		body: "Was Produktangaben aussagen – und welche Nachweise dafür erforderlich sind.",
+		href: "/qualitaet-analyse/",
 	},
-	"Stoffwechsel-Forschung": {
-		label: "Forschungsbereich",
-		body: "Forschungskategorien für analytische Laborprojekte zu metabolischen Mechanismen.",
+	{
+		title: "Nur für Forschungszwecke",
+		body: "Klare Abgrenzung zu medizinischer Anwendung und menschlichem Gebrauch.",
+		href: "/forschungszwecke/",
 	},
-	"Signal- & Fragmentpeptide": {
-		label: "Peptidgruppe",
-		body: "Strukturierte Auswahl an Fragment- und Signalpeptiden mit produktbezogener Dokumentation.",
+	{
+		title: "Redaktionelle Standards",
+		body: "Wie Fachinhalte ausgewählt, belegt, aktualisiert und korrigiert werden.",
+		href: "/redaktionsrichtlinien/",
 	},
-	"Neuropeptid-Forschung": {
-		label: "Forschungsbereich",
+	{
+		title: "Häufige Fragen",
+		body: "Antworten zu Produktinformationen, Bestellstatus und Supportwegen.",
+		href: "/faq/",
+	},
+];
+
+const CATEGORY_FALLBACKS: Record<
+	string,
+	{ title: string; body: string; icon: string }
+> = {
+	"neuropeptid-forschung": {
+		title: "Neuropeptid-Forschung",
 		body: "Forschungsbezogene Projekte zu neuronalen Signalwegen und Modellforschung.",
+		icon: "network",
+	},
+	regenerationsforschung: {
+		title: "Regenerationsforschung",
+		body: "Peptide und Fragmente für Zellkommunikations-, Gewebe- und Signalwegmodelle.",
+		icon: "leaf",
+	},
+	"signal-fragmentpeptide": {
+		title: "Signal- & Fragmentpeptide",
+		body: "Fragment- und Signalpeptide mit produktbezogenen Angaben für Laborprojekte.",
+		icon: "molecule",
+	},
+	"stoffwechsel-forschung": {
+		title: "Stoffwechsel-Forschung",
+		body: "Forschungskategorien für analytische Laborprojekte zu metabolischen Mechanismen.",
+		icon: "drop",
 	},
 };
 
-const categories = (await listCategories()).map((category) => {
-	const copy = CATEGORY_COPY[category.name ?? ""];
-	return {
-		handle: category.handle,
-		title: category.name,
-		label: copy?.label ?? "Kategorie",
-		body:
-			copy?.body ??
-			category.description?.trim() ??
-			`Produkte der Kategorie ${category.name}.`,
-	};
-});
+const categoryRecords = await listCategories();
+const categoryByHandle = new Map(
+	categoryRecords.map((category) => [category.handle, category]),
+);
+const categories = Object.entries(CATEGORY_FALLBACKS).map(
+	([handle, fallback]) => {
+		const category = categoryByHandle.get(handle);
+		return {
+			handle,
+			title: category?.name?.trim() || fallback.title,
+			body: category?.description?.trim() || fallback.body,
+			icon: fallback.icon,
+		};
+	},
+);
 
 const faqs = [
 	{
 		q: "Wofür sind die Produkte vorgesehen?",
-		a: "Alle Produkte sind ausschließlich für Forschungs-, Analyse- und Laborzwecke bestimmt. Keine medizinische Beratung, keine Anwendungshinweise.",
+		a: "Alle Produkte sind ausschließlich für Forschungs-, Analyse- und Laborzwecke bestimmt. Sie sind nicht für den menschlichen Gebrauch vorgesehen.",
 	},
 	{
-		q: "Gibt es ein Zertifikat zum Produkt?",
-		a: "Der Zertifikatsstatus wird pro Produkt und Packgröße ausgewiesen. [Platzhalter – tatsächliche COA-Verfügbarkeit vor Veröffentlichung bestätigen.]",
+		q: "Wo finde ich Analyse- und Zertifikatsinformationen?",
+		a: "Produktbezogene Angaben stehen auf der jeweiligen Detailseite. Die Seite Qualität und Analyse erklärt zusätzlich, wie diese Informationen einzuordnen sind.",
 	},
 	{
-		q: "Wie läuft die Bestellung ab?",
-		a: "Produkte in den Warenkorb legen, Packgröße wählen und über den Checkout abschließen. [Platzhalter – Versand-/Zahlungsdetails ergänzen.]",
+		q: "Kann ich derzeit eine Bestellung abschließen?",
+		a: "Der Bestellvorgang ist derzeit nicht verfügbar. Sortiment, Packgrößen und Preise können weiterhin eingesehen werden.",
 	},
 	{
-		q: "Kann ich größere Mengen bestellen?",
-		a: "Für Laborbestellungen größerer Mengen kontaktieren Sie bitte den Support.",
+		q: "Wie erreiche ich den Support?",
+		a: "Die Support-Anfrage führt zu den passenden Kontaktwegen für Produktdaten, bestehende Bestellungen und weitere Anliegen.",
 	},
 ];
 
-// --- SEO ---------------------------------------------------------------
-// WebSite + FAQPage, built from the FAQ rendered further down so the markup
-// and the structured data can never drift apart.
 const homeJsonLd = [
 	{
 		"@type": "WebSite",
@@ -141,6 +176,16 @@ const homeJsonLd = [
 		})),
 	},
 ];
+
+const iconPaths: Record<string, string[]> = {
+	flask: ["M9 3h6", "M10 3v6l-5 9a2 2 0 0 0 2 3h10a2 2 0 0 0 2-3l-5-9V3", "M8 15h8"],
+	document: ["M6 3h9l3 3v15H6z", "M15 3v4h4", "M9 12h6", "M9 16h6"],
+	package: ["m4 8 8-4 8 4-8 4z", "M4 8v9l8 4 8-4V8", "M12 12v9"],
+	network: ["M12 5v14", "M5 9h14", "M5 15h14", "M5 7a2 2 0 1 0 0 4", "M19 7a2 2 0 1 1 0 4", "M5 13a2 2 0 1 0 0 4", "M19 13a2 2 0 1 1 0 4"],
+	leaf: ["M20 4C11 4 5 8 5 15c0 3 2 5 5 5 7 0 10-8 10-16Z", "M8 17c3-4 6-6 10-9"],
+	molecule: ["M6 17 10 9l7-3", "M10 9l7 8", "M6 17h11", "M6 20a3 3 0 1 0 0-6 3 3 0 0 0 0 6", "M10 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6", "M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6", "M18 20a3 3 0 1 0 0-6 3 3 0 0 0 0 6"],
+	drop: ["M12 3s6 7 6 12a6 6 0 0 1-12 0c0-5 6-12 6-12Z", "M9 16c.5 1 1.4 1.5 2.5 1.5"],
+};
 ---
 
 <BaseLayout
@@ -150,89 +195,63 @@ const homeJsonLd = [
 	wide
 	jsonLd={homeJsonLd}
 >
-	<!-- HERO -->
-	<section class="hero">
-		<div class="hero__inner container">
+	<section class="hero" aria-labelledby="home-heading">
+		<Picture
+			class="hero__image"
+			src={heroImage}
+			formats={["avif", "webp"]}
+			widths={[640, 960, 1280, 1672]}
+			sizes="100vw"
+			alt=""
+			aria-hidden="true"
+			loading="eager"
+			fetchpriority="high"
+			decoding="async"
+		/>
+		<div class="hero__veil" aria-hidden="true"></div>
+		<div class:list={["hero__inner", "container", !spotlight && "hero__inner--solo"]}>
 			<div class="hero__copy">
-				<span class="eyebrow eyebrow--dark">Geprüfte Forschungspeptide</span>
-				<h1>Peptide kaufen in Deutschland – für Forschung und Analyse</h1>
-				<p>
-					Forschungspeptide für wissenschaftliche Anwendungen und Laborzwecke.
-					Klare Produktdaten, Packgrößen und Zertifikatsstatus auf einen Blick.
+				<span class="hero__eyebrow">Forschungspeptide in Deutschland</span>
+				<h1 id="home-heading">
+					Forschungspeptide in Deutschland kaufen
+				</h1>
+				<p class="hero__lead">
+					Produkte und Informationen für wissenschaftliche Forschung,
+					Laboranalyse und dokumentierte Modellprojekte.
 				</p>
 				<div class="hero__actions">
-					<a href="/produkte/" class="btn btn--green">Peptide ansehen</a>
-					<a href="/about/" class="btn btn--ghost">Mehr erfahren</a>
+					<a href="/produkte/" class="btn btn--green">Peptide entdecken <span aria-hidden="true">→</span></a>
+					<a href="/qualitaet-analyse/" class="btn btn--ghost">Qualität und Analyse</a>
 				</div>
-				<ul class="hero__trust">
-					<li>Diskreter Versand</li>
-					<li>Packgrößen 5–500 mg</li>
-					<li>COA-Zertifikat je Produkt*</li>
-					<li>Klare Produktdaten</li>
+				<ul class="hero__trust" aria-label="Hinweise zum Sortiment">
+					<li>Nur für Forschungszwecke</li>
+					<li>Produktbezogene Angaben</li>
+					<li>Support zu Produktdaten</li>
 				</ul>
 			</div>
 
 			{
 				spotlight && (
-					<a class="spotlight" href={productPath(spotlight.handle)}>
-						<div class="spotlight__head">
-							<span>Produktdaten</span>
-							<span class="spotlight__code">
-								{typeof spotlight.metadata?.research_code === "string"
-									? spotlight.metadata.research_code
-									: "Research Use Only"}
-							</span>
-						</div>
-						<div class="spotlight__grid">
-							<div class="spotlight__info">
-								<h2>{spotlight.title}</h2>
+					<article class="spotlight" aria-labelledby="spotlight-title">
+						<div class="spotlight__label">Aus dem Sortiment</div>
+						<div class="spotlight__layout">
+							<div class="spotlight__content">
+								{spotlightCode && <p class="spotlight__code">{spotlightCode}</p>}
+								<h2 id="spotlight-title">{spotlight.title}</h2>
 								{spotlightPrice && <p class="spotlight__price">ab {spotlightPrice}</p>}
-								<dl>
-									<div>
-										<dt>Reinheit</dt>
-										<dd>
-											{typeof spotlight.metadata?.purity === "string"
-												? spotlight.metadata.purity
-												: "—"}
-										</dd>
-									</div>
-									<div>
-										<dt>Packgrößen</dt>
-										<dd>{(spotlight.variants ?? []).map((v) => v.title).join(" / ") || "—"}</dd>
-									</div>
-									<div>
-										<dt>COA-Zertifikat</dt>
-										<dd>
-											{typeof spotlight.metadata?.coa_status === "string"
-												? spotlight.metadata.coa_status
-												: "—"}
-										</dd>
-									</div>
-								</dl>
-								<span class="btn btn--green btn--sm">Produkt ansehen</span>
+								<a href={productPath(spotlight.handle)} class="btn btn--green btn--sm">
+									Produkt ansehen <span aria-hidden="true">→</span>
+								</a>
 							</div>
 							<div class="spotlight__media">
 								{spotlight.thumbnail ? (
-									/*
-									 * Inside the hero and above the fold on desktop (measured
-									 * ~287 px down at 1366×900), below it on a phone (~1060 px
-									 * at 390×844). Static HTML cannot vary the attribute by
-									 * viewport, and eager is the side that cannot go wrong:
-									 * lazy would risk a blank panel in the desktop hero, while
-									 * eager only costs a phone an image it scrolls to shortly.
-									 *
-									 * No fetchpriority: the LCP element on this page is the
-									 * hero <h1> (measured, 85 324 px² against this ~200 px
-									 * panel), so promoting the image would take bandwidth from
-									 * the text that actually decides LCP.
-									 */
 									<img
 										src={spotlight.thumbnail}
 										alt={productImageAlt(spotlight, "card")}
-										loading="eager"
+										loading="lazy"
 										decoding="async"
-										width="200"
-										height="200"
+										width="240"
+										height="240"
 									/>
 								) : (
 									<svg viewBox="0 0 80 100" aria-hidden="true">
@@ -243,212 +262,296 @@ const homeJsonLd = [
 								)}
 							</div>
 						</div>
-					</a>
+						{spotlightSizes.length > 0 && (
+							<div class="spotlight__sizes">
+								<span>Packgrößen</span>
+								<ul>
+									{spotlightSizes.map((size) => <li>{size}</li>)}
+								</ul>
+							</div>
+						)}
+					</article>
 				)
 			}
 		</div>
 	</section>
 
-	<!-- COMPARISON ROW -->
-	<section class="container section">
-		<span class="eyebrow">Alle Produkte</span>
-		<div class="section__head">
-			<h2>Forschungspeptide direkt vergleichen</h2>
-			<a href="/produkte/" class="section__link">Alle Produkte ansehen →</a>
+	<nav class="trust-strip" aria-label="Qualität, Forschung und Support">
+		<div class="container trust-strip__grid">
+			<a href="/qualitaet-analyse/">
+				<span class="trust-strip__icon" aria-hidden="true">✓</span>
+				<span><strong>Analyseinformationen</strong><small>Angaben einordnen</small></span>
+			</a>
+			<a href="/forschungszwecke/">
+				<span class="trust-strip__icon" aria-hidden="true">i</span>
+				<span><strong>Forschungszwecke</strong><small>Verwendung klar abgegrenzt</small></span>
+			</a>
+			<a href="/versand-zahlung/">
+				<span class="trust-strip__icon" aria-hidden="true">↗</span>
+				<span><strong>Versand &amp; Zahlung</strong><small>Aktuellen Stand prüfen</small></span>
+			</a>
+			<a href="/support/anfrage/">
+				<span class="trust-strip__icon" aria-hidden="true">?</span>
+				<span><strong>Support-Anfrage</strong><small>Passenden Kontaktweg finden</small></span>
+			</a>
 		</div>
-		<p class="section__lead">
-			Packgrößen, Preis und Zertifikatsstatus auf einen Blick. Öffne ein Produkt,
-			um Reinheit und Varianten zu prüfen.
-		</p>
-		<div class="row">
-			{products.map((product) => <ProductCard product={product} />)}
-		</div>
-	</section>
+	</nav>
 
-	<!-- FEATURE STRIP -->
-	<section class="strip">
-		<div class="container strip__grid">
-			{
-				features.map((f) => (
-					<div class="strip__card">
-						<h3>{f.title}</h3>
-						<p>{f.body}</p>
-					</div>
-				))
-			}
+	<section class="section section--tight container" aria-labelledby="quality-title">
+		<div class="section__intro">
+			<span class="eyebrow">Orientierung</span>
+			<h2 id="quality-title">Informationen vor der Produktauswahl prüfen</h2>
+			<p>Direkte Wege zu Analyse, Dokumentation und dem aktuellen operativen Stand.</p>
 		</div>
-	</section>
-
-	<!-- CATEGORIES -->
-	<section class="container section">
-		<span class="eyebrow">Kategorien</span>
-		<h2>Nach Forschungsbereich auswählen</h2>
-		<p class="section__lead">
-			Wähle zwischen Forschungsbereichen und Peptidgruppen.
-		</p>
-		<div class="cat-grid">
+		<div class="quality-grid">
 			{
-				categories.map((c) => (
-					<a href={categoryPath(c.handle)} class="cat">
-						<span class="cat__label">{c.label}</span>
-						<h3>{c.title}</h3>
-						<p>{c.body}</p>
-						<span class="cat__more">Öffnen →</span>
+				qualityCards.map((card) => (
+					<a class="quality-card" href={card.href}>
+						<span class="line-icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+								{iconPaths[card.icon].map((path) => (
+									<path d={path} />
+								))}
+							</svg>
+						</span>
+						<span>
+							<h3>{card.title}</h3>
+							<p>{card.body}</p>
+							<strong>Informationen ansehen <span aria-hidden="true">→</span></strong>
+						</span>
 					</a>
 				))
 			}
 		</div>
 	</section>
 
-	<!-- FAQ -->
-	<section class="container section">
-		<h2>Häufig gestellte Fragen</h2>
-		<div class="faq">
+	<section class="transparency" aria-labelledby="transparency-title">
+		<div class="container transparency__inner">
+			<div class="transparency__head">
+				<span class="eyebrow eyebrow--dark">Nachvollziehbar informiert</span>
+				<h2 id="transparency-title">Qualität und Transparenz im Überblick</h2>
+				<p>Fakten, Grenzen und redaktionelle Standards anstelle pauschaler Versprechen.</p>
+			</div>
+			<div class="transparency__grid">
+				{
+					transparencyCards.map((card, index) => (
+						<a href={card.href} class="transparency-card">
+							<span class="transparency-card__number" aria-hidden="true">
+								{String(index + 1).padStart(2, "0")}
+							</span>
+							<h3>{card.title}</h3>
+							<p>{card.body}</p>
+							<strong>Mehr erfahren <span aria-hidden="true">→</span></strong>
+						</a>
+					))
+				}
+			</div>
+		</div>
+	</section>
+
+	<section class="section container" aria-labelledby="categories-title">
+		<div class="section__head">
+			<div class="section__intro">
+				<span class="eyebrow">Forschungsbereiche</span>
+				<h2 id="categories-title">Beliebte Forschungsbereiche</h2>
+				<p>Das Sortiment nach bestehenden Forschungskategorien erkunden.</p>
+			</div>
+			<a href="/produkte/" class="section__link">Alle Produkte ansehen <span aria-hidden="true">→</span></a>
+		</div>
+		<div class="category-grid">
 			{
-				faqs.map((f) => (
+				categories.map((category) => (
+					<article class="category-card">
+						<span class="line-icon line-icon--large" aria-hidden="true">
+							<svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+								{iconPaths[category.icon].map((path) => (
+									<path d={path} />
+								))}
+							</svg>
+						</span>
+						<h3>{category.title}</h3>
+						<p>{category.body}</p>
+						<a href={categoryPath(category.handle)}>
+							Produkte ansehen <span class="visually-hidden">in {category.title}</span>
+							<span aria-hidden="true">→</span>
+						</a>
+					</article>
+				))
+			}
+		</div>
+	</section>
+
+	<section class="section section--faq container" aria-labelledby="faq-title">
+		<div class="section__intro">
+			<span class="eyebrow">Kurz erklärt</span>
+			<h2 id="faq-title">Häufige Fragen</h2>
+		</div>
+		<div class="faq-grid">
+			{
+				faqs.map((faq) => (
 					<details>
-						<summary>{f.q}</summary>
-						<p>{f.a}</p>
+						<summary>{faq.q}</summary>
+						<p>{faq.a}</p>
 					</details>
 				))
 			}
 		</div>
 	</section>
 
-	<!-- CTA BAND -->
-	<section class="container">
-		<div class="cta">
-			<div>
-				<h2>Prüfe Produkte anhand klarer Analyseangaben</h2>
-				<ul>
-					<li>Zertifikatsstatus pro Produkt sichtbar.</li>
-					<li>Packgröße und Preis übersichtlich vergleichen.</li>
-					<li>Klare Produktdaten und diskreter Versand.</li>
-				</ul>
-			</div>
-			<a href="/produkte/" class="btn btn--green">Zum Shop →</a>
+	<section class="container closing" aria-labelledby="closing-title">
+		<div>
+			<h2 id="closing-title">Forschungsprodukte und Informationen entdecken</h2>
+			<p>Sortiment vergleichen oder den passenden Supportweg für Ihre Frage finden.</p>
+		</div>
+		<div class="closing__actions">
+			<a href="/produkte/" class="btn btn--green">Produkte ansehen <span aria-hidden="true">→</span></a>
+			<a href="/support/anfrage/" class="btn closing__secondary">Support kontaktieren</a>
 		</div>
 	</section>
 
 	<style>
-		/* HERO */
 		.hero {
-			background: radial-gradient(120% 120% at 80% 0%, var(--c-navy-2), var(--c-navy) 55%, var(--c-navy-deep));
+			position: relative;
+			isolation: isolate;
+			overflow: hidden;
+			background: var(--c-navy-deep);
 			color: var(--c-white);
+		}
+		.hero__image,
+		.hero__veil {
+			position: absolute;
+			inset: 0;
+			width: 100%;
+			height: 100%;
+		}
+		.hero__image {
+			z-index: -3;
+			object-fit: cover;
+			object-position: center;
+		}
+		.hero__veil {
+			z-index: -2;
+			background: linear-gradient(90deg, var(--c-navy-deep) 4%, color-mix(in srgb, var(--c-navy-deep) 88%, transparent) 45%, color-mix(in srgb, var(--c-navy-deep) 62%, transparent));
 		}
 		.hero__inner {
 			display: grid;
-			grid-template-columns: 1.05fr 0.95fr;
-			gap: 3rem;
+			grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.85fr);
 			align-items: center;
-			padding-block: 4rem 4.5rem;
+			gap: clamp(2rem, 5vw, 4.5rem);
+			min-height: 520px;
+			padding-block: clamp(3.5rem, 7vw, 5.75rem);
+		}
+		.hero__inner--solo {
+			grid-template-columns: minmax(0, 680px);
+		}
+		.hero__copy {
+			max-width: 660px;
+		}
+		.hero__eyebrow {
+			display: inline-flex;
+			padding: 0.35rem 0.7rem;
+			border-radius: 999px;
+			background: color-mix(in srgb, var(--c-white) 10%, transparent);
+			color: var(--c-on-navy-100);
+			font-size: 0.7rem;
+			font-weight: 800;
+			letter-spacing: 0.07em;
+			text-transform: uppercase;
 		}
 		.hero h1 {
-			font-size: clamp(2rem, 4vw, 3rem);
-			font-weight: 800;
-			margin: 0 0 1rem;
+			max-width: 13ch;
+			margin: 1rem 0 1rem;
+			font-size: clamp(2.45rem, 4.6vw, 4.15rem);
+			font-weight: 850;
+			letter-spacing: -0.045em;
 		}
-		.hero__copy > p {
-			color: var(--c-on-navy-300);
-			font-size: 1.05rem;
-			max-width: 46ch;
-			margin: 0 0 1.6rem;
+		.hero h1::after {
+			content: ".";
+			color: var(--c-green);
 		}
-		.eyebrow--dark {
-			background: rgba(255, 255, 255, 0.1);
+		.hero__lead {
+			max-width: 54ch;
+			margin: 0;
 			color: var(--c-on-navy-100);
+			font-size: 1.05rem;
 		}
 		.hero__actions {
 			display: flex;
-			gap: 0.8rem;
 			flex-wrap: wrap;
+			gap: 0.8rem;
+			margin-top: 1.65rem;
+		}
+		.hero__actions .btn {
+			justify-content: center;
+			min-width: 190px;
 		}
 		.hero__trust {
-			list-style: none;
 			display: flex;
 			flex-wrap: wrap;
-			gap: 1.2rem;
+			gap: 0.65rem 1.25rem;
+			list-style: none;
 			padding: 0;
-			margin: 1.8rem 0 0;
-			font-size: 0.82rem;
-			color: var(--c-on-navy-400);
-		}
-		.hero__trust li {
-			display: flex;
-			align-items: center;
-			gap: 0.4rem;
+			margin: 1.5rem 0 0;
+			color: var(--c-on-navy-200);
+			font-size: 0.78rem;
 		}
 		.hero__trust li::before {
 			content: "✓";
+			margin-right: 0.4rem;
 			color: var(--c-green);
-			font-weight: 800;
+			font-weight: 900;
 		}
 
-		/* Spotlight card */
 		.spotlight {
-			display: block;
-			background: var(--c-white);
+			min-width: 0;
+			padding: 1.25rem;
+			border: 1px solid color-mix(in srgb, var(--c-white) 75%, var(--c-border));
+			border-radius: var(--radius);
+			background: color-mix(in srgb, var(--c-white) 96%, var(--c-blue-tint));
 			color: var(--c-ink);
-			border-radius: 18px;
-			padding: 1.4rem;
-			text-decoration: none;
-			box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+			box-shadow: 0 28px 60px color-mix(in srgb, var(--c-navy-deep) 40%, transparent);
 		}
-		.spotlight__head {
-			display: flex;
-			justify-content: space-between;
-			font-size: 0.72rem;
-			font-weight: 700;
+		.spotlight__label {
+			display: inline-flex;
+			padding: 0.3rem 0.65rem;
+			border-radius: 999px;
+			background: var(--c-mint);
+			color: var(--c-green-dark);
+			font-size: 0.66rem;
+			font-weight: 800;
+			letter-spacing: 0.06em;
 			text-transform: uppercase;
-			letter-spacing: 0.05em;
-			color: var(--c-muted);
-			margin-bottom: 0.8rem;
+		}
+		.spotlight__layout {
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) minmax(130px, 0.75fr);
+			align-items: center;
+			gap: 1rem;
+			margin-top: 0.8rem;
 		}
 		.spotlight__code {
-			color: var(--c-green-dark);
+			margin: 0 0 0.2rem;
+			color: var(--c-muted);
+			font-size: 0.78rem;
+			font-weight: 700;
 		}
-		.spotlight__grid {
-			display: grid;
-			grid-template-columns: 1fr 0.8fr;
-			gap: 1rem;
-			align-items: center;
-		}
-		.spotlight__info h2 {
-			font-size: 1.5rem;
+		.spotlight h2 {
 			margin: 0;
+			font-size: clamp(1.35rem, 2vw, 1.8rem);
 		}
 		.spotlight__price {
-			font-size: 1.15rem;
-			font-weight: 800;
-			color: var(--c-navy);
-			margin: 0.2rem 0 0.9rem;
-		}
-		.spotlight dl {
-			margin: 0 0 1rem;
-			display: grid;
-			gap: 0.4rem;
-		}
-		.spotlight dl div {
-			display: flex;
-			justify-content: space-between;
-			font-size: 0.85rem;
-			border-bottom: 1px solid var(--c-border);
-			padding-bottom: 0.35rem;
-		}
-		.spotlight dt {
-			color: var(--c-muted);
-		}
-		.spotlight dd {
-			margin: 0;
-			font-weight: 600;
+			margin: 0.35rem 0 0.85rem;
+			font-size: 1.25rem;
+			font-weight: 850;
 		}
 		.spotlight__media {
-			background: linear-gradient(180deg, var(--c-surface), var(--c-surface-2));
-			border-radius: 12px;
 			display: grid;
 			place-items: center;
-			aspect-ratio: 3 / 4;
-			padding: 1rem;
+			min-width: 0;
+			aspect-ratio: 1 / 1.15;
+			padding: 0.75rem;
+			border-radius: var(--radius-sm);
+			background: linear-gradient(180deg, var(--c-surface), var(--c-surface-2));
 		}
 		.spotlight__media img {
 			width: 100%;
@@ -457,185 +560,466 @@ const homeJsonLd = [
 			mix-blend-mode: multiply;
 		}
 		.spotlight__media svg {
-			width: 60%;
+			width: 54%;
+			max-height: 170px;
+		}
+		.spotlight__sizes {
+			display: flex;
+			align-items: center;
+			gap: 0.7rem;
+			margin-top: 1rem;
+			padding-top: 0.8rem;
+			border-top: 1px solid var(--c-border);
+			color: var(--c-muted);
+			font-size: 0.7rem;
+		}
+		.spotlight__sizes ul {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.35rem;
+			list-style: none;
+			padding: 0;
+			margin: 0;
+		}
+		.spotlight__sizes li {
+			padding: 0.25rem 0.55rem;
+			border-radius: 999px;
+			background: var(--c-surface-2);
+			color: var(--c-ink);
+			font-weight: 700;
 		}
 
-		/* Section scaffolding */
+		.trust-strip {
+			border-bottom: 1px solid var(--c-border);
+			background: var(--c-white);
+			box-shadow: 0 8px 24px color-mix(in srgb, var(--c-navy) 7%, transparent);
+		}
+		.trust-strip__grid {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+		.trust-strip a {
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+			min-width: 0;
+			padding: 1.25rem 1rem;
+			text-decoration: none;
+		}
+		.trust-strip a + a {
+			border-left: 1px solid var(--c-border);
+		}
+		.trust-strip__icon {
+			display: grid;
+			place-items: center;
+			flex: none;
+			width: 34px;
+			height: 34px;
+			border-radius: 50%;
+			background: var(--c-mint);
+			color: var(--c-green-dark);
+			font-weight: 850;
+		}
+		.trust-strip strong,
+		.trust-strip small {
+			display: block;
+		}
+		.trust-strip strong {
+			font-size: 0.84rem;
+		}
+		.trust-strip small {
+			margin-top: 0.15rem;
+			color: var(--c-muted);
+			font-size: 0.7rem;
+		}
+
 		.section {
-			padding-block: 3.5rem 1rem;
+			padding-block: 4.5rem;
+		}
+		.section--tight {
+			padding-bottom: 3.5rem;
+		}
+		.section__intro {
+			max-width: 700px;
+		}
+		.section__intro h2,
+		.transparency h2,
+		.closing h2 {
+			font-size: clamp(1.7rem, 3vw, 2.35rem);
+		}
+		.section__intro p,
+		.transparency__head p,
+		.closing p {
+			margin: 0;
+			color: var(--c-muted);
 		}
 		.section__head {
 			display: flex;
+			align-items: flex-end;
 			justify-content: space-between;
-			align-items: baseline;
-			gap: 1rem;
-			flex-wrap: wrap;
-		}
-		.section h2 {
-			font-size: clamp(1.5rem, 2.5vw, 2rem);
-		}
-		.section__lead {
-			color: var(--c-muted);
-			max-width: 60ch;
-			margin: 0.25rem 0 1.75rem;
+			gap: 1.5rem;
+			margin-bottom: 1.75rem;
 		}
 		.section__link {
-			text-decoration: none;
-			font-weight: 600;
+			flex: none;
+			padding-bottom: 0.15rem;
 			color: var(--c-green-dark);
-			white-space: nowrap;
+			font-size: 0.88rem;
+			font-weight: 750;
+			text-decoration: none;
 		}
 
-		.row {
+		.quality-grid {
 			display: grid;
-			grid-auto-flow: column;
-			grid-auto-columns: minmax(210px, 1fr);
-			gap: 1.2rem;
-			overflow-x: auto;
-			padding-bottom: 0.5rem;
-			scroll-snap-type: x mandatory;
-		}
-		.row > * {
-			scroll-snap-align: start;
-		}
-
-		/* Feature strip */
-		.strip {
-			background: var(--c-blue-tint);
-			margin-top: 2.5rem;
-		}
-		.strip__grid {
-			display: grid;
-			grid-template-columns: repeat(4, 1fr);
+			grid-template-columns: repeat(3, minmax(0, 1fr));
 			gap: 1rem;
-			padding-block: 2rem;
+			margin-top: 1.75rem;
 		}
-		.strip__card {
-			background: var(--c-white);
+		.quality-card {
+			display: grid;
+			grid-template-columns: auto minmax(0, 1fr);
+			gap: 1rem;
+			padding: 1.35rem;
 			border: 1px solid var(--c-border);
 			border-radius: var(--radius);
-			padding: 1.1rem 1.2rem;
-		}
-		.strip__card h3 {
-			font-size: 0.98rem;
-			margin: 0 0 0.35rem;
-		}
-		.strip__card p {
-			margin: 0;
-			font-size: 0.85rem;
-			color: var(--c-muted);
-		}
-
-		/* Categories */
-		.cat-grid {
-			display: grid;
-			grid-template-columns: repeat(3, 1fr);
-			gap: 1rem;
-		}
-		.cat {
-			display: block;
-			background: var(--c-cream-soft);
-			border: 1px solid var(--c-cream-border);
-			border-radius: var(--radius);
-			padding: 1.3rem;
+			background: var(--c-white);
+			box-shadow: 0 12px 30px color-mix(in srgb, var(--c-navy) 6%, transparent);
 			text-decoration: none;
-			color: inherit;
-			transition: border-color 0.15s ease;
 		}
-		.cat:hover {
-			border-color: var(--c-gold);
+		.quality-card h3 {
+			margin: 0 0 0.4rem;
+			font-size: 1rem;
 		}
-		.cat__label {
-			font-size: 0.68rem;
-			font-weight: 700;
-			text-transform: uppercase;
-			letter-spacing: 0.06em;
-			color: var(--c-gold);
-		}
-		.cat h3 {
-			font-size: 1.1rem;
-			margin: 0.4rem 0 0.4rem;
-		}
-		.cat p {
-			font-size: 0.85rem;
+		.quality-card p {
+			margin: 0 0 0.75rem;
 			color: var(--c-muted);
-			margin: 0 0 0.8rem;
+			font-size: 0.83rem;
 		}
-		.cat__more {
-			font-size: 0.85rem;
-			font-weight: 600;
+		.quality-card strong,
+		.category-card > a,
+		.transparency-card strong {
+			color: var(--c-green-dark);
+			font-size: 0.78rem;
+		}
+		.line-icon {
+			display: grid;
+			place-items: center;
+			width: 44px;
+			height: 44px;
+			border-radius: var(--radius-sm);
+			background: var(--c-mint);
 			color: var(--c-green-dark);
 		}
-
-		/* FAQ */
-		.faq {
-			max-width: 760px;
+		.line-icon svg {
+			width: 25px;
+			height: 25px;
+			stroke: currentColor;
+			stroke-width: 1.7;
+			stroke-linecap: round;
+			stroke-linejoin: round;
 		}
-		.faq details {
+		.line-icon--large {
+			width: 52px;
+			height: 52px;
+			border-radius: 50%;
+		}
+
+		.transparency {
+			background: var(--c-navy-deep);
+			color: var(--c-white);
+		}
+		.transparency__inner {
+			padding-block: 3.5rem;
+		}
+		.transparency__head {
+			max-width: 720px;
+			margin-bottom: 1.75rem;
+		}
+		.eyebrow--dark {
+			background: color-mix(in srgb, var(--c-white) 10%, transparent);
+			color: var(--c-on-navy-100);
+		}
+		.transparency__head p {
+			color: var(--c-on-navy-300);
+		}
+		.transparency__grid {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 0.8rem;
+		}
+		.transparency-card {
+			display: flex;
+			flex-direction: column;
+			min-height: 210px;
+			padding: 1.25rem;
+			border: 1px solid color-mix(in srgb, var(--c-white) 13%, transparent);
+			border-radius: var(--radius-sm);
+			background: color-mix(in srgb, var(--c-navy-2) 65%, transparent);
+			text-decoration: none;
+		}
+		.transparency-card__number {
+			color: var(--c-green);
+			font-size: 0.72rem;
+			font-weight: 850;
+			letter-spacing: 0.08em;
+		}
+		.transparency-card h3 {
+			margin: 1.2rem 0 0.5rem;
+			font-size: 1rem;
+		}
+		.transparency-card p {
+			margin: 0 0 1rem;
+			color: var(--c-on-navy-300);
+			font-size: 0.82rem;
+		}
+		.transparency-card strong {
+			margin-top: auto;
+			color: var(--c-on-navy-100);
+		}
+
+		.category-grid {
+			display: grid;
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+			gap: 1rem;
+		}
+		.category-card {
+			display: flex;
+			flex-direction: column;
+			min-width: 0;
+			padding: 1.35rem;
+			border: 1px solid var(--c-border);
+			border-radius: var(--radius);
+			background: var(--c-cream-soft);
+		}
+		.category-card h3 {
+			margin: 1rem 0 0.45rem;
+			font-size: 1rem;
+		}
+		.category-card p {
+			margin: 0 0 1.2rem;
+			color: var(--c-muted);
+			font-size: 0.82rem;
+		}
+		.category-card > a {
+			margin-top: auto;
+			font-weight: 750;
+			text-decoration: none;
+		}
+
+		.section--faq {
+			padding-top: 0;
+		}
+		.faq-grid {
+			display: grid;
+			grid-template-columns: 1fr 1fr;
+			gap: 0.75rem;
+			margin-top: 1.5rem;
+		}
+		.faq-grid details {
+			padding: 1rem 1.1rem;
 			border: 1px solid var(--c-border);
 			border-radius: var(--radius-sm);
-			padding: 0.9rem 1.1rem;
-			margin-bottom: 0.7rem;
 			background: var(--c-white);
 		}
-		.faq summary {
+		.faq-grid summary {
 			cursor: pointer;
-			font-weight: 600;
+			font-weight: 700;
 			list-style: none;
 		}
-		.faq summary::-webkit-details-marker {
+		.faq-grid summary::-webkit-details-marker {
 			display: none;
 		}
-		.faq summary::after {
+		.faq-grid summary::after {
 			content: "+";
 			float: right;
-			color: var(--c-green);
-			font-weight: 800;
+			margin-left: 1rem;
+			color: var(--c-green-dark);
 		}
-		.faq details[open] summary::after {
-			content: "–";
+		.faq-grid details[open] summary::after {
+			content: "−";
 		}
-		.faq p {
-			margin: 0.7rem 0 0;
+		.faq-grid p {
+			margin: 0.8rem 0 0;
 			color: var(--c-muted);
-			font-size: 0.9rem;
+			font-size: 0.88rem;
 		}
 
-		/* CTA band */
-		.cta {
-			background: var(--c-cream);
-			border-radius: 18px;
-			padding: 2rem 2.2rem;
-			margin: 2.5rem 0;
+		.closing {
 			display: flex;
 			align-items: center;
 			justify-content: space-between;
-			gap: 1.5rem;
-			flex-wrap: wrap;
+			gap: 2rem;
+			margin-block: 0 4rem;
+			padding-block: 2rem;
+			border-radius: var(--radius);
+			background: var(--c-cream);
 		}
-		.cta h2 {
-			margin: 0 0 0.6rem;
-			font-size: 1.4rem;
+		.closing h2 {
+			margin-bottom: 0.4rem;
 		}
-		.cta ul {
-			margin: 0;
-			padding-left: 1.1rem;
-			color: var(--c-gold-ink-soft);
-			font-size: 0.9rem;
+		.closing__actions {
+			display: flex;
+			flex: none;
+			gap: 0.75rem;
+		}
+		.closing__secondary {
+			border: 1px solid var(--c-navy);
+			background: transparent;
+			color: var(--c-navy);
+		}
+		.hero a:hover,
+		.trust-strip a:hover,
+		.quality-card:hover,
+		.transparency-card:hover,
+		.category-card > a:hover,
+		.section__link:hover {
+			text-decoration: underline;
+			text-underline-offset: 0.2em;
+		}
+		.hero a:focus-visible,
+		.trust-strip a:focus-visible,
+		.quality-card:focus-visible,
+		.transparency-card:focus-visible,
+		.category-card > a:focus-visible,
+		.section__link:focus-visible,
+		.closing a:focus-visible,
+		.faq-grid summary:focus-visible {
+			outline: 2px solid var(--c-green);
+			outline-offset: 3px;
 		}
 
-		@media (max-width: 900px) {
+		@media (max-width: 980px) {
 			.hero__inner {
+				grid-template-columns: minmax(0, 1fr) minmax(310px, 0.8fr);
+				gap: 2rem;
+			}
+			.hero h1 {
+				font-size: clamp(2.25rem, 5vw, 3.35rem);
+			}
+			.trust-strip__grid,
+			.transparency__grid,
+			.category-grid {
+				grid-template-columns: repeat(2, minmax(0, 1fr));
+			}
+			.trust-strip a:nth-child(3) {
+				border-left: 0;
+				border-top: 1px solid var(--c-border);
+			}
+			.trust-strip a:nth-child(4) {
+				border-top: 1px solid var(--c-border);
+			}
+			.quality-grid {
 				grid-template-columns: 1fr;
 			}
-			.strip__grid {
-				grid-template-columns: repeat(2, 1fr);
+			.closing {
+				align-items: flex-start;
+				flex-direction: column;
 			}
-			.cat-grid {
+		}
+
+		@media (max-width: 720px) {
+			.hero__image {
+				object-position: 57% center;
+			}
+			.hero__veil {
+				background: linear-gradient(180deg, color-mix(in srgb, var(--c-navy-deep) 90%, transparent), color-mix(in srgb, var(--c-navy-deep) 78%, transparent));
+			}
+			.hero__inner {
+				grid-template-columns: minmax(0, 1fr);
+				gap: 2.25rem;
+				min-height: 0;
+				padding-block: 3rem 2.5rem;
+			}
+			.hero__copy,
+			.spotlight {
+				min-width: 0;
+			}
+			.hero h1 {
+				max-width: 15ch;
+				font-size: clamp(2.1rem, 11vw, 3.1rem);
+			}
+			.hero__lead {
+				font-size: 0.98rem;
+			}
+			.hero__actions {
+				display: grid;
 				grid-template-columns: 1fr;
 			}
-			.spotlight__grid {
+			.hero__actions .btn {
+				width: 100%;
+			}
+			.hero__trust {
+				display: grid;
+				gap: 0.55rem;
+			}
+			.spotlight__layout {
+				grid-template-columns: minmax(0, 1.1fr) minmax(105px, 0.65fr);
+			}
+			.spotlight__sizes {
+				align-items: flex-start;
+				flex-direction: column;
+			}
+			.trust-strip__grid,
+			.transparency__grid,
+			.category-grid,
+			.faq-grid {
 				grid-template-columns: 1fr;
+			}
+			.trust-strip a,
+			.trust-strip a + a,
+			.trust-strip a:nth-child(3) {
+				border: 0;
+				border-top: 1px solid var(--c-border);
+			}
+			.trust-strip a:first-child {
+				border-top: 0;
+			}
+			.section {
+				padding-block: 3.5rem;
+			}
+			.section--faq {
+				padding-top: 0;
+			}
+			.section__head {
+				align-items: flex-start;
+				flex-direction: column;
+			}
+			.quality-card {
+				padding: 1.1rem;
+			}
+			.transparency-card {
+				min-height: 175px;
+			}
+			.closing {
+				margin-inline: 1rem;
+				padding-inline: 1.25rem;
+			}
+			.closing__actions {
+				display: grid;
+				grid-template-columns: 1fr;
+				width: 100%;
+			}
+			.closing__actions .btn {
+				justify-content: center;
+			}
+		}
+
+		@media (max-width: 390px) {
+			.spotlight__layout {
+				grid-template-columns: 1fr;
+			}
+			.spotlight__media {
+				max-height: 190px;
+				aspect-ratio: 16 / 9;
+			}
+			.quality-card {
+				grid-template-columns: 1fr;
+			}
+		}
+
+		@media (prefers-reduced-motion: reduce) {
+			* {
+				scroll-behavior: auto;
 			}
 		}
 	</style>

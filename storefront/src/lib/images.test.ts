@@ -60,9 +60,16 @@ function imgTags(relative: string): string[] {
 	return source(relative).match(/<img\b[^>]*>/gs) ?? [];
 }
 
-const attr = (tag: string, name: string): string | null =>
-	tag.match(new RegExp(`\\b${name}=(?:"([^"]*)"|\\{([^}]*)\\})`, "s"))?.slice(1).find((v) => v !== undefined) ??
-	null;
+const attr = (tag: string, name: string): string | null => {
+	const value = tag
+		.match(new RegExp(`\\b${name}=(?:"([^"]*)"|\\{([^}]*)\\})`, "s"))
+		?.slice(1)
+		.find((candidate) => candidate !== undefined);
+	if (value !== undefined) return value;
+	// Astro serialises an explicitly empty string as a boolean HTML attribute
+	// (`alt` rather than `alt=""`). It still represents the intended empty alt.
+	return new RegExp(`\\s${name}(?:\\s|>|$)`).test(tag) ? "" : null;
+};
 
 // ---------------------------------------------------------------------------
 // Alt text
@@ -196,11 +203,14 @@ test("REGRESSION: the product-page LCP image is never lazy", () => {
 	assert.equal(attr(tag, "height"), "440");
 });
 
-test("REGRESSION: the hero spotlight image is never lazy", () => {
-	// Above the fold on desktop. Lazy here would leave a hole in the hero.
+test("the homepage product image yields priority to the decorative LCP hero", () => {
+	// The Astro <Picture> is the one promoted hero asset. The optional remote
+	// product thumbnail is secondary and must not compete with it.
 	const tag = imgTags(IMAGE_SOURCES.spotlight)[0];
 	assert.ok(tag, "homepage no longer renders a spotlight image");
-	assert.equal(attr(tag, "loading"), "eager");
+	assert.equal(attr(tag, "loading"), "lazy");
+	assert.equal(attr(tag, "fetchpriority"), null);
+	assert.match(source(IMAGE_SOURCES.spotlight), /<Picture[\s\S]*?loading="eager"[\s\S]*?fetchpriority="high"/);
 });
 
 test("fetchpriority=\"high\" is used on the LCP image and nowhere else", () => {
@@ -306,9 +316,12 @@ test("no built <img> is missing alt, dimensions or a loading decision", { skip }
 		for (const name of ["alt", "width", "height", "loading", "decoding"]) {
 			if (attr(tag, name) === null) wrong.push(`${page}: <img> without ${name}`);
 		}
-		if ((attr(tag, "alt") ?? "").trim() === "") {
-			// A product image is never decorative: it is the only thing that says
-			// which product a card shows.
+		if (
+			(attr(tag, "alt") ?? "").trim() === "" &&
+			attr(tag, "aria-hidden") !== "true"
+		) {
+			// Only explicitly aria-hidden artwork may carry an empty alt. A product
+			// image is never decorative: it identifies which product a card shows.
 			wrong.push(`${page}: <img> with empty alt`);
 		}
 	}
