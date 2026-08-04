@@ -384,6 +384,11 @@ const SECTIONS: LegalSection[] = Object.values(S);
 	</p>
 
 	<h2 id={S.analytics.id}>{S.analytics.heading}</h2>
+	<p>
+		Ihre aktuelle Auswahl können Sie auf der Seite{" "}
+		<a href="/cookie-einstellungen/">Cookie-Einstellungen</a> einsehen und —
+		sofern die Statistik-Auswertung konfiguriert ist — ändern.
+	</p>
 	{
 		ANALYTICS_ENABLED ? (
 			<Fragment>
@@ -499,6 +504,10 @@ const SECTIONS: LegalSection[] = Object.values(S);
 	}
 
 	<h2 id={S.rights.id}>{S.rights.heading}</h2>
+	<p>
+		Hinweise zum sicheren Kontaktweg und zu den nötigen Angaben finden Sie unter{" "}
+		<a href="/datenschutz-anfrage/">Datenschutzanfrage</a>.
+	</p>
 	<p>Sie haben uns gegenüber das Recht auf:</p>
 	<ul>
 		<li>Auskunft über die zu Ihnen gespeicherten Daten (Art. 15 DSGVO),</li>

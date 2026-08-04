@@ -1,0 +1,147 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { ANALYTICS_ENABLED } from "../lib/analytics";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+
+const TITLE = "Cookie-Einstellungen";
+const DESCRIPTION =
+	"Informationen zur technisch notwendigen lokalen Speicherung und zur optionalen Statistik-Einwilligung dieser Website.";
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": canonicalUrl("/cookie-einstellungen") + "#webpage",
+		url: canonicalUrl("/cookie-einstellungen"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([["Startseite", "/"], ["Cookie-Einstellungen", "/cookie-einstellungen"]]),
+];
+---
+
+<BaseLayout title={TITLE} description={DESCRIPTION} rawTitle noindex jsonLd={jsonLd}>
+	<div class="trust-page">
+		<h1>Cookie-Einstellungen</h1>
+		<p class="lead">
+			Hier können Sie den aktuellen Stand Ihrer Statistik-Einwilligung sehen und die
+			bestehenden Datenschutz-Einstellungen öffnen.
+		</p>
+
+		<section class="section" id="notwendig">
+			<h2>Technisch notwendige lokale Speicherung</h2>
+			<p>
+				Die Website verwendet den lokalen Speicher Ihres Browsers für Funktionen,
+				die nicht der Werbung oder Statistik dienen:
+			</p>
+			<dl class="facts">
+				<div>
+					<dt><code>peptide_cart_id</code></dt>
+					<dd>Speichert eine Warenkorbkennung, wenn ein Warenkorb verwendet wird.</dd>
+				</div>
+				<div>
+					<dt><code>pe_consent_v1</code></dt>
+					<dd>Speichert Ihre Entscheidung zur optionalen Statistik-Auswertung samt Entscheidungszeitpunkt.</dd>
+				</div>
+			</dl>
+			<p class="section__note">
+				Diese Einträge können über die Browser-Einstellungen gelöscht werden. Danach
+				kann eine erneute Entscheidung erforderlich sein.
+			</p>
+		</section>
+
+		<section class="section" id="statistik">
+			<h2>Optionale Statistik</h2>
+			{ANALYTICS_ENABLED ? (
+				<Fragment>
+					<p>
+						Google Analytics wird nur geladen, wenn Sie Statistiken ausdrücklich
+						erlauben. Danach können die Cookies <code>_ga</code> und{" "}
+						<code>_ga_&lt;ID&gt;</code> gesetzt werden. Ohne Einwilligung wird das
+						Google-Skript nicht geladen.
+					</p>
+					<p>
+						Das Ablehnen oder spätere Widerrufen der optionalen Statistik verhindert
+						die grundlegende Nutzung dieser Website nicht.
+					</p>
+					<p id="consent-state-label" class="status-label">Aktuelle Auswahl</p>
+					<p
+						class="status"
+						role="status"
+						aria-live="polite"
+						aria-labelledby="consent-state-label"
+						data-consent-page-status
+					>
+						Wird aus Ihrem Browser gelesen …
+					</p>
+					<button type="button" class="settings-button" data-consent-page-open>
+						Datenschutz-Einstellungen öffnen
+					</button>
+				</Fragment>
+			) : (
+				<Fragment>
+					<p>
+						Auf dieser Website ist derzeit keine optionale Statistik-Auswertung
+						konfiguriert. Daher gibt es keine Statistik-Einwilligung zu ändern und
+						keinen Einstellungsdialog zu öffnen.
+					</p>
+					<p class="status" role="status">
+						Aktueller Zustand: Statistiken sind nicht konfiguriert.
+					</p>
+				</Fragment>
+			)}
+		</section>
+
+		<section class="section" id="weitere-informationen">
+			<h2>Weitere Informationen</h2>
+			<p>
+				Welche Daten bei einem Seitenaufruf und — sofern aktiviert — durch die
+				Statistik verarbeitet werden, erläutert die{" "}
+				<a href="/datenschutz/">Datenschutzerklärung</a>.
+			</p>
+		</section>
+	</div>
+
+	{ANALYTICS_ENABLED && (
+		<script>
+			import { onConsentChange, readConsent, requestConsentDialog } from "../lib/consent";
+
+			const status = document.querySelector<HTMLElement>("[data-consent-page-status]");
+			const button = document.querySelector<HTMLButtonElement>("[data-consent-page-open]");
+			const paintState = () => {
+				if (!status) return;
+				const consent = readConsent();
+				status.textContent = consent === null
+					? "Noch keine Auswahl getroffen."
+					: consent.statistics
+						? "Statistiken erlaubt."
+						: "Statistiken abgelehnt.";
+			};
+
+			paintState();
+			onConsentChange(paintState);
+			button?.addEventListener("click", () => requestConsentDialog());
+		</script>
+	)}
+
+	<style>
+		.trust-page { max-width: 900px; }
+		.trust-page h1 { font-size: clamp(1.9rem, 4vw, 2.5rem); overflow-wrap: break-word; }
+		.lead { max-width: 64ch; margin: 0 0 1.25rem; color: var(--c-muted); font-size: 1.05rem; }
+		.section { max-width: 68ch; padding-block: 1.5rem; }
+		.section h2 { margin-bottom: 0.75rem; font-size: clamp(1.3rem, 2.2vw, 1.6rem); scroll-margin-top: 5rem; }
+		.section p { margin: 0 0 1rem; }
+		.section a { color: var(--c-green-dark); font-weight: 600; }
+		.section a:focus-visible, .settings-button:focus-visible { outline: 2px solid var(--c-green); outline-offset: 2px; }
+		.section__note { color: var(--c-muted); font-size: 0.9rem; }
+		.facts { display: grid; gap: 0.9rem; margin: 0 0 1rem; }
+		.facts > div { padding-bottom: 0.75rem; border-bottom: 1px solid var(--c-border); }
+		.facts > div:last-child { border-bottom: 0; }
+		.facts dt { color: var(--c-muted); font-size: 0.82rem; font-weight: 700; }
+		.facts dd { margin: 0.2rem 0 0; font-size: 0.95rem; }
+		.status-label { margin-bottom: 0.25rem !important; font-size: 0.82rem; font-weight: 700; }
+		.status { padding: 0.85rem 1rem; border: 1px solid var(--c-border); border-radius: var(--radius-sm); background: var(--c-surface); }
+		.settings-button { padding: 0.75rem 1rem; border: 0; border-radius: var(--radius-sm); background: var(--c-green); color: var(--c-white); font: inherit; font-weight: 600; cursor: pointer; }
+		.settings-button:hover { background: var(--c-green-dark); }
+	</style>
+</BaseLayout>

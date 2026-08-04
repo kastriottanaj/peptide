@@ -159,6 +159,15 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 		priority: 0.4,
 	},
 	{
+		path: "/sicherheit",
+		title: "Sicherheit melden",
+		description:
+			"Wie mögliche Sicherheitsprobleme, verdächtige Nachrichten und offengelegte Daten verantwortungsvoll gemeldet werden können.",
+		keywords: ["Sicherheit", "Sicherheitshinweis", "Phishing", "Datenschutzvorfall"],
+		changeFrequency: "yearly",
+		priority: 0.3,
+	},
+	{
 		path: "/faq",
 		title: "Häufige Fragen",
 		description:

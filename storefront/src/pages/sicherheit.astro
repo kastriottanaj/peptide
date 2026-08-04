@@ -1,0 +1,127 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { CONTACT, mailtoHref } from "../lib/company";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+
+const TITLE = "Sicherheit melden";
+const DESCRIPTION =
+	"Hinweise zum verantwortungsvollen Melden möglicher Sicherheitsprobleme, verdächtiger Nachrichten und offengelegter Daten.";
+const securityMailHref = CONTACT.email
+	? mailtoHref(CONTACT.email) + "?subject=" + encodeURIComponent("Sicherheitshinweis")
+	: null;
+const reportTypes = [
+	"eine vermutete Sicherheitslücke in einer öffentlich erreichbaren Funktion",
+	"versehentlich offengelegte personenbezogene Informationen",
+	"Probleme mit Authentifizierung oder Zugriff",
+	"verdächtige E-Mails, die sich als Nachricht dieses Shops ausgeben",
+	"einen möglichen Datenschutz- oder Infrastrukturvorfall",
+];
+const usefulDetails = [
+	"die betroffene öffentliche URL oder Funktion",
+	"sicher nachvollziehbare Schritte, die das Problem reproduzieren, ohne Schaden zu verursachen",
+	"Datum und ungefähre Uhrzeit der Beobachtung",
+	"Browser und Gerät, wenn sie für die Beobachtung relevant sind",
+	"Screenshots, aus denen sensible und nicht erforderliche Angaben entfernt wurden",
+];
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": canonicalUrl("/sicherheit") + "#webpage",
+		url: canonicalUrl("/sicherheit"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([["Startseite", "/"], ["Sicherheit melden", "/sicherheit"]]),
+];
+---
+
+<BaseLayout title={TITLE} description={DESCRIPTION} rawTitle jsonLd={jsonLd}>
+	<div class="trust-page">
+		<h1>Sicherheit melden</h1>
+		<p class="lead">
+			Wenn Ihnen ein mögliches Sicherheits- oder Datenschutzproblem auffällt, können
+			Sie es über den veröffentlichten Kontaktweg verantwortungsvoll melden.
+		</p>
+
+		<section class="section" id="melden">
+			<h2>Was gemeldet werden kann</h2>
+			<ul class="list">{reportTypes.map((type) => <li>{type}</li>)}</ul>
+		</section>
+
+		<section class="section" id="angaben">
+			<h2>Hilfreiche Angaben</h2>
+			<p>Für die Einordnung eines Hinweises helfen:</p>
+			<ul class="list">{usefulDetails.map((detail) => <li>{detail}</li>)}</ul>
+			<aside class="note" role="note">
+				<strong>Sensible Daten entfernen</strong>
+				<p>
+					Senden Sie keine Passwörter, privaten Schlüssel, Zahlungs- oder
+					Zugangsdaten und keine personenbezogenen Daten, die mit dem Hinweis
+					nichts zu tun haben.
+				</p>
+			</aside>
+		</section>
+
+		<section class="section" id="grenzen">
+			<h2>Grenzen einer verantwortungsvollen Prüfung</h2>
+			<p>
+				Ein Sicherheitshinweis rechtfertigt keine Eingriffe in Daten oder Betrieb.
+				Insbesondere dürfen Sie nicht:
+			</p>
+			<ul class="list">
+				<li>Daten anderer Personen aufrufen, ändern, herunterladen oder löschen,</li>
+				<li>die Verfügbarkeit der Website oder verbundener Dienste beeinträchtigen,</li>
+				<li>destruktive Tests automatisieren oder Spam versenden,</li>
+				<li>Social Engineering oder Täuschung gegenüber Beschäftigten, Dienstleistern oder Nutzern versuchen.</li>
+			</ul>
+		</section>
+
+		<section class="section" id="rahmen">
+			<h2>Kein öffentliches Bug-Bounty-Programm</h2>
+			<p>
+				Diese Seite richtet kein öffentliches Bug-Bounty-Programm ein. Für Hinweise
+				wird keine Vergütung oder andere Belohnung versprochen. Eingehende Hinweise
+				werden geprüft; eine bestimmte Antwort- oder Bearbeitungszeit sowie ein
+				bestimmtes Ergebnis sind damit nicht zugesagt.
+			</p>
+		</section>
+
+		<section class="section" id="kontakt">
+			<h2>Sicherheitshinweis senden</h2>
+			{securityMailHref && CONTACT.email ? (
+				<Fragment>
+					<p>E-Mail: <a href={securityMailHref}>{CONTACT.email}</a></p>
+					<p><a class="btn btn--green" href={securityMailHref}>Sicherheitshinweis per E-Mail</a></p>
+				</Fragment>
+			) : (
+				<p>
+					Ein E-Mail-Kontakt ist derzeit nicht veröffentlicht. Verfügbare
+					Kontaktwege stehen auf der <a href="/support/anfrage/">Support-Seite</a>.
+				</p>
+			)}
+			<p>
+				Geht es um die Ausübung Ihrer Datenschutzrechte, nutzen Sie die{" "}
+				<a href="/datenschutz-anfrage/">Datenschutzanfrage</a>. Weitere Angaben zur
+				Datenverarbeitung stehen in der <a href="/datenschutz/">Datenschutzerklärung</a>.
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.trust-page { max-width: 900px; }
+		.trust-page h1 { font-size: clamp(1.9rem, 4vw, 2.5rem); overflow-wrap: break-word; }
+		.lead { max-width: 64ch; margin: 0 0 1.25rem; color: var(--c-muted); font-size: 1.05rem; }
+		.section { max-width: 68ch; padding-block: 1.5rem; }
+		.section h2 { margin-bottom: 0.75rem; font-size: clamp(1.3rem, 2.2vw, 1.6rem); scroll-margin-top: 5rem; }
+		.section p { margin: 0 0 1rem; }
+		.section a { color: var(--c-green-dark); font-weight: 600; }
+		.section a:focus-visible { outline: 2px solid var(--c-green); outline-offset: 2px; }
+		.section a.btn { color: var(--c-white); }
+		.list { display: grid; gap: 0.35rem; margin: 0 0 1rem; padding-left: 1.25rem; }
+		.list li { font-size: 0.95rem; }
+		.note { padding: 1rem 1.15rem; border: 1px solid var(--c-border); border-radius: var(--radius-sm); background: var(--c-surface); }
+		.note p { margin: 0.4rem 0 0; color: var(--c-muted); font-size: 0.92rem; }
+	</style>
+</BaseLayout>

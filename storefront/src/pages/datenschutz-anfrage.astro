@@ -1,0 +1,127 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { CONTACT, mailtoHref } from "../lib/company";
+import { ORGANIZATION_ID, breadcrumbNode, canonicalUrl } from "../lib/site";
+
+const TITLE = "Datenschutzanfrage";
+const DESCRIPTION =
+	"Informationen zu Auskunft, Berichtigung, Löschung und weiteren Datenschutzanliegen sowie zum sicheren Kontaktweg.";
+const requestTypes = [
+	["Auskunft", "Welche personenbezogenen Daten zu Ihrer Person verarbeitet werden."],
+	["Berichtigung", "Unrichtige personenbezogene Daten berichtigen oder unvollständige Angaben ergänzen."],
+	["Löschung", "Die Löschung personenbezogener Daten verlangen, soweit keine Pflicht oder Rechtsgrundlage für die weitere Verarbeitung besteht."],
+	["Einschränkung der Verarbeitung", "Die Verarbeitung unter den gesetzlichen Voraussetzungen begrenzen lassen."],
+	["Datenübertragbarkeit", "Daten, die Sie bereitgestellt haben, unter den gesetzlichen Voraussetzungen in einem übertragbaren Format erhalten."],
+	["Widerspruch", "Einer Verarbeitung widersprechen, die auf berechtigten Interessen beruht."],
+	["Widerruf einer Einwilligung", "Eine erteilte Einwilligung mit Wirkung für die Zukunft widerrufen."],
+	["Sonstige Datenschutzanfrage", "Ein anderes Anliegen zur Verarbeitung Ihrer personenbezogenen Daten schildern."],
+];
+const privacyMailHref = CONTACT.email
+	? mailtoHref(CONTACT.email) + "?subject=" + encodeURIComponent("Datenschutzanfrage")
+	: null;
+const jsonLd = [
+	{
+		"@type": "WebPage",
+		"@id": canonicalUrl("/datenschutz-anfrage") + "#webpage",
+		url: canonicalUrl("/datenschutz-anfrage"),
+		name: TITLE,
+		description: DESCRIPTION,
+		inLanguage: "de-DE",
+		publisher: { "@id": ORGANIZATION_ID },
+	},
+	breadcrumbNode([["Startseite", "/"], ["Datenschutzanfrage", "/datenschutz-anfrage"]]),
+];
+---
+
+<BaseLayout title={TITLE} description={DESCRIPTION} rawTitle noindex jsonLd={jsonLd}>
+	<div class="trust-page">
+		<h1>Datenschutzanfrage</h1>
+		<p class="lead">
+			Hier erfahren Sie, welche Datenschutzanliegen Sie an uns richten können und
+			welche Angaben für eine sichere Zuordnung sinnvoll sind.
+		</p>
+
+		<section class="section" id="anliegen">
+			<h2>Mögliche Anliegen</h2>
+			<dl class="facts">
+				{requestTypes.map(([label, text]) => <div><dt>{label}</dt><dd>{text}</dd></div>)}
+			</dl>
+			<p class="section__note">
+				Ob und in welchem Umfang ein Recht besteht, richtet sich nach den gesetzlichen
+				Voraussetzungen. Weitere Informationen stehen in der{" "}
+				<a href="/datenschutz/">Datenschutzerklärung</a>.
+			</p>
+		</section>
+
+		<section class="section" id="angaben">
+			<h2>Welche Angaben helfen?</h2>
+			<p>
+				Beschreiben Sie das Anliegen kurz und nennen Sie die E-Mail-Adresse oder eine
+				Bestellreferenz nur, soweit sie zur Zuordnung erforderlich ist. Geben Sie an,
+				welches der oben genannten Rechte Sie ausüben möchten.
+			</p>
+			<p>
+				Wenn begründete Zweifel an der Identität bestehen, kann eine angemessene
+				Identitätsprüfung erforderlich sein. Welche zusätzliche Angabe dafür nötig ist,
+				wird gegebenenfalls gesondert mitgeteilt.
+			</p>
+			<aside class="note" role="note">
+				<strong>Bitte keine unnötigen sensiblen Daten senden.</strong>
+				<p>
+					Übermitteln Sie keine Passwörter oder Zugangsdaten, Zahlungs- oder
+					Kreditkartendaten, medizinischen Daten oder sonstigen nicht erforderlichen
+					personenbezogenen Angaben. Senden Sie insbesondere nicht unaufgefordert eine
+					Kopie eines Ausweises oder eines anderen Identitätsdokuments. Auf dieser Website
+					können keine Dokumente hochgeladen werden.
+				</p>
+			</aside>
+		</section>
+
+		<section class="section" id="kontakt">
+			<h2>Datenschutzanfrage senden</h2>
+			<p>
+				Datenschutzanfragen nutzen denselben Kontaktweg wie andere Support-Anliegen.
+				Es gibt kein separates Anfrageformular.
+			</p>
+			{privacyMailHref && CONTACT.email ? (
+				<Fragment>
+					<p>E-Mail: <a href={privacyMailHref}>{CONTACT.email}</a></p>
+					<p><a class="btn btn--green" href={privacyMailHref}>Datenschutzanfrage per E-Mail</a></p>
+				</Fragment>
+			) : (
+				<p>
+					Ein E-Mail-Kontakt ist derzeit nicht veröffentlicht. Verfügbare Kontaktwege
+					stehen auf der <a href="/contact/">Kontaktseite</a>.
+				</p>
+			)}
+			<p>
+				Zur allgemeinen Einordnung können Sie außerdem die{" "}
+				<a href="/support/anfrage/">Support-Anfrage</a> aufrufen.
+			</p>
+			<p class="section__note">
+				Mit der Kontaktaufnahme ist keine bestimmte Antwort- oder Bearbeitungsdauer
+				zugesagt.
+			</p>
+		</section>
+	</div>
+
+	<style>
+		.trust-page { max-width: 900px; }
+		.trust-page h1 { font-size: clamp(1.9rem, 4vw, 2.5rem); overflow-wrap: break-word; }
+		.lead { max-width: 64ch; margin: 0 0 1.25rem; font-size: 1.05rem; color: var(--c-muted); }
+		.section { max-width: 68ch; padding-block: 1.5rem; }
+		.section h2 { margin-bottom: 0.75rem; font-size: clamp(1.3rem, 2.2vw, 1.6rem); scroll-margin-top: 5rem; }
+		.section p { margin: 0 0 1rem; }
+		.section a { color: var(--c-green-dark); font-weight: 600; }
+		.section a:focus-visible { outline: 2px solid var(--c-green); outline-offset: 2px; }
+		.section a.btn { color: var(--c-white); }
+		.section__note { color: var(--c-muted); font-size: 0.9rem; }
+		.facts { display: grid; gap: 0.9rem; margin: 0 0 1rem; }
+		.facts > div { padding-bottom: 0.75rem; border-bottom: 1px solid var(--c-border); }
+		.facts > div:last-child { border-bottom: 0; }
+		.facts dt { color: var(--c-muted); font-size: 0.74rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+		.facts dd { margin: 0.2rem 0 0; font-size: 0.95rem; }
+		.note { padding: 1rem 1.15rem; border: 1px solid var(--c-border); border-radius: var(--radius-sm); background: var(--c-surface); }
+		.note p { margin: 0.4rem 0 0; color: var(--c-muted); font-size: 0.92rem; }
+	</style>
+</BaseLayout>
