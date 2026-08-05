@@ -105,6 +105,15 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 		priority: 0.75,
 	},
 	{
+		path: "/stack-builder",
+		title: "Peptid Stack-Builder für Labor und Forschung",
+		description:
+			"Forschungsprodukte aus dem aktuellen Sortiment auswählen, Packgrößen und Preise vergleichen und als transparente Positionen zusammenstellen.",
+		keywords: ["Stack-Builder", "Produktvergleich", "Packgrößen", "Forschungsprodukte"],
+		changeFrequency: "weekly",
+		priority: 0.75,
+	},
+	{
 		path: "/about",
 		title: "Über uns",
 		description:

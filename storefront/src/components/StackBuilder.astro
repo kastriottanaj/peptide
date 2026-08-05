@@ -1,0 +1,461 @@
+---
+import type { StackBuilderModel } from "../lib/stack-builder";
+import { formatEur } from "../lib/pricing";
+import { categoryPath, productPath } from "../lib/links";
+
+interface Props {
+	model: StackBuilderModel;
+}
+
+const { model } = Astro.props;
+---
+
+<section class="presets" aria-labelledby="preset-heading">
+	<div class="section-head">
+		<span class="eyebrow">Vordefinierte Auswahl</span>
+		<h2 id="preset-heading">Forschungs-Panels vergleichen</h2>
+		<p>Jede Komponente bleibt ein eigenständiges Katalogprodukt mit eigener Packgröße und eigenem Preis.</p>
+	</div>
+	<div class="preset-grid">
+		{model.presets.map((preset) => (
+			<article class="preset-card" data-preset-card>
+				<p class="preset-card__count">{preset.components.length} Komponenten</p>
+				<h3>{preset.name}</h3>
+				<p>{preset.description}</p>
+				<ul>
+					{preset.components.map((component) => (
+						<li class:list={{ "is-unavailable": component.status !== "available" }}>
+							{component.productTitle ?? component.handle}
+							{component.status === "missing" && <span>Fehlt im aktuellen Katalog</span>}
+							{component.status === "unavailable" && <span>Keine vergleichbare Variante verfügbar</span>}
+						</li>
+					))}
+				</ul>
+				<button
+					type="button"
+					class="btn btn--green js-control"
+					data-preset={JSON.stringify(preset.components)}
+					disabled={!preset.selectable}
+					hidden
+				>
+					{preset.selectable ? "Panel auswählen" : "Panel nicht vollständig"}
+				</button>
+			</article>
+		))}
+	</div>
+</section>
+
+<section class="builder" aria-labelledby="builder-heading" data-stack-builder>
+	<div class="builder__catalog">
+		<div class="section-head">
+			<span class="eyebrow">Einzelprodukte</span>
+			<h2 id="builder-heading">Eigenen Vergleich zusammenstellen</h2>
+			<p>Wähle Produkte und Packgrößen für eine unverbindliche Preisübersicht aus.</p>
+		</div>
+
+		<nav class="category-links" aria-label="Katalogkategorien ohne Filterfunktion" data-static-category-links>
+			<a href="/produkte/">Alle Produkte</a>
+			{model.categories.map((category) => (
+				<a href={categoryPath(category.handle)}>
+					{category.name} <span>({category.productCount})</span>
+				</a>
+			))}
+		</nav>
+
+		<div class="filters js-control" aria-label="Produkte filtern" hidden>
+			<button type="button" data-filter="all" aria-pressed="true">Alle</button>
+			{model.categories.map((category) => (
+				<button type="button" data-filter={category.handle} aria-pressed="false">
+					{category.name} ({category.productCount})
+				</button>
+			))}
+		</div>
+		<p class="filter-status js-control" data-filter-status role="status" hidden></p>
+
+		<div class="product-grid">
+			{model.products.map((product) => (
+				<article
+					class="stack-product"
+					data-product
+					data-product-id={product.id}
+					data-product-title={product.title}
+					data-product-handle={product.handle}
+					data-categories={product.categoryHandles.join(" ")}
+				>
+					<div class="stack-product__media">
+						{product.researchCode && <span class="stack-product__code">{product.researchCode}</span>}
+						{product.purity && <span class="stack-product__purity">{product.purity}</span>}
+						{product.thumbnail ? (
+							<img src={product.thumbnail} alt={product.imageAlt} loading="lazy" decoding="async" width="260" height="260" />
+						) : (
+							<svg class="stack-product__vial" viewBox="0 0 80 100" aria-hidden="true">
+								<rect x="30" y="6" width="20" height="10" rx="2" fill="#c9d3df" />
+								<path d="M28 16h24v70a12 12 0 0 1-24 0V16Z" fill="#d9a441" opacity="0.85" />
+								<path d="M28 58h24v28a12 12 0 0 1-24 0V58Z" fill="#b9862f" opacity="0.6" />
+								<rect x="34" y="24" width="12" height="26" rx="2" fill="#fff" opacity="0.35" />
+							</svg>
+						)}
+					</div>
+					<div class="stack-product__body">
+						<div class="stack-product__categories">
+							{product.categoryNames.map((name) => <span>{name}</span>)}
+						</div>
+						<h3><a href={productPath(product.handle)}>{product.title}</a></h3>
+						{product.description && <p class="stack-product__description">{product.description}</p>}
+						{product.coaStatus && <p class="stack-product__coa">COA-Status: {product.coaStatus}</p>}
+
+						{product.variants.length > 0 ? (
+							<>
+								<ul class="variant-list" data-static-variants>
+									{product.variants.map((variant) => (
+										<li>
+											<span>{variant.title}</span>
+											<strong>{variant.formattedPrice ?? "Preis nicht verfügbar"}</strong>
+											{!variant.available && <em>Nicht verfügbar</em>}
+										</li>
+									))}
+								</ul>
+								<label class="variant-picker js-control" hidden>
+									<span>Packgröße</span>
+									<select data-variant>
+										{product.variants.map((variant) => (
+											<option
+												value={variant.id}
+												data-title={variant.title}
+												data-amount={variant.amount ?? ""}
+												data-currency={variant.currency ?? ""}
+												data-price={variant.formattedPrice ?? "Preis nicht verfügbar"}
+												disabled={!variant.selectable}
+												selected={variant.id === product.defaultVariantId}
+											>
+												{variant.title} — {variant.formattedPrice ?? "Preis nicht verfügbar"}{!variant.available ? " — Nicht verfügbar" : ""}
+											</option>
+										))}
+									</select>
+								</label>
+							</>
+						) : <p class="stack-product__unavailable">Keine Packgröße verfügbar</p>}
+
+						<div class="stack-product__actions">
+							<a href={productPath(product.handle)}>Produktdetails</a>
+							<button
+								type="button"
+								class="btn btn--green btn--sm js-control"
+								data-toggle-product
+								disabled={!product.defaultVariantId}
+								hidden
+							>
+								{product.defaultVariantId ? "Auswählen" : "Nicht vergleichbar"}
+							</button>
+						</div>
+					</div>
+				</article>
+			))}
+		</div>
+		<p class="filter-empty" data-filter-empty hidden>
+			In dieser Kategorie sind derzeit keine Produkte im Katalog gelistet.
+			<a data-empty-category-link href="/produkte/">Kategorie ansehen</a>
+		</p>
+	</div>
+
+	<aside class="summary" aria-labelledby="summary-heading">
+		<p class="summary__eyebrow">Deine Auswahl</p>
+		<h2 id="summary-heading"><span data-selection-count>0</span> Positionen</h2>
+		<p class="summary__empty" data-summary-empty>
+			Wähle Produkte aus, um Packgrößen und Katalogpreise zu vergleichen.
+		</p>
+		<ul class="summary__lines" data-summary-lines></ul>
+		<div class="summary__totals">
+			<span>Vergleichssumme</span>
+			<strong data-summary-total>{formatEur(0)}</strong>
+		</div>
+		<p class="summary__currency" data-summary-currency hidden></p>
+		<p class="summary__note">Unverbindlicher Vergleich aktueller Katalogpreise. Presets sind keine Produkte oder Angebote.</p>
+		<button type="button" class="summary__reset js-control" data-reset hidden>Auswahl zurücksetzen</button>
+		<p class="visually-hidden" role="status" aria-live="polite" data-selection-status></p>
+	</aside>
+</section>
+
+<script>
+	import { categoryPath, productPath } from "../lib/links";
+
+	type Selected = {
+		productId: string;
+		productTitle: string;
+		productHandle: string;
+		variantId: string;
+		variantTitle: string;
+		amount: number;
+		currency: string;
+		price: string;
+	};
+
+	const root = document.querySelector<HTMLElement>("[data-stack-builder]");
+	if (root) {
+		const selected = new Map<string, Selected>();
+		const productCards = Array.from(root.querySelectorAll<HTMLElement>("[data-product]"));
+		const summaryLines = root.querySelector<HTMLUListElement>("[data-summary-lines]");
+		const summaryEmpty = root.querySelector<HTMLElement>("[data-summary-empty]");
+		const count = root.querySelector<HTMLElement>("[data-selection-count]");
+		const total = root.querySelector<HTMLElement>("[data-summary-total]");
+		const currencyNote = root.querySelector<HTMLElement>("[data-summary-currency]");
+		const reset = root.querySelector<HTMLButtonElement>("[data-reset]");
+		const live = root.querySelector<HTMLElement>("[data-selection-status]");
+
+		document.querySelectorAll<HTMLElement>(".js-control").forEach((control) => {
+			control.hidden = false;
+		});
+		root.querySelectorAll<HTMLElement>("[data-static-variants]").forEach((list) => {
+			list.hidden = true;
+		});
+		root.querySelector<HTMLElement>("[data-static-category-links]")?.setAttribute("hidden", "");
+
+		const announce = (message: string) => {
+			if (live) live.textContent = message;
+		};
+
+		const currentChoice = (card: HTMLElement): Selected | null => {
+			const select = card.querySelector<HTMLSelectElement>("[data-variant]");
+			const option = select?.selectedOptions[0];
+			const amount = Number(option?.dataset.amount);
+			const currency = option?.dataset.currency ?? "";
+			if (!option || option.disabled || !Number.isFinite(amount) || !currency) return null;
+			return {
+				productId: card.dataset.productId ?? "",
+				productTitle: card.dataset.productTitle ?? "",
+				productHandle: card.dataset.productHandle ?? "",
+				variantId: option.value,
+				variantTitle: option.dataset.title ?? option.textContent ?? "",
+				amount,
+				currency,
+				price: option.dataset.price ?? "",
+			};
+		};
+
+		const formatMoney = (amount: number, currency: string) =>
+			new Intl.NumberFormat("de-DE", { style: "currency", currency: currency.toUpperCase() }).format(amount);
+
+		const render = () => {
+			if (summaryLines) summaryLines.replaceChildren();
+			for (const item of selected.values()) {
+				const line = document.createElement("li");
+				const info = document.createElement("div");
+				const link = document.createElement("a");
+				link.href = productPath(item.productHandle);
+				link.textContent = item.productTitle;
+				const variant = document.createElement("span");
+				variant.textContent = `${item.variantTitle} · ${item.price}`;
+				info.append(link, variant);
+				const remove = document.createElement("button");
+				remove.type = "button";
+				remove.textContent = "Entfernen";
+				remove.setAttribute("aria-label", `${item.productTitle} entfernen`);
+				remove.addEventListener("click", () => {
+					selected.delete(item.productId);
+					const card = productCards.find((entry) => entry.dataset.productId === item.productId);
+					const toggle = card?.querySelector<HTMLButtonElement>("[data-toggle-product]");
+					if (toggle) {
+						toggle.textContent = "Auswählen";
+						toggle.setAttribute("aria-pressed", "false");
+					}
+					render();
+					announce(`${item.productTitle} entfernt.`);
+				});
+				line.append(info, remove);
+				summaryLines?.append(line);
+			}
+
+			const items = [...selected.values()];
+			if (count) count.textContent = String(items.length);
+			summaryEmpty?.toggleAttribute("hidden", items.length > 0);
+			reset?.toggleAttribute("hidden", items.length === 0);
+			const currencies = new Set(items.map((item) => item.currency));
+			const comparable = currencies.size <= 1;
+			currencyNote?.toggleAttribute("hidden", comparable);
+			if (currencyNote && !comparable) {
+				currencyNote.textContent = "Keine gemeinsame Summe für unterschiedliche Währungen.";
+			}
+			if (total) {
+				total.textContent = comparable
+					? formatMoney(items.reduce((sum, item) => sum + item.amount, 0), items[0]?.currency ?? "eur")
+					: "—";
+			}
+		};
+
+		for (const card of productCards) {
+			const toggle = card.querySelector<HTMLButtonElement>("[data-toggle-product]");
+			const select = card.querySelector<HTMLSelectElement>("[data-variant]");
+			toggle?.setAttribute("aria-pressed", "false");
+			toggle?.addEventListener("click", () => {
+				const id = card.dataset.productId ?? "";
+				const title = card.dataset.productTitle ?? "Produkt";
+				if (selected.has(id)) {
+					selected.delete(id);
+					if (toggle) {
+						toggle.textContent = "Auswählen";
+						toggle.setAttribute("aria-pressed", "false");
+					}
+					render();
+					announce(`${title} entfernt.`);
+					return;
+				}
+				const choice = currentChoice(card);
+				if (!choice) return;
+				selected.set(id, choice);
+				if (toggle) {
+					toggle.textContent = "Entfernen";
+					toggle.setAttribute("aria-pressed", "true");
+				}
+				render();
+				announce(`${title} hinzugefügt.`);
+			});
+			select?.addEventListener("change", () => {
+				const id = card.dataset.productId ?? "";
+				if (!selected.has(id)) return;
+				const choice = currentChoice(card);
+				if (!choice) return;
+				selected.set(id, choice);
+				render();
+				announce(`Packgröße für ${choice.productTitle} geändert.`);
+			});
+		}
+
+		root.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((button) => {
+			button.addEventListener("click", () => {
+				const filter = button.dataset.filter ?? "all";
+				let visible = 0;
+				for (const card of productCards) {
+					const matches = filter === "all" || (card.dataset.categories ?? "").split(" ").includes(filter);
+					card.toggleAttribute("hidden", !matches);
+					if (matches) visible++;
+				}
+				root.querySelectorAll<HTMLButtonElement>("[data-filter]").forEach((entry) => {
+					entry.setAttribute("aria-pressed", String(entry === button));
+				});
+				const status = root.querySelector<HTMLElement>("[data-filter-status]");
+				if (status) status.textContent = `${visible} Produkte sichtbar.`;
+				const empty = root.querySelector<HTMLElement>("[data-filter-empty]");
+				empty?.toggleAttribute("hidden", visible !== 0);
+				const emptyLink = root.querySelector<HTMLAnchorElement>("[data-empty-category-link]");
+				if (emptyLink && filter !== "all") emptyLink.href = categoryPath(filter);
+			});
+		});
+
+		document.querySelectorAll<HTMLButtonElement>("[data-preset]").forEach((button) => {
+			button.addEventListener("click", () => {
+				const components = JSON.parse(button.dataset.preset ?? "[]") as Array<{ productId: string; variantId: string }>;
+				selected.clear();
+				for (const card of productCards) {
+					const toggle = card.querySelector<HTMLButtonElement>("[data-toggle-product]");
+					if (toggle) {
+						toggle.textContent = "Auswählen";
+						toggle.setAttribute("aria-pressed", "false");
+					}
+				}
+				for (const component of components) {
+					const card = productCards.find((entry) => entry.dataset.productId === component.productId);
+					const select = card?.querySelector<HTMLSelectElement>("[data-variant]");
+					if (!card || !select) continue;
+					select.value = component.variantId;
+					const choice = currentChoice(card);
+					if (!choice) continue;
+					selected.set(choice.productId, choice);
+					const toggle = card.querySelector<HTMLButtonElement>("[data-toggle-product]");
+					if (toggle) {
+						toggle.textContent = "Entfernen";
+						toggle.setAttribute("aria-pressed", "true");
+					}
+				}
+				render();
+				announce(`${button.closest("[data-preset-card]")?.querySelector("h3")?.textContent ?? "Panel"} ausgewählt.`);
+			});
+		});
+
+		reset?.addEventListener("click", () => {
+			selected.clear();
+			for (const card of productCards) {
+				const toggle = card.querySelector<HTMLButtonElement>("[data-toggle-product]");
+				if (toggle) {
+					toggle.textContent = "Auswählen";
+					toggle.setAttribute("aria-pressed", "false");
+				}
+			}
+			render();
+			announce("Auswahl geleert.");
+		});
+
+		render();
+	}
+</script>
+
+<style>
+	.presets { margin-bottom: 3rem; }
+	.section-head { max-width: 70ch; margin-bottom: 1.25rem; }
+	.section-head h2 { margin: 0 0 0.45rem; font-size: clamp(1.5rem, 3vw, 2rem); }
+	.section-head p { margin: 0; color: var(--c-muted); }
+	.preset-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+	.preset-card { border: 1px solid var(--c-border); border-radius: var(--radius); padding: 1.25rem; background: var(--c-white); }
+	.preset-card h3 { margin: 0.25rem 0 0.5rem; }
+	.preset-card > p:not(.preset-card__count) { color: var(--c-muted); font-size: 0.9rem; }
+	.preset-card__count { margin: 0; color: var(--c-green-dark); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+	.preset-card ul { padding-left: 1.1rem; margin: 1rem 0; font-size: 0.88rem; }
+	.preset-card li span { display: block; color: var(--c-muted); font-size: 0.78rem; }
+	.preset-card .is-unavailable { color: var(--c-muted); }
+	.preset-card button:disabled { cursor: not-allowed; opacity: 0.55; }
+	.builder { display: grid; grid-template-columns: minmax(0, 1fr) minmax(270px, 330px); gap: 1.5rem; align-items: start; }
+	.category-links { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 1rem; }
+	.category-links a, .filters button { border: 1px solid var(--c-border); border-radius: 999px; padding: 0.42rem 0.78rem; color: var(--c-navy); background: var(--c-white); text-decoration: none; font: inherit; font-size: 0.78rem; font-weight: 600; }
+	.category-links span { color: var(--c-muted); }
+	.filters { display: flex; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.7rem; }
+	.filters button { cursor: pointer; }
+	.filters button[aria-pressed="true"] { color: var(--c-white); background: var(--c-navy); border-color: var(--c-navy); }
+	.filter-status { color: var(--c-muted); font-size: 0.85rem; }
+	.product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1rem; }
+	.stack-product { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--c-border); border-radius: var(--radius); background: var(--c-white); }
+	.stack-product__media { position: relative; display: grid; place-items: center; aspect-ratio: 1 / 1; padding: 1rem; background: linear-gradient(180deg, var(--c-surface), var(--c-surface-2)); }
+	.stack-product__media img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
+	.stack-product__vial { width: 50%; height: 75%; }
+	.stack-product__code, .stack-product__purity { position: absolute; top: 0.65rem; border-radius: 6px; padding: 0.22rem 0.45rem; font-size: 0.65rem; font-weight: 700; }
+	.stack-product__code { left: 0.65rem; color: var(--c-white); background: var(--c-navy); }
+	.stack-product__purity { right: 0.65rem; color: var(--c-green-dark); background: var(--c-mint); }
+	.stack-product__body { display: flex; flex: 1; flex-direction: column; padding: 1rem; }
+	.stack-product__body h3 { margin: 0.35rem 0; font-size: 1.05rem; }
+	.stack-product__body h3 a { text-decoration: none; }
+	.stack-product__categories { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+	.stack-product__categories span { padding: 0.18rem 0.4rem; border-radius: 999px; color: var(--c-green-dark); background: var(--c-mint); font-size: 0.65rem; }
+	.stack-product__description { display: -webkit-box; overflow: hidden; margin: 0 0 0.65rem; color: var(--c-muted); font-size: 0.82rem; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+	.stack-product__coa { margin: 0 0 0.7rem; color: var(--c-green-dark); font-size: 0.76rem; font-weight: 600; }
+	.variant-list { display: grid; gap: 0.35rem; padding: 0; margin: auto 0 0.8rem; list-style: none; }
+	.variant-list li { display: grid; grid-template-columns: 1fr auto; gap: 0.25rem 0.5rem; font-size: 0.78rem; }
+	.variant-list em { grid-column: 1 / -1; color: var(--c-muted); font-style: normal; }
+	.variant-picker { display: grid; gap: 0.3rem; margin-top: auto; font-size: 0.76rem; font-weight: 700; }
+	.variant-picker select { width: 100%; padding: 0.55rem; border: 1px solid var(--c-border); border-radius: 8px; color: var(--c-navy); background: var(--c-white); font: inherit; }
+	.stack-product__unavailable { margin-top: auto; color: var(--c-muted); font-size: 0.82rem; }
+	.stack-product__actions { display: flex; align-items: center; justify-content: space-between; gap: 0.7rem; margin-top: 0.85rem; }
+	.stack-product__actions > a { color: var(--c-green-dark); font-size: 0.78rem; font-weight: 650; }
+	.stack-product__actions button[aria-pressed="true"] { color: var(--c-navy); background: var(--c-mint); }
+	.filter-empty { padding: 1.25rem; border: 1px dashed var(--c-border); border-radius: var(--radius); color: var(--c-muted); }
+	.filter-empty a { display: block; margin-top: 0.4rem; color: var(--c-green-dark); font-weight: 650; }
+	.summary { position: sticky; top: 6.5rem; max-height: calc(100vh - 8rem); overflow: auto; padding: 1.25rem; border: 1px solid var(--c-border); border-radius: var(--radius); background: var(--c-surface); }
+	.summary__eyebrow { margin: 0; color: var(--c-green-dark); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+	.summary h2 { margin: 0.25rem 0 0.8rem; }
+	.summary__empty, .summary__note, .summary__currency { color: var(--c-muted); font-size: 0.82rem; }
+	.summary__lines { display: grid; gap: 0.65rem; padding: 0; list-style: none; }
+	.summary__lines :global(li) { display: flex; align-items: start; justify-content: space-between; gap: 0.7rem; padding-bottom: 0.65rem; border-bottom: 1px solid var(--c-border); }
+	.summary__lines :global(li div) { display: grid; gap: 0.15rem; min-width: 0; }
+	.summary__lines :global(a) { color: var(--c-navy); font-size: 0.84rem; font-weight: 700; }
+	.summary__lines :global(span) { color: var(--c-muted); font-size: 0.75rem; }
+	.summary__lines :global(button), .summary__reset { border: 0; padding: 0; color: var(--c-green-dark); background: transparent; font: inherit; font-size: 0.75rem; font-weight: 650; cursor: pointer; text-decoration: underline; }
+	.summary__totals { display: flex; justify-content: space-between; gap: 1rem; padding-top: 0.8rem; border-top: 1px solid var(--c-border); }
+	.summary__note { padding-top: 0.8rem; border-top: 1px solid var(--c-border); }
+	@media (max-width: 800px), (max-height: 620px) {
+		.preset-grid { grid-template-columns: 1fr; }
+		.builder { grid-template-columns: 1fr; }
+		.summary { position: static; max-height: none; overflow: visible; }
+	}
+	@media (max-width: 480px) {
+		.product-grid { grid-template-columns: 1fr; }
+		.stack-product__actions { align-items: stretch; flex-direction: column; }
+		.stack-product__actions .btn { justify-content: center; }
+	}
+</style>

@@ -101,7 +101,16 @@ const seo = categorySeo(category.handle, {
 
 	{
 		products.length === 0 ? (
-			<p>In dieser Kategorie sind derzeit keine Produkte gelistet.</p>
+			<div class="empty-category">
+				<p>In dieser Kategorie sind derzeit keine Produkte gelistet.</p>
+				{category.handle === "peptid-stacks" && (
+					<p>
+						Der <a href="/stack-builder/">Stack-Builder</a> ist ein Vergleichswerkzeug
+						für einzelne Katalogprodukte und stellt keinen verfügbaren
+						Peptid-Stack-Bestand dar.
+					</p>
+				)}
+			</div>
 		) : (
 			<div class="grid">
 				{products.map((product, index) => (
@@ -144,6 +153,10 @@ const seo = categorySeo(category.handle, {
 			color: var(--c-muted);
 			margin: 0.25rem 0 2rem;
 			max-width: 60ch;
+		}
+		.empty-category a {
+			color: var(--c-green-dark);
+			font-weight: 650;
 		}
 		.grid {
 			display: grid;

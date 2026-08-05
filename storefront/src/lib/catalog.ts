@@ -1,6 +1,9 @@
 import type { HttpTypes } from "@medusajs/types";
 import { snapshotCategories, snapshotProducts } from "./build-catalog";
 import { medusa, getDefaultRegionId } from "./medusa";
+import { isVariantAvailable } from "./variant-availability";
+
+export { isVariantAvailable } from "./variant-availability";
 
 /**
  * Catalog reads shared by the listing and the category pages, so the two cannot
@@ -31,14 +34,6 @@ function isPeptide(product: CatalogProduct): boolean {
  * the moment real inventory is switched on, instead of hard-coding InStock into
  * the product JSON-LD and the "Verfügbar" badge for something unbuyable.
  */
-export function isVariantAvailable(
-	variant: HttpTypes.StoreProductVariant,
-): boolean {
-	if (variant.manage_inventory === false) return true;
-	if (variant.allow_backorder) return true;
-	return (variant.inventory_quantity ?? 0) > 0;
-}
-
 export function isProductAvailable(product: CatalogProduct): boolean {
 	return (product.variants ?? []).some(isVariantAvailable);
 }

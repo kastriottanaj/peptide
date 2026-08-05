@@ -51,6 +51,7 @@ const source = (relative: string): string =>
  */
 const IMAGE_SOURCES = {
 	card: "components/ProductCard.astro",
+	stackBuilder: "components/StackBuilder.astro",
 	spotlight: "pages/index.astro",
 	detail: "pages/produkte/[handle].astro",
 } as const;
@@ -259,6 +260,7 @@ test("decorative inline SVG is hidden from assistive technology", () => {
 	// graphic on every page.
 	const DECORATIVE = [
 		IMAGE_SOURCES.card,
+		IMAGE_SOURCES.stackBuilder,
 		IMAGE_SOURCES.spotlight,
 		IMAGE_SOURCES.detail,
 		"layouts/BaseLayout.astro",
