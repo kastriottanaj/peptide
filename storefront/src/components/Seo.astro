@@ -19,6 +19,8 @@ export interface Props {
 	ogType?: "website" | "article" | "product";
 	image?: { url: string; alt: string; width?: number; height?: number };
 	noindex?: boolean;
+	/** Valid public page that should not be indexed, while its links remain crawlable. */
+	noindexFollow?: boolean;
 	/** Extra JSON-LD nodes; the Organization node is always included. */
 	jsonLd?: Record<string, unknown>[];
 }
@@ -30,8 +32,13 @@ const {
 	ogType = "website",
 	image,
 	noindex = false,
+	noindexFollow = false,
 	jsonLd = [],
 } = Astro.props;
+
+if (noindex && noindexFollow) {
+	throw new Error("A page cannot be both noindex,nofollow and noindex,follow.");
+}
 
 const fullTitle = rawTitle ? title : `${title} | ${SITE_NAME}`;
 const canonical = canonicalUrl(Astro.url);
@@ -83,6 +90,7 @@ function serializeJsonLd(value: unknown): string {
 <meta name="description" content={description} />
 <link rel="canonical" href={canonical} />
 {noindex && <meta name="robots" content="noindex, nofollow" />}
+{noindexFollow && <meta name="robots" content="noindex, follow" />}
 {
 	googleSiteVerification && (
 		<meta name="google-site-verification" content={googleSiteVerification} />

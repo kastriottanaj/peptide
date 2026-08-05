@@ -72,10 +72,25 @@ export const PRODUCT_SEO: Record<string, RouteSeo> = {
 };
 
 export const CATEGORY_SEO: Record<string, RouteSeo> = {
+	"glp-1-forschung": {
+		title: "GLP-1-Forschung: Produkte für Labor & Analyse",
+		description:
+			"Produkte für GLP-1-bezogene Forschungs- und Analysezwecke mit transparenten Produktangaben. Kategorie ansehen.",
+	},
+	laborbedarf: {
+		title: "Laborbedarf für Forschung und Analyse",
+		description:
+			"Kategorieübersicht für Laborbedarf im Forschungs- und Analysekontext. Verfügbare Kategorien und das Gesamtsortiment ansehen.",
+	},
 	"neuropeptid-forschung": {
 		title: "Neuropeptid-Forschung kaufen: Semax 30 mg",
 		description:
 			"Informationen zu Forschungspeptiden, Reinheit und Zertifikaten – ausschließlich für Laboranalysen. Jetzt Produktdetails ansehen!",
+	},
+	"peptid-stacks": {
+		title: "Peptid-Stacks für Forschung und Labor",
+		description:
+			"Kategorieübersicht zu Peptid-Stacks für Forschungs- und Laborzwecke. Verfügbare Kategorien und das Gesamtsortiment ansehen.",
 	},
 	regenerationsforschung: {
 		title: "Regenerationsforschung: Peptide für Labor & Analyse",

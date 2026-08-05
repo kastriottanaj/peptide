@@ -9,6 +9,7 @@ import {
   updateProductVariantsWorkflow,
   updateProductsWorkflow,
 } from "@medusajs/medusa/core-flows";
+import { EXPANDED_PRODUCT_CATEGORIES } from "../lib/catalog-categories";
 
 /**
  * Seeds DEMO research-peptide products so the storefront's peptide card design
@@ -71,6 +72,7 @@ export default async function seedPeptides({
     "Stoffwechsel-Forschung",
     "Neuropeptid-Forschung",
     "Signal- & Fragmentpeptide",
+    ...EXPANDED_PRODUCT_CATEGORIES.map(({ name }) => name),
   ];
 
   const { data: existingCategories } = await query.graph({
@@ -84,10 +86,21 @@ export default async function seedPeptides({
   if (missingNames.length) {
     const { result } = await createProductCategoriesWorkflow(container).run({
       input: {
-        product_categories: missingNames.map((name) => ({
-          name,
-          is_active: true,
-        })),
+        product_categories: missingNames.map((name) => {
+          const expanded = EXPANDED_PRODUCT_CATEGORIES.find(
+            (category) => category.name === name,
+          );
+          return {
+            name,
+            ...(expanded
+              ? {
+                  handle: expanded.handle,
+                  description: expanded.description,
+                }
+              : {}),
+            is_active: true,
+          };
+        }),
       },
     });
     createdCategories = result;
@@ -98,10 +111,8 @@ export default async function seedPeptides({
     categoryByName.set(c.name, c.id);
   }
 
-  const catId = (name: string) => {
-    const id = categoryByName.get(name);
-    return id ? [id] : [];
-  };
+  const catIds = (names: string[]) =>
+    names.map((name) => categoryByName.get(name)).filter(Boolean) as string[];
 
   // Placeholder analytical metadata shared across demo products.
   const demoMeta = (research_code: string) => ({
@@ -118,7 +129,7 @@ export default async function seedPeptides({
     title: string;
     handle: string;
     code: string;
-    category: string;
+    categories: string[];
     description: string;
     packs: { size: string; price: number }[];
   };
@@ -128,7 +139,7 @@ export default async function seedPeptides({
       title: "Retatrutide",
       handle: "retatrutide",
       code: "PEK-RETA",
-      category: "Stoffwechsel-Forschung",
+      categories: ["Stoffwechsel-Forschung", "GLP-1-Forschung"],
       description:
         "Lyophilisiertes Forschungspeptid für metabolische Modellforschung. " +
         demoNotice,
@@ -142,7 +153,7 @@ export default async function seedPeptides({
       title: "BPC-157",
       handle: "bpc-157",
       code: "PEK-BPC157",
-      category: "Regenerationsforschung",
+      categories: ["Regenerationsforschung"],
       description:
         "Lyophilisiertes Forschungspeptid für regenerationsbezogene Zellmodelle. " +
         demoNotice,
@@ -155,7 +166,7 @@ export default async function seedPeptides({
       title: "GHK-Cu",
       handle: "ghk-cu",
       code: "PEK-GHKCU",
-      category: "Regenerationsforschung",
+      categories: ["Regenerationsforschung"],
       description:
         "Kupfer-Peptid-Komplex für Forschungs- und Analysezwecke. " + demoNotice,
       packs: [
@@ -167,7 +178,7 @@ export default async function seedPeptides({
       title: "MOTS-c",
       handle: "mots-c",
       code: "PEK-MOTSC",
-      category: "Stoffwechsel-Forschung",
+      categories: ["Stoffwechsel-Forschung"],
       description:
         "Mitochondrial abgeleitetes Forschungspeptid für metabolische Studienmodelle. " +
         demoNotice,
@@ -177,7 +188,7 @@ export default async function seedPeptides({
       title: "TB-500",
       handle: "tb-500",
       code: "PEK-TB500",
-      category: "Signal- & Fragmentpeptide",
+      categories: ["Signal- & Fragmentpeptide"],
       description:
         "Fragmentpeptid für regenerations- und signalbezogene Forschungsmodelle. " +
         demoNotice,
@@ -190,7 +201,7 @@ export default async function seedPeptides({
       title: "Semax",
       handle: "semax",
       code: "PEK-SEMAX",
-      category: "Neuropeptid-Forschung",
+      categories: ["Neuropeptid-Forschung"],
       description:
         "Neuropeptid für Forschung zu neuronalen Signalwegen. " + demoNotice,
       packs: [{ size: "30 mg", price: 44.9 }],
@@ -255,7 +266,7 @@ export default async function seedPeptides({
           handle: p.handle,
           description: p.description,
           status: ProductStatus.PUBLISHED,
-          category_ids: catId(p.category),
+          category_ids: catIds(p.categories),
           shipping_profile_id: shippingProfile.id,
           metadata: demoMeta(p.code),
           options: [
@@ -290,7 +301,7 @@ export default async function seedPeptides({
           title: p.title,
           description: p.description,
           status: ProductStatus.PUBLISHED,
-          category_ids: catId(p.category),
+          category_ids: catIds(p.categories),
           metadata: demoMeta(p.code),
         },
       },

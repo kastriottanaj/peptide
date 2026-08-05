@@ -440,6 +440,69 @@ systemctl reload caddy
 caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 ```
 
+### Apply the seven-category catalog expansion
+
+This is an explicit Medusa data operation, not a migration and not an automatic
+deploy step. It creates the three approved categories (`glp-1-forschung`,
+`peptid-stacks`, and `laborbedarf`) and adds the existing repository-owned
+Retatrutide record to GLP-1-Forschung without removing any existing category.
+The operation never creates a product.
+
+Do not proceed if production differs from the expected one Retatrutide demo record,
+if a desired handle has a conflicting name, or if any protected product field differs
+unexpectedly. First capture the current product and category records through the
+Medusa Admin/API, including Retatrutide's ID, category IDs, variants, prices,
+inventory, images, description, metadata, and the total product count. Save that
+read-only output with the change record.
+
+Back up the database before the first write:
+
+```bash
+sudo -u postgres pg_dump medusa_peptides | gzip > ~/medusa-before-category-expansion-$(date +%F-%H%M).sql.gz
+```
+
+After the verified commit has reached `main` and has been deployed through the normal
+scripted path, run the built-in dry run from the active release:
+
+```bash
+cd /srv/peptides/current/backend/apps/backend
+sudo -u medusa env CATEGORY_EXPANSION_DRY_RUN=true NODE_ENV=production npx medusa exec ./src/scripts/expand-product-categories.ts
+```
+
+The dry run performs ownership and conflict checks and reports intended changes but
+writes nothing. If it matches the approved change, apply it once, then immediately
+run it again. The second run must report zero category creations and an existing
+Retatrutide GLP-1 assignment:
+
+```bash
+sudo -u medusa env NODE_ENV=production npx medusa exec ./src/scripts/expand-product-categories.ts
+sudo -u medusa env NODE_ENV=production npx medusa exec ./src/scripts/expand-product-categories.ts
+```
+
+Re-read the same Medusa records and compare them with the captured before-state.
+There must still be one Retatrutide product and the same total product count. Its old
+category IDs, variants, prices, inventory, images, description, and metadata must be
+unchanged; only the GLP-1 category ID is added. Peptid-Stacks and Laborbedarf must
+have zero products. Then rebuild the static storefront through the one approved
+deployment command so the new routes and navigation reflect live Medusa data:
+
+```bash
+bash /srv/peptides/repo/deploy/deploy.sh <verified-main-sha>
+```
+
+Verify the public catalog, all seven category routes, robots metadata, sitemap, and
+`llms.txt`. GLP-1-Forschung is indexable and discoverable; the two empty categories
+render `noindex, follow` and are absent from sitemap and `llms.txt` until a real
+product relationship exists.
+
+For a targeted rollback, use Medusa Admin/API operations—not SQL—to restore the exact
+captured pre-change category-ID set on Retatrutide. Delete only category records that
+this operation created, and only after verifying that no unexpected product is linked;
+GLP-1 must be unlinked first, while Peptid-Stacks and Laborbedarf should already be
+empty. Rebuild the storefront afterward. If the changed records cannot be identified
+unambiguously or any broader data changed, stop and restore the database backup. A
+code rollback does not roll back Medusa catalog data.
+
 ## What is still open
 
 The gate came off on 2026-07-29, **before** the hard blockers in

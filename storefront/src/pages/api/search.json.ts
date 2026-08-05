@@ -6,7 +6,7 @@ import { BUILD_DATE } from "../../lib/build-time";
 import {
 	allStaticEntries,
 	articleEntries,
-	categoryEntries,
+	allCategoryEntries,
 	termEntries,
 	type IndexedEntry,
 } from "../../lib/content-index";
@@ -78,7 +78,7 @@ const fromEntry = (type: SearchDoc["type"]) => (entry: IndexedEntry): SearchDoc 
 export const GET: APIRoute = async () => {
 	const [products, categories, articles, terms] = await Promise.all([
 		listProducts({ limit: 1000 }),
-		categoryEntries(),
+		allCategoryEntries(),
 		articleEntries(),
 		termEntries(),
 	]);

@@ -89,6 +89,21 @@ const EXPECTED: Record<string, PageMeta> = {
 		description:
 			"Informationen zu Forschungspeptiden, Reinheit und Zertifikaten – ausschließlich für Laboranalysen. Jetzt Produktdetails ansehen!",
 	},
+	"/kategorie/glp-1-forschung/": {
+		title: "GLP-1-Forschung: Produkte für Labor & Analyse",
+		description:
+			"Produkte für GLP-1-bezogene Forschungs- und Analysezwecke mit transparenten Produktangaben. Kategorie ansehen.",
+	},
+	"/kategorie/laborbedarf/": {
+		title: "Laborbedarf für Forschung und Analyse",
+		description:
+			"Kategorieübersicht für Laborbedarf im Forschungs- und Analysekontext. Verfügbare Kategorien und das Gesamtsortiment ansehen.",
+	},
+	"/kategorie/peptid-stacks/": {
+		title: "Peptid-Stacks für Forschung und Labor",
+		description:
+			"Kategorieübersicht zu Peptid-Stacks für Forschungs- und Laborzwecke. Verfügbare Kategorien und das Gesamtsortiment ansehen.",
+	},
 	"/kategorie/regenerationsforschung/": {
 		title: "Regenerationsforschung: Peptide für Labor & Analyse",
 		description:
@@ -293,6 +308,10 @@ const metaName = (html: string, name: string) =>
 	matchAll(headOf(html), new RegExp(`<meta name="${name}" content="([^"]*)"`, "g"));
 
 const MAPPED = Object.entries(EXPECTED);
+const EMPTY_CATEGORY_PATHS = new Set([
+	"/kategorie/laborbedarf/",
+	"/kategorie/peptid-stacks/",
+]);
 
 // --- the routes exist -------------------------------------------------------
 
@@ -435,6 +454,7 @@ test("every approved route keeps exactly one self-consistent canonical", { skip 
 
 test("no approved route carries a robots meta tag", { skip }, () => {
 	for (const [path] of MAPPED) {
+		if (EMPTY_CATEGORY_PATHS.has(path)) continue;
 		const html = HTML_BY_PATH.get(path);
 		if (!html) continue;
 		assert.deepEqual(
@@ -484,7 +504,9 @@ test("every approved indexable route is listed in a sitemap", { skip }, () => {
 		),
 	];
 	const paths = new Set(locs.map((l) => new URL(l).pathname));
-	const missing = MAPPED.map(([p]) => p).filter((p) => !paths.has(p));
+	const missing = MAPPED.map(([p]) => p).filter(
+		(p) => !EMPTY_CATEGORY_PATHS.has(p) && !paths.has(p),
+	);
 	assert.deepEqual(missing, [], `indexable routes absent from every sitemap: ${missing}`);
 });
 

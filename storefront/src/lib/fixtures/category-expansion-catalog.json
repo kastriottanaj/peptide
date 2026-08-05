@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "default_region_id": "reg_test",
+  "regions": [{ "id": "reg_test", "currency_code": "eur" }],
+  "categories": [
+    {
+      "id": "cat_glp1",
+      "name": "GLP-1-Forschung",
+      "handle": "glp-1-forschung",
+      "description": "Forschungsprodukte für GLP-1-bezogene Labor- und Analysezwecke."
+    },
+    {
+      "id": "cat_regen",
+      "name": "Regenerationsforschung",
+      "handle": "regenerationsforschung",
+      "description": "Regenerationsforschung."
+    },
+    {
+      "id": "cat_metabolic",
+      "name": "Stoffwechsel-Forschung",
+      "handle": "stoffwechsel-forschung",
+      "description": "Stoffwechsel-Forschung."
+    },
+    {
+      "id": "cat_signal",
+      "name": "Signal- & Fragmentpeptide",
+      "handle": "signal-fragmentpeptide",
+      "description": "Signal- und Fragmentpeptide."
+    },
+    {
+      "id": "cat_neuro",
+      "name": "Neuropeptid-Forschung",
+      "handle": "neuropeptid-forschung",
+      "description": "Neuropeptid-Forschung."
+    },
+    {
+      "id": "cat_stacks",
+      "name": "Peptid-Stacks",
+      "handle": "peptid-stacks",
+      "description": "Kategorie für Peptid-Stacks im Forschungs- und Laborkontext."
+    },
+    {
+      "id": "cat_supplies",
+      "name": "Laborbedarf",
+      "handle": "laborbedarf",
+      "description": "Kategorie für Laborbedarf im Forschungs- und Laborkontext."
+    }
+  ],
+  "products": [
+    {
+      "id": "prod_reta",
+      "title": "Retatrutide",
+      "handle": "retatrutide",
+      "description": "Lyophilisiertes Forschungspeptid für metabolische Modellforschung.",
+      "updated_at": "2026-08-05T00:00:00.000Z",
+      "metadata": { "research_code": "PEK-RETA", "demo": "true" },
+      "categories": [
+        {
+          "id": "cat_metabolic",
+          "name": "Stoffwechsel-Forschung",
+          "handle": "stoffwechsel-forschung"
+        },
+        {
+          "id": "cat_glp1",
+          "name": "GLP-1-Forschung",
+          "handle": "glp-1-forschung"
+        }
+      ],
+      "variants": [
+        {
+          "id": "var_reta",
+          "title": "5 mg",
+          "manage_inventory": true,
+          "allow_backorder": false,
+          "options": []
+        }
+      ]
+    },
+    {
+      "id": "prod_bpc",
+      "title": "BPC-157",
+      "handle": "bpc-157",
+      "description": "Forschungspeptid.",
+      "updated_at": "2026-08-05T00:00:00.000Z",
+      "metadata": { "research_code": "PEK-BPC157", "demo": "true" },
+      "categories": [
+        {
+          "id": "cat_regen",
+          "name": "Regenerationsforschung",
+          "handle": "regenerationsforschung"
+        }
+      ],
+      "variants": []
+    },
+    {
+      "id": "prod_ghk",
+      "title": "GHK-Cu",
+      "handle": "ghk-cu",
+      "description": "Forschungspeptid.",
+      "updated_at": "2026-08-05T00:00:00.000Z",
+      "metadata": { "research_code": "PEK-GHKCU", "demo": "true" },
+      "categories": [
+        {
+          "id": "cat_regen",
+          "name": "Regenerationsforschung",
+          "handle": "regenerationsforschung"
+        }
+      ],
+      "variants": []
+    },
+    {
+      "id": "prod_mots",
+      "title": "MOTS-c",
+      "handle": "mots-c",
+      "description": "Forschungspeptid.",
+      "updated_at": "2026-08-05T00:00:00.000Z",
+      "metadata": { "research_code": "PEK-MOTSC", "demo": "true" },
+      "categories": [
+        {
+          "id": "cat_metabolic",
+          "name": "Stoffwechsel-Forschung",
+          "handle": "stoffwechsel-forschung"
+        }
+      ],
+      "variants": []
+    },
+    {
+      "id": "prod_tb",
+      "title": "TB-500",
+      "handle": "tb-500",
+      "description": "Forschungspeptid.",
+      "updated_at": "2026-08-05T00:00:00.000Z",
+      "metadata": { "research_code": "PEK-TB500", "demo": "true" },
+      "categories": [
+        {
+          "id": "cat_signal",
+          "name": "Signal- & Fragmentpeptide",
+          "handle": "signal-fragmentpeptide"
+        }
+      ],
+      "variants": []
+    },
+    {
+      "id": "prod_semax",
+      "title": "Semax",
+      "handle": "semax",
+      "description": "Forschungspeptid.",
+      "updated_at": "2026-08-05T00:00:00.000Z",
+      "metadata": { "research_code": "PEK-SEMAX", "demo": "true" },
+      "categories": [
+        {
+          "id": "cat_neuro",
+          "name": "Neuropeptid-Forschung",
+          "handle": "neuropeptid-forschung"
+        }
+      ],
+      "variants": []
+    }
+  ]
+}

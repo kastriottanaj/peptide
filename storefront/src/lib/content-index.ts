@@ -244,9 +244,30 @@ export function allStaticEntries(lastModified = buildDate()): IndexedEntry[] {
 	return withTimestamp(STATIC_ROUTES, lastModified);
 }
 
-export async function categoryEntries(
-	lastModified = buildDate(),
-): Promise<IndexedEntry[]> {
+export async function categoryEntries(lastModified = buildDate()): Promise<IndexedEntry[]> {
+	const [categories, products] = await Promise.all([
+		listCategories(),
+		listProductsInSourceOrder({ limit: 1000 }),
+	]);
+	const populatedIds = new Set(
+		products.flatMap((product) =>
+			(product.categories ?? []).map((category) => category.id),
+		),
+	);
+	return categories
+		.filter((category) => populatedIds.has(category.id))
+		.map((category) => ({
+			path: `/kategorie/${category.handle}`,
+			title: category.name ?? category.handle,
+			description: category.description?.trim() || undefined,
+			lastModified,
+			changeFrequency: "weekly" as const,
+			priority: 0.7,
+		}));
+}
+
+/** All category routes, including valid empty pages used by on-site search. */
+export async function allCategoryEntries(lastModified = buildDate()): Promise<IndexedEntry[]> {
 	const categories = await listCategories();
 	return categories.map((category) => ({
 		path: `/kategorie/${category.handle}`,

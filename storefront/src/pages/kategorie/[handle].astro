@@ -40,7 +40,14 @@ const description =
 	category.description?.trim() ||
 	`${category.name}: ${products.length} Forschungspeptide mit Packgrößen, Preis und Zertifikatsstatus. Ausschließlich für Forschungs- und Laborzwecke.`;
 
-const jsonLd = [
+const breadcrumb = breadcrumbNode([
+	["Start", "/"],
+	["Produkte", "/produkte"],
+	[category.name ?? "", path],
+]);
+
+const jsonLd = products.length > 0
+	? [
 	{
 		"@type": "CollectionPage",
 		"@id": `${canonicalUrl(path)}#collection`,
@@ -59,12 +66,9 @@ const jsonLd = [
 			})),
 		},
 	},
-	breadcrumbNode([
-		["Start", "/"],
-		["Produkte", "/produkte"],
-		[category.name ?? "", path],
-	]),
-];
+	breadcrumb,
+]
+	: [breadcrumb];
 
 // Search-result copy for this handle, if one is curated. The CollectionPage
 // above keeps Medusa's own name and description, so the graph still describes
@@ -79,6 +83,7 @@ const seo = categorySeo(category.handle, {
 	title={seo.title}
 	description={seo.description}
 	rawTitle={seo.rawTitle}
+	noindexFollow={products.length === 0}
 	jsonLd={jsonLd}
 >
 	<nav class="crumbs" aria-label="Brotkrumen">
@@ -96,7 +101,7 @@ const seo = categorySeo(category.handle, {
 
 	{
 		products.length === 0 ? (
-			<p>In dieser Kategorie sind aktuell keine Produkte verfügbar.</p>
+			<p>In dieser Kategorie sind derzeit keine Produkte gelistet.</p>
 		) : (
 			<div class="grid">
 				{products.map((product, index) => (
