@@ -105,6 +105,15 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 		priority: 0.75,
 	},
 	{
+		path: "/tools",
+		title: "Tools für Forschungspeptide",
+		description:
+			"Peptid-Rechner, COA-Informationen, Produktvergleich, Lagerungs-Guide und Support zentral aufrufen.",
+		keywords: ["Tools", "COA", "Peptid-Rechner", "Produktvergleich", "Lagerung"],
+		changeFrequency: "monthly",
+		priority: 0.7,
+	},
+	{
 		path: "/about",
 		title: "Über uns",
 		description:
