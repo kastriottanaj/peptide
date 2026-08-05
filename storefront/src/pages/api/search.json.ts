@@ -7,6 +7,7 @@ import {
 	allStaticEntries,
 	articleEntries,
 	allCategoryEntries,
+	coaCheckerSearchEntries,
 	termEntries,
 	type IndexedEntry,
 } from "../../lib/content-index";
@@ -131,7 +132,10 @@ export const GET: APIRoute = async () => {
 			...categories.map(fromEntry("kategorie")),
 			...articles.map(fromEntry("wissen")),
 			...terms.map(fromEntry("lexikon")),
-			...allStaticEntries().map(fromEntry("seite")),
+			// `/coa-pruefen/` is here regardless of whether it is indexable: site
+			// search is not a crawler, and the page is a valid public URL that
+			// someone searching "COA" should find even while no document is linked.
+			...[...allStaticEntries(), ...coaCheckerSearchEntries()].map(fromEntry("seite")),
 		],
 	};
 

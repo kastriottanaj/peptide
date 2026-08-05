@@ -7,6 +7,8 @@ import {
 	isVariantAvailable,
 	listProductsInSourceOrder,
 } from "../../lib/catalog";
+import { resolveVariantStatus } from "../../lib/coa-documents";
+import { allowedDocumentOrigins } from "../../lib/coa-origins";
 import { absoluteUrl, breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../../lib/site";
 import { productImageAlt } from "../../lib/product-image-alt";
 import { productSeo } from "../../lib/catalog-seo";
@@ -29,10 +31,27 @@ const meta = (product.metadata ?? {}) as Record<string, unknown>;
 const researchCode =
 	typeof meta.research_code === "string" ? meta.research_code : null;
 const purity = typeof meta.purity === "string" ? meta.purity : null;
-const coaStatus =
-	typeof meta.coa_status === "string" ? meta.coa_status : null;
 
 const variants = product.variants ?? [];
+
+/**
+ * Analysis documentation, resolved per pack size from the same variant-level
+ * contract `/coa-pruefen/` uses.
+ *
+ * This replaced a "COA-Zertifikat: {metadata.coa_status}" row, which rendered
+ * the seeded placeholder string "verfügbar" as a public claim that a
+ * certificate existed while the catalog held no document at all. Availability
+ * is now something only a validated, linked document can establish, per pack
+ * size, with no fallback between variants — `metadata.coa_status` is not read
+ * anywhere on this page.
+ *
+ * `metadata.purity` stays exactly as it was above: also placeholder data, but
+ * its cleanup is a separate audit, and it is never treated as an analysis
+ * result here.
+ */
+const documentStatuses = variants.map((variant) =>
+	resolveVariantStatus(variant, allowedDocumentOrigins()),
+);
 const packSizes = variants.map((v) => v.title).filter(Boolean).join(" / ");
 
 // --- SEO ---------------------------------------------------------------
@@ -171,11 +190,50 @@ const seo = productSeo(product.handle, {
 					<dt>Packgrößen</dt>
 					<dd>{packSizes || "—"}</dd>
 				</div>
-				<div>
-					<dt>COA-Zertifikat</dt>
-					<dd>{coaStatus ?? "—"}</dd>
-				</div>
 			</dl>
+
+			<section class="coa-docs" aria-labelledby="coa-docs-heading">
+				<h2 id="coa-docs-heading">Analysedokumentation</h2>
+				<p class="coa-docs__note">
+					Aufgeführt ist ausschließlich, was im Katalog zur jeweiligen Packgröße
+					verknüpft ist. Eine Echtheitsprüfung findet nicht statt, und ein
+					Dokument gilt nicht für eine andere Packgröße oder Charge.
+				</p>
+				<ul class="coa-docs__list">
+					{
+						documentStatuses.length === 0 ? (
+							<li>Für dieses Produkt sind keine Packgrößen im Katalog.</li>
+						) : (
+							documentStatuses.map((status) => (
+								<li>
+									<span class="coa-docs__size">{status.variant.packSize}</span>
+									{status.state === "document" ? (
+										<span>
+											<a
+												class="coa-docs__link"
+												href={status.document.url}
+												rel="noopener noreferrer"
+											>
+												{status.document.type ?? "Analysedokument"} öffnen
+											</a>
+											<span class="coa-docs__meta">
+												Dokumenttyp: {status.document.type ?? "nicht hinterlegt"} ·
+												Analysedatum: {status.document.analysisDate ?? "nicht hinterlegt"} ·
+												Charge: {status.document.batch ?? "nicht hinterlegt"}
+											</span>
+										</span>
+									) : (
+										<span>Für diese Packgröße ist derzeit kein Analysedokument verknüpft.</span>
+									)}
+								</li>
+							))
+						)
+					}
+				</ul>
+				<p class="coa-docs__more">
+					<a href="/coa-pruefen/">Analysedokumentation nachschlagen</a>
+				</p>
+			</section>
 
 			<h2 class="variants__title">Packgröße wählen</h2>
 			<AddToCart variants={variants} />
@@ -277,6 +335,54 @@ const seo = productSeo(product.handle, {
 		   `AddToCart.astro`, which brings its own scoped styles. Astro scopes
 		   these rules to this component, so they could never have matched the
 		   markup in that one. */
+		.coa-docs {
+			margin: 0 0 1.75rem;
+		}
+		.coa-docs h2 {
+			font-size: 1rem;
+			margin: 0 0 0.4rem;
+		}
+		.coa-docs__note {
+			margin: 0 0 0.75rem;
+			font-size: 0.82rem;
+			color: var(--c-muted);
+		}
+		.coa-docs__list {
+			list-style: none;
+			margin: 0;
+			padding: 0;
+			display: grid;
+			gap: 0.5rem;
+		}
+		.coa-docs__list li {
+			display: flex;
+			flex-wrap: wrap;
+			gap: 0.35rem 0.75rem;
+			font-size: 0.88rem;
+			padding-bottom: 0.5rem;
+			border-bottom: 1px solid var(--c-border);
+		}
+		.coa-docs__size {
+			font-weight: 650;
+			min-width: 4.5rem;
+		}
+		.coa-docs__link {
+			color: var(--c-green-dark);
+			font-weight: 650;
+		}
+		.coa-docs__meta {
+			display: block;
+			color: var(--c-muted);
+			font-size: 0.82rem;
+		}
+		.coa-docs__more {
+			margin: 0.85rem 0 0;
+			font-size: 0.88rem;
+		}
+		.coa-docs__more a {
+			color: var(--c-green-dark);
+			font-weight: 650;
+		}
 		.disclaimer {
 			margin: 1.25rem 0 0;
 			font-size: 0.78rem;

@@ -4,6 +4,7 @@ import {
 	allStaticEntries,
 	articleEntries,
 	categoryEntries,
+	coaCheckerEntries,
 	productEntries,
 	termEntries,
 	type IndexedEntry,
@@ -55,11 +56,15 @@ function section(heading: string, entries: IndexedEntry[]): string[] {
 }
 
 export const GET: APIRoute = async () => {
-	const [products, categories, articles, terms] = await Promise.all([
+	const [products, categories, articles, terms, coaChecker] = await Promise.all([
 		productEntries(),
 		categoryEntries(),
 		articleEntries(),
 		termEntries(),
+		// Empty while no analysis document is linked, from the same predicate that
+		// makes `/coa-pruefen/` noindex. A map for language models should not point
+		// at a lookup page that can only answer "nothing linked".
+		coaCheckerEntries(),
 	]);
 
 	const body = [
@@ -73,7 +78,7 @@ export const GET: APIRoute = async () => {
 		...section("Kategorien", categories),
 		...section("Wissen", articles),
 		...section("Lexikon", terms),
-		...section("Seiten", allStaticEntries()),
+		...section("Seiten", [...allStaticEntries(), ...coaChecker]),
 		// Read from the same descriptors the page registers, so this list cannot
 		// promise a tool that does not exist.
 		"## Agent Tools Available",

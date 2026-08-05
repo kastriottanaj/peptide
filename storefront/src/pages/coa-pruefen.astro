@@ -1,0 +1,187 @@
+---
+/**
+ * `/coa-pruefen/` — look up which analysis documentation is linked to a real
+ * catalog product and pack size.
+ *
+ * The page reports what is stored and nothing else. It does not authenticate a
+ * document, does not judge whether one is current, and never implies that a
+ * document for one pack size covers another. The route name uses "prüfen" in
+ * its everyday "nachschlagen" sense; the H1, the lead and the clarification in
+ * `CoaLookup.astro` keep that reading unambiguous.
+ *
+ * Indexability is data-driven: while no valid document is linked anywhere in
+ * the catalog the page is `noindex, follow` and stays out of the sitemap and
+ * llms.txt, because a lookup tool that can only answer "nothing here" is not
+ * something to invite search traffic to. `hasLinkedDocuments()` is the single
+ * predicate behind all three decisions — see `lib/content-index.ts`.
+ */
+import BaseLayout from "../layouts/BaseLayout.astro";
+import CoaLookup from "../components/CoaLookup.astro";
+import { listProducts } from "../lib/catalog";
+import { buildCoaLookupModel, hasLinkedDocuments, listedDocuments } from "../lib/coa-documents";
+import { allowedDocumentOrigins } from "../lib/coa-origins";
+import { breadcrumbNode, canonicalUrl, ORGANIZATION_ID } from "../lib/site";
+import { productPath } from "../lib/links";
+
+const title = "COA nachschlagen: Analysedokumentation je Packgröße";
+const description =
+	"Nachschlagen, ob zu einem Produkt und einer Packgröße im Katalog Analysedokumentation hinterlegt ist. Keine Echtheits- oder Qualitätsprüfung.";
+
+const products = await listProducts({ limit: 1000 });
+const model = buildCoaLookupModel(products, allowedDocumentOrigins());
+const indexable = hasLinkedDocuments(model);
+const documents = listedDocuments(model);
+
+const jsonLd: Record<string, unknown>[] = [
+	breadcrumbNode([
+		["Start", "/"],
+		["COA nachschlagen", "/coa-pruefen"],
+	]),
+];
+
+/**
+ * The ItemList exists only when documents are actually listed on the page. An
+ * empty or speculative list would describe content no visitor can see, and a
+ * Product/Offer node here would present analytical documentation as
+ * merchandise — those belong on the product pages.
+ */
+if (documents.length > 0) {
+	jsonLd.push({
+		"@type": "ItemList",
+		"@id": `${canonicalUrl("/coa-pruefen")}#documents`,
+		name: "Verknüpfte Analysedokumentation",
+		numberOfItems: documents.length,
+		publisher: { "@id": ORGANIZATION_ID },
+		itemListElement: documents.map(({ product, status }, index) => ({
+			"@type": "ListItem",
+			position: index + 1,
+			name: `${product.title}, ${status.variant.packSize}`,
+			url: canonicalUrl(productPath(product.handle)),
+		})),
+	});
+}
+---
+
+<BaseLayout title={title} description={description} noindexFollow={!indexable} jsonLd={jsonLd}>
+	<nav class="crumbs" aria-label="Brotkrumen">
+		<a href="/">Start</a>
+		<span aria-hidden="true">/</span>
+		<span>COA nachschlagen</span>
+	</nav>
+
+	<header class="hero">
+		<div>
+			<span class="eyebrow">Labor-Tool</span>
+			<h1>Analysedokumentation zu Produkt und Packgröße nachschlagen</h1>
+			<p class="lead">
+				Schlage nach, ob zu einem Produkt aus dem aktuellen Katalog und einer
+				bestimmten Packgröße ein Analysedokument verknüpft ist, und öffne das
+				verknüpfte Dokument direkt.
+			</p>
+		</div>
+		<aside class="hero__note">
+			<strong>Anzeigen statt bewerten</strong>
+			<p>
+				Angezeigt wird ausschließlich, was im Katalog hinterlegt ist. Eine
+				Echtheitsprüfung findet nicht statt.
+			</p>
+		</aside>
+	</header>
+
+	<section class="intro" aria-labelledby="intro-heading">
+		<h2 id="intro-heading">Warum Dokumente chargenbezogen sind</h2>
+		<p>
+			Analytische Dokumentation beschreibt eine konkrete Produktionscharge, nicht
+			ein Produkt im Allgemeinen. Ein Dokument zu einer Packgröße sagt deshalb
+			nichts über eine andere Packgröße oder eine andere Charge aus — auch dann
+			nicht, wenn beide zum selben Produkt gehören.
+		</p>
+		<p>
+			Was in einem Analysezertifikat steht und wie HPLC- und
+			Massenspektrometrie-Angaben zu lesen sind, steht ausführlich unter{" "}
+			<a href="/qualitaet-analyse/">Qualität und Analyse</a> sowie unter{" "}
+			<a href="/wissen/reinheit-und-coa/">Reinheit und Analysezertifikat (COA)</a>.
+		</p>
+	</section>
+
+	<CoaLookup model={model} />
+</BaseLayout>
+
+<style>
+	.crumbs {
+		display: flex;
+		gap: 0.5rem;
+		align-items: center;
+		font-size: 0.88rem;
+		color: var(--c-muted);
+		margin-bottom: 1.25rem;
+	}
+	.crumbs a {
+		color: var(--c-green-dark);
+	}
+	.hero {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+		gap: 1.5rem;
+		align-items: start;
+		margin-bottom: 2rem;
+	}
+	.eyebrow {
+		display: block;
+		font-size: 0.78rem;
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+		color: var(--c-green-dark);
+		font-weight: 700;
+	}
+	/* German compounds like "Analysedokumentation" are longer than a 320 px
+	   viewport can fit at heading size, and an unbreakable word pushes the whole
+	   document into a horizontal scroll. Hyphenation keeps the page within its
+	   viewport; `lang="de"` on <html> gives the browser the right dictionary. */
+	.hero h1 {
+		margin: 0.4rem 0 0.75rem;
+		overflow-wrap: break-word;
+		hyphens: auto;
+	}
+	.lead {
+		margin: 0;
+		max-width: 62ch;
+		color: var(--c-muted);
+	}
+	.hero__note {
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius);
+		background: var(--c-surface);
+		padding: 1rem 1.15rem;
+	}
+	.hero__note p {
+		margin: 0.35rem 0 0;
+		font-size: 0.92rem;
+		color: var(--c-muted);
+	}
+	.intro {
+		border-top: 1px solid var(--c-border);
+		padding-top: 1.5rem;
+	}
+	.intro h2 {
+		margin-top: 0;
+	}
+	.intro p,
+	.lead,
+	.intro h2 {
+		overflow-wrap: break-word;
+		hyphens: auto;
+	}
+	.intro p {
+		max-width: 68ch;
+	}
+	.intro a {
+		color: var(--c-green-dark);
+		font-weight: 650;
+	}
+	@media (max-width: 860px) {
+		.hero {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

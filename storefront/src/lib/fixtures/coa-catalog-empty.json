@@ -1,0 +1,100 @@
+{
+  "_comment": "Mirrors the real production catalog on 2026-08-06: six products, twelve variants, every variant metadata null, product metadata carrying the placeholder coa_status and purity. Used to prove the tool reports 'no document' honestly and stays out of the sitemap and llms.txt. Test data only — never seeded, never deployed.",
+  "products": [
+    {
+      "id": "prod_bpc",
+      "handle": "bpc-157",
+      "title": "BPC-157",
+      "metadata": {
+        "demo": "true",
+        "purity": ">99%",
+        "coa_status": "verfügbar",
+        "data_status": "placeholder",
+        "research_code": "PEK-BPC157"
+      },
+      "variants": [
+        { "id": "variant_bpc_5", "title": "5 mg", "sku": "PEK-BPC157-5mg", "metadata": null },
+        { "id": "variant_bpc_10", "title": "10 mg", "sku": "PEK-BPC157-10mg", "metadata": null }
+      ]
+    },
+    {
+      "id": "prod_reta",
+      "handle": "retatrutide",
+      "title": "Retatrutide",
+      "metadata": {
+        "demo": "true",
+        "purity": ">99%",
+        "coa_status": "verfügbar",
+        "data_status": "placeholder",
+        "research_code": "PEK-RETA"
+      },
+      "variants": [
+        { "id": "variant_reta_5", "title": "5 mg", "sku": "PEK-RETA-5mg", "metadata": null },
+        { "id": "variant_reta_10", "title": "10 mg", "sku": "PEK-RETA-10mg", "metadata": null },
+        { "id": "variant_reta_15", "title": "15 mg", "sku": "PEK-RETA-15mg", "metadata": null }
+      ]
+    },
+    {
+      "id": "prod_ghk",
+      "handle": "ghk-cu",
+      "title": "GHK-Cu",
+      "metadata": {
+        "demo": "true",
+        "purity": ">99%",
+        "coa_status": "verfügbar",
+        "data_status": "placeholder",
+        "research_code": "PEK-GHKCU"
+      },
+      "variants": [
+        { "id": "variant_ghk_50", "title": "50 mg", "sku": "PEK-GHKCU-50mg", "metadata": null },
+        { "id": "variant_ghk_100", "title": "100 mg", "sku": "PEK-GHKCU-100mg", "metadata": null }
+      ]
+    },
+    {
+      "id": "prod_mots",
+      "handle": "mots-c",
+      "title": "MOTS-c",
+      "metadata": {
+        "demo": "true",
+        "purity": ">99%",
+        "coa_status": "verfügbar",
+        "data_status": "placeholder",
+        "research_code": "PEK-MOTSC"
+      },
+      "variants": [
+        { "id": "variant_mots_10", "title": "10 mg", "sku": "PEK-MOTSC-10mg", "metadata": null }
+      ]
+    },
+    {
+      "id": "prod_semax",
+      "handle": "semax",
+      "title": "Semax",
+      "metadata": {
+        "demo": "true",
+        "purity": ">99%",
+        "coa_status": "verfügbar",
+        "data_status": "placeholder",
+        "research_code": "PEK-SEMAX"
+      },
+      "variants": [
+        { "id": "variant_semax_30", "title": "30 mg", "sku": "PEK-SEMAX-30mg", "metadata": null }
+      ]
+    },
+    {
+      "id": "prod_tb500",
+      "handle": "tb-500",
+      "title": "TB-500",
+      "metadata": {
+        "demo": "true",
+        "purity": ">99%",
+        "coa_status": "verfügbar",
+        "data_status": "placeholder",
+        "research_code": "PEK-TB500"
+      },
+      "variants": [
+        { "id": "variant_tb_5", "title": "5 mg", "sku": "PEK-TB500-5mg", "metadata": null },
+        { "id": "variant_tb_10", "title": "10 mg", "sku": "PEK-TB500-10mg", "metadata": null }
+      ]
+    }
+  ]
+}

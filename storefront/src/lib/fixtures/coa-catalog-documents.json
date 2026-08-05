@@ -1,0 +1,150 @@
+{
+  "_comment": "Synthetic catalog exercising every accept and reject path of the document resolver. No document referenced here exists; the URLs are test strings and are never fetched, seeded or deployed. Allowed origins for these fixtures: https://api.peptideeinkaufen.de and https://peptideeinkaufen.de.",
+  "products": [
+    {
+      "id": "prod_doc",
+      "handle": "dokument-produkt",
+      "title": "Dokument-Produkt",
+      "metadata": {
+        "purity": ">99%",
+        "coa_status": "verfügbar",
+        "data_status": "placeholder",
+        "research_code": "PEK-DOC",
+        "_comment": "Product-level document keys must be ignored entirely.",
+        "coa_document_url": "https://api.peptideeinkaufen.de/static/produktweit.pdf",
+        "coa_batch": "PRODUKT-CHARGE"
+      },
+      "variants": [
+        {
+          "id": "variant_doc_5",
+          "title": "5 mg",
+          "sku": "PEK-DOC-5mg",
+          "metadata": {
+            "coa_document_url": "https://api.peptideeinkaufen.de/static/coa-doc-5mg.pdf",
+            "coa_document_type": "COA",
+            "coa_analysis_date": "2026-05-14",
+            "coa_batch": "CHARGE-5MG-01"
+          }
+        },
+        {
+          "id": "variant_doc_10",
+          "title": "10 mg",
+          "sku": "PEK-DOC-10mg",
+          "metadata": null
+        },
+        {
+          "id": "variant_doc_15",
+          "title": "15 mg",
+          "sku": "PEK-DOC-15mg",
+          "metadata": {
+            "_comment": "Valid URL, every optional field invalid or absent.",
+            "coa_document_url": "https://peptideeinkaufen.de/dokumente/coa-doc-15mg.pdf",
+            "coa_document_type": "   ",
+            "coa_analysis_date": "2026-02-30",
+            "coa_batch": 12345
+          }
+        }
+      ]
+    },
+    {
+      "id": "prod_none",
+      "handle": "kein-dokument",
+      "title": "Kein-Dokument-Produkt",
+      "metadata": {
+        "purity": ">99%",
+        "coa_status": "verfügbar",
+        "data_status": "placeholder",
+        "research_code": "PEK-NONE"
+      },
+      "variants": [
+        { "id": "variant_none_5", "title": "5 mg", "sku": "PEK-NONE-5mg", "metadata": null }
+      ]
+    },
+    {
+      "id": "prod_bad",
+      "handle": "ungueltige-urls",
+      "title": "Ungültige-URLs-Produkt",
+      "metadata": { "research_code": "PEK-BAD" },
+      "variants": [
+        {
+          "id": "variant_bad_http",
+          "title": "1 mg",
+          "sku": "PEK-BAD-http",
+          "metadata": { "coa_document_url": "http://api.peptideeinkaufen.de/static/coa.pdf" }
+        },
+        {
+          "id": "variant_bad_file",
+          "title": "2 mg",
+          "sku": "PEK-BAD-file",
+          "metadata": { "coa_document_url": "file:///var/lib/peptides/static/coa.pdf" }
+        },
+        {
+          "id": "variant_bad_data",
+          "title": "3 mg",
+          "sku": "PEK-BAD-data",
+          "metadata": { "coa_document_url": "data:application/pdf;base64,JVBERi0xLjQK" }
+        },
+        {
+          "id": "variant_bad_javascript",
+          "title": "4 mg",
+          "sku": "PEK-BAD-javascript",
+          "metadata": { "coa_document_url": "javascript:alert(document.cookie)" }
+        },
+        {
+          "id": "variant_bad_blob",
+          "title": "5 mg",
+          "sku": "PEK-BAD-blob",
+          "metadata": {
+            "coa_document_url": "blob:https://api.peptideeinkaufen.de/9f1c0e2a-0000-4000-8000-000000000000"
+          }
+        },
+        {
+          "id": "variant_bad_protocol_relative",
+          "title": "6 mg",
+          "sku": "PEK-BAD-protocol-relative",
+          "metadata": { "coa_document_url": "//api.peptideeinkaufen.de/static/coa.pdf" }
+        },
+        {
+          "id": "variant_bad_malformed",
+          "title": "7 mg",
+          "sku": "PEK-BAD-malformed",
+          "metadata": { "coa_document_url": "https://" }
+        },
+        {
+          "id": "variant_bad_not_a_url",
+          "title": "8 mg",
+          "sku": "PEK-BAD-not-a-url",
+          "metadata": { "coa_document_url": "coa-dokument.pdf" }
+        },
+        {
+          "id": "variant_bad_origin",
+          "title": "9 mg",
+          "sku": "PEK-BAD-origin",
+          "metadata": {
+            "coa_document_url": "https://api.peptideeinkaufen.de.evil.test/static/coa.pdf"
+          }
+        },
+        {
+          "id": "variant_bad_credentials",
+          "title": "10 mg",
+          "sku": "PEK-BAD-credentials",
+          "metadata": {
+            "coa_document_url": "https://nutzer:geheim@api.peptideeinkaufen.de/static/coa.pdf"
+          }
+        },
+        {
+          "id": "variant_bad_empty",
+          "title": "11 mg",
+          "sku": "PEK-BAD-empty",
+          "metadata": { "coa_document_url": "" }
+        },
+        {
+          "id": "variant_bad_type",
+          "title": "12 mg",
+          "sku": "PEK-BAD-type",
+          "metadata": { "coa_document_url": 42 }
+        }
+      ]
+    }
+  ]
+}

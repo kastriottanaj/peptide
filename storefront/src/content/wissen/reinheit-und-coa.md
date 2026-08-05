@@ -57,6 +57,12 @@ aussagekräftig, einzeln nur eingeschränkt.
 - Ist ein Chromatogramm abgebildet oder nur ein Zahlenwert genannt?
 - Ist das ausführende Labor benannt?
 
+Ob im Katalog zu einem bestimmten Produkt und einer bestimmten Packgröße ein
+Dokument verknüpft ist, lässt sich unter
+[Analysedokumentation nachschlagen](/coa-pruefen/) einsehen. Angezeigt wird dort
+ausschließlich der hinterlegte Dokumentstatus — eine Echtheitsprüfung findet
+nicht statt.
+
 ---
 
 *Dieser Text dient ausschließlich der wissenschaftlichen Information. Die im
