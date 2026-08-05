@@ -1,0 +1,532 @@
+---
+/**
+ * Product → pack size → document status, server-rendered first.
+ *
+ * The full table is in the HTML: every product, every pack size, every status.
+ * A visitor without JavaScript gets the complete answer by reading it. The
+ * script then hides that table and reveals the search/select controls, which
+ * narrow the same data to one result — the `.js-control` / `data-static-*`
+ * pattern already used by `StackBuilder.astro`.
+ *
+ * The component states what is linked and nothing more. It never describes a
+ * document as authentic, current, or applicable to another pack size or batch;
+ * the clarification below says so in the page's own words.
+ */
+import type { CoaLookupModel } from "../lib/coa-documents";
+import { productPath } from "../lib/links";
+
+interface Props {
+	model: CoaLookupModel;
+}
+
+const { model } = Astro.props;
+
+const NO_DOCUMENT = "Für diese Packgröße ist derzeit kein Analysedokument verknüpft.";
+const NOT_RECORDED = "nicht hinterlegt";
+
+/** The document payload the script reads, keyed by handle and pack size. */
+const lookupData = model.products.map((product) => ({
+	handle: product.handle,
+	title: product.title,
+	researchCode: product.researchCode,
+	variants: product.variants.map((status) => ({
+		packSize: status.variant.packSize,
+		sku: status.variant.sku,
+		document:
+			status.state === "document"
+				? {
+						url: status.document.url,
+						type: status.document.type,
+						analysisDate: status.document.analysisDate,
+						batch: status.document.batch,
+					}
+				: null,
+	})),
+}));
+---
+
+<section class="coa" aria-labelledby="coa-heading" data-coa-lookup>
+	<div class="section-head">
+		<span class="eyebrow">Katalogdaten</span>
+		<h2 id="coa-heading">Dokumentstatus anzeigen</h2>
+		<p class="coa__clarification">
+			Dieses Werkzeug zeigt ausschließlich Dokumente an, die im Katalog verknüpft
+			sind. Es prüft weder deren Echtheit noch, ob sie für eine andere Charge oder
+			Packgröße gelten.
+		</p>
+	</div>
+
+	{
+		!model.catalogAvailable ? (
+			<div class="coa__state" data-catalog-unavailable>
+				<p>
+					Der Produktkatalog steht derzeit nicht zur Verfügung, deshalb lässt sich
+					kein Dokumentstatus anzeigen.
+				</p>
+				<p>
+					<a href="/produkte/">Zum Sortiment</a> ·{" "}
+					<a href="/support/anfrage/">Support kontaktieren</a>
+				</p>
+			</div>
+		) : (
+			<>
+				<div class="coa__controls js-control" hidden>
+					<div class="coa__field">
+						<label for="coa-search">Produkt suchen</label>
+						<input
+							type="search"
+							id="coa-search"
+							name="coa-search"
+							autocomplete="off"
+							placeholder="Name oder Forschungscode"
+							data-coa-search
+						/>
+					</div>
+					<div class="coa__field">
+						<label for="coa-product">Produkt</label>
+						<select id="coa-product" data-coa-product></select>
+					</div>
+					<div class="coa__field">
+						<label for="coa-variant">Packgröße</label>
+						<select id="coa-variant" data-coa-variant></select>
+					</div>
+				</div>
+
+				<p class="coa__empty js-control" hidden data-coa-no-match>
+					Kein Produkt im Katalog entspricht dieser Suche.
+				</p>
+
+				<div class="coa__result js-control" hidden data-coa-result></div>
+
+				<p class="coa__status" role="status" aria-live="polite" data-coa-announce></p>
+
+				<div class="coa__table-wrap" data-coa-static>
+					<table class="coa__table">
+						<caption>
+							Analysedokumentation je Produkt und Packgröße im aktuellen Katalog
+						</caption>
+						<thead>
+							<tr>
+								<th scope="col">Produkt</th>
+								<th scope="col">Packgröße</th>
+								<th scope="col">SKU</th>
+								<th scope="col">Dokumentstatus</th>
+							</tr>
+						</thead>
+						<tbody>
+							{model.products.map((product) =>
+								product.variants.length === 0 ? (
+									<tr>
+										<th scope="row">
+											<a href={productPath(product.handle)}>{product.title}</a>
+										</th>
+										<td colspan="3">Für dieses Produkt sind keine Packgrößen im Katalog.</td>
+									</tr>
+								) : (
+									product.variants.map((status, index) => (
+										<tr>
+											<th scope="row">
+												{index === 0 ? (
+													<a href={productPath(product.handle)}>{product.title}</a>
+												) : (
+													<span class="coa__repeat">{product.title}</span>
+												)}
+											</th>
+											<td>{status.variant.packSize}</td>
+											<td>{status.variant.sku ?? "—"}</td>
+											<td>
+												{status.state === "document" ? (
+													<>
+														<a
+															class="coa__doc-link"
+															href={status.document.url}
+															rel="noopener noreferrer"
+														>
+															{status.document.type ?? "Analysedokument"} für{" "}
+															{product.title}, {status.variant.packSize} öffnen
+														</a>
+														<span class="coa__doc-meta">
+															Dokumenttyp: {status.document.type ?? NOT_RECORDED} ·
+															Analysedatum: {status.document.analysisDate ?? NOT_RECORDED} ·
+															Charge: {status.document.batch ?? NOT_RECORDED}
+														</span>
+													</>
+												) : (
+													NO_DOCUMENT
+												)}
+											</td>
+										</tr>
+									))
+								),
+							)}
+						</tbody>
+					</table>
+				</div>
+			</>
+		)
+	}
+
+	<p class="coa__links">
+		Wie Analysedaten einzuordnen sind:{" "}
+		<a href="/qualitaet-analyse/">Qualität und Analyse</a> ·{" "}
+		<a href="/wissen/reinheit-und-coa/">Reinheit und Analysezertifikat (COA)</a> ·{" "}
+		<a href="/support/anfrage/">Dokumentation anfragen</a>
+	</p>
+</section>
+
+<script is:inline type="application/json" data-coa-data set:html={JSON.stringify(lookupData)} />
+
+<script>
+	import { foldSearchText, searchTerms } from "../lib/search";
+
+	type LookupDocument = {
+		url: string;
+		type: string | null;
+		analysisDate: string | null;
+		batch: string | null;
+	};
+	type LookupVariant = { packSize: string; sku: string | null; document: LookupDocument | null };
+	type LookupProduct = {
+		handle: string;
+		title: string;
+		researchCode: string | null;
+		variants: LookupVariant[];
+	};
+
+	const NOT_RECORDED = "nicht hinterlegt";
+	const NO_DOCUMENT = "Für diese Packgröße ist derzeit kein Analysedokument verknüpft.";
+
+	const root = document.querySelector<HTMLElement>("[data-coa-lookup]");
+	const dataNode = document.querySelector<HTMLScriptElement>("[data-coa-data]");
+
+	if (root && dataNode) {
+		const products = JSON.parse(dataNode.textContent ?? "[]") as LookupProduct[];
+
+		const search = root.querySelector<HTMLInputElement>("[data-coa-search]");
+		const productSelect = root.querySelector<HTMLSelectElement>("[data-coa-product]");
+		const variantSelect = root.querySelector<HTMLSelectElement>("[data-coa-variant]");
+		const result = root.querySelector<HTMLElement>("[data-coa-result]");
+		const noMatch = root.querySelector<HTMLElement>("[data-coa-no-match]");
+		const announce = root.querySelector<HTMLElement>("[data-coa-announce]");
+		const staticTable = root.querySelector<HTMLElement>("[data-coa-static]");
+
+		// Only now that the script is running does the interactive view replace the
+		// static one. Without JavaScript the table stays and the controls never
+		// appear, so nothing on the page is inert.
+		if (products.length > 0 && productSelect && variantSelect) {
+			root.querySelectorAll<HTMLElement>(".js-control").forEach((control) => {
+				control.hidden = false;
+			});
+			staticTable?.setAttribute("hidden", "");
+
+			// Same folding as the build-time search haystacks, so "packgrosse" and
+			// "Packgröße" match here exactly as they do in site search.
+			const matches = (product: LookupProduct, query: string) => {
+				const terms = searchTerms(query);
+				if (terms.length === 0) return true;
+				const haystack = foldSearchText(
+					[product.title, product.handle, product.researchCode ?? ""].join(" "),
+				);
+				return terms.every((term) => haystack.includes(term));
+			};
+
+			const currentProduct = () =>
+				products.find((product) => product.handle === productSelect.value) ?? null;
+
+			const say = (message: string) => {
+				if (announce) announce.textContent = message;
+			};
+
+			const renderResult = () => {
+				const product = currentProduct();
+				if (!result) return;
+				result.replaceChildren();
+
+				// State (c): the selection no longer names a catalog product. No
+				// nearest-match substitution — the visitor is told, and pointed at the
+				// catalog.
+				if (!product) {
+					const p = document.createElement("p");
+					p.textContent = "Dieses Produkt ist im aktuellen Katalog nicht vorhanden.";
+					const link = document.createElement("p");
+					const anchor = document.createElement("a");
+					anchor.href = "/produkte/";
+					anchor.textContent = "Zum Sortiment";
+					link.append(anchor);
+					result.append(p, link);
+					say("Dieses Produkt ist im aktuellen Katalog nicht vorhanden.");
+					return;
+				}
+
+				const variant =
+					product.variants.find((entry) => entry.packSize === variantSelect.value) ?? null;
+
+				// State (d): the pack size is not one this product has. The real pack
+				// sizes are listed rather than a neighbouring size being substituted.
+				if (!variant) {
+					const p = document.createElement("p");
+					p.textContent = "Diese Packgröße ist für dieses Produkt nicht im Katalog.";
+					const sizes = document.createElement("p");
+					sizes.textContent = product.variants.length
+						? `Im Katalog: ${product.variants.map((entry) => entry.packSize).join(", ")}.`
+						: "Für dieses Produkt sind derzeit keine Packgrößen im Katalog.";
+					result.append(p, sizes);
+					say("Diese Packgröße ist für dieses Produkt nicht im Katalog.");
+					return;
+				}
+
+				const heading = document.createElement("p");
+				heading.className = "coa__result-head";
+				heading.textContent = `${product.title}, ${variant.packSize}${
+					variant.sku ? ` (SKU ${variant.sku})` : ""
+				}`;
+				result.append(heading);
+
+				if (!variant.document) {
+					// State (b).
+					const p = document.createElement("p");
+					p.textContent = NO_DOCUMENT;
+					const support = document.createElement("p");
+					const anchor = document.createElement("a");
+					anchor.href = "/support/anfrage/";
+					anchor.textContent = "Dokumentation anfragen";
+					support.append(anchor);
+					result.append(p, support);
+					say(`Für ${product.title}, ${variant.packSize} ist derzeit kein Analysedokument verknüpft.`);
+				} else {
+					// States (a) and (e): the document is offered either way; absent
+					// optional fields are named as absent rather than filled in.
+					const link = document.createElement("a");
+					link.className = "coa__doc-link";
+					link.href = variant.document.url;
+					link.rel = "noopener noreferrer";
+					link.textContent = `${variant.document.type ?? "Analysedokument"} für ${
+						product.title
+					}, ${variant.packSize} öffnen`;
+
+					const meta = document.createElement("p");
+					meta.className = "coa__doc-meta";
+					meta.textContent = [
+						`Dokumenttyp: ${variant.document.type ?? NOT_RECORDED}`,
+						`Analysedatum: ${variant.document.analysisDate ?? NOT_RECORDED}`,
+						`Charge: ${variant.document.batch ?? NOT_RECORDED}`,
+					].join(" · ");
+
+					result.append(link, meta);
+					say(
+						`Für ${product.title}, ${variant.packSize} ist ein Analysedokument verknüpft.`,
+					);
+				}
+
+				const productLink = document.createElement("p");
+				const anchor = document.createElement("a");
+				anchor.href = `/produkte/${product.handle}/`;
+				anchor.textContent = `Produktseite ${product.title}`;
+				productLink.append(anchor);
+				result.append(productLink);
+			};
+
+			const fillVariants = () => {
+				const product = currentProduct();
+				variantSelect.replaceChildren();
+				for (const variant of product?.variants ?? []) {
+					const option = document.createElement("option");
+					option.value = variant.packSize;
+					option.textContent = variant.packSize;
+					variantSelect.append(option);
+				}
+				variantSelect.disabled = !product || product.variants.length === 0;
+			};
+
+			const fillProducts = () => {
+				const query = search?.value ?? "";
+				const visible = products.filter((product) => matches(product, query));
+				const previous = productSelect.value;
+
+				productSelect.replaceChildren();
+				for (const product of visible) {
+					const option = document.createElement("option");
+					option.value = product.handle;
+					option.textContent = product.title;
+					productSelect.append(option);
+				}
+
+				const keep = visible.some((product) => product.handle === previous);
+				if (keep) productSelect.value = previous;
+
+				productSelect.disabled = visible.length === 0;
+				if (noMatch) noMatch.hidden = visible.length > 0;
+				if (result) result.hidden = visible.length === 0;
+
+				if (visible.length === 0) {
+					say("Kein Produkt im Katalog entspricht dieser Suche.");
+					return;
+				}
+				if (!keep) fillVariants();
+				renderResult();
+			};
+
+			search?.addEventListener("input", fillProducts);
+			productSelect.addEventListener("change", () => {
+				fillVariants();
+				renderResult();
+			});
+			variantSelect.addEventListener("change", renderResult);
+
+			fillProducts();
+			fillVariants();
+			renderResult();
+		}
+	}
+</script>
+
+<style>
+	.coa {
+		margin: 2.5rem 0 0;
+	}
+	.section-head {
+		margin-bottom: 1.25rem;
+	}
+	.eyebrow {
+		display: block;
+		font-size: 0.78rem;
+		letter-spacing: 0.09em;
+		text-transform: uppercase;
+		color: var(--c-green-dark);
+		font-weight: 700;
+	}
+	/* Long German compounds must hyphenate rather than force the page into a
+	   horizontal scroll on a 320 px viewport. */
+	.coa h2,
+	.coa p,
+	.coa td,
+	.coa th,
+	.coa caption {
+		overflow-wrap: break-word;
+		hyphens: auto;
+	}
+	.section-head h2 {
+		margin: 0.35rem 0 0.5rem;
+	}
+	.coa__clarification {
+		max-width: 68ch;
+		color: var(--c-muted);
+		margin: 0;
+	}
+	.coa__controls {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+		gap: 1rem;
+		padding: 1.15rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius);
+		background: var(--c-surface);
+	}
+	.coa__field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		min-width: 0;
+	}
+	.coa__field label {
+		font-weight: 650;
+		font-size: 0.9rem;
+	}
+	.coa__field input,
+	.coa__field select {
+		font: inherit;
+		padding: 0.6rem 0.7rem;
+		border: 1px solid var(--c-border);
+		border-radius: calc(var(--radius) / 2);
+		background: var(--c-field);
+		color: var(--c-ink);
+		max-width: 100%;
+	}
+	.coa__field input:focus-visible,
+	.coa__field select:focus-visible,
+	.coa a:focus-visible {
+		outline: 2px solid var(--c-green-dark);
+		outline-offset: 2px;
+	}
+	.coa__result,
+	.coa__state {
+		margin-top: 1.25rem;
+		padding: 1.15rem;
+		border: 1px solid var(--c-border);
+		border-radius: var(--radius);
+		background: var(--c-surface-2);
+	}
+	.coa__result p,
+	.coa__state p {
+		margin: 0 0 0.5rem;
+	}
+	.coa__result p:last-child,
+	.coa__state p:last-child {
+		margin-bottom: 0;
+	}
+	.coa__result-head {
+		font-weight: 700;
+	}
+	.coa__doc-link {
+		font-weight: 650;
+		color: var(--c-green-dark);
+	}
+	.coa__doc-meta {
+		display: block;
+		font-size: 0.88rem;
+		color: var(--c-muted);
+	}
+	.coa__empty {
+		margin-top: 1rem;
+		color: var(--c-muted);
+	}
+	.coa__status {
+		margin: 0.75rem 0 0;
+		font-size: 0.9rem;
+		color: var(--c-muted);
+		min-height: 1.2em;
+	}
+	/* The table is the no-JavaScript answer, so it scrolls inside its own box
+	   rather than pushing the page into a horizontal scroll on a phone. */
+	.coa__table-wrap {
+		margin-top: 1.5rem;
+		overflow-x: auto;
+	}
+	.coa__table {
+		border-collapse: collapse;
+		width: 100%;
+		min-width: 640px;
+		font-size: 0.94rem;
+	}
+	.coa__table caption {
+		text-align: left;
+		padding-bottom: 0.6rem;
+		color: var(--c-muted);
+		font-size: 0.9rem;
+	}
+	.coa__table th,
+	.coa__table td {
+		border-bottom: 1px solid var(--c-border);
+		padding: 0.65rem 0.75rem;
+		text-align: left;
+		vertical-align: top;
+	}
+	.coa__table thead th {
+		background: var(--c-surface);
+		font-size: 0.85rem;
+		letter-spacing: 0.02em;
+	}
+	.coa__repeat {
+		color: var(--c-muted);
+		font-weight: 500;
+	}
+	.coa__links {
+		margin-top: 1.5rem;
+		font-size: 0.94rem;
+	}
+	@media (max-width: 640px) {
+		.coa__controls {
+			padding: 1rem;
+		}
+	}
+</style>

@@ -262,6 +262,55 @@ export function allStaticEntries(lastModified = buildDate()): IndexedEntry[] {
 	return withTimestamp(STATIC_ROUTES, lastModified);
 }
 
+/**
+ * `/coa-pruefen/`, deliberately not in `STATIC_ROUTES`.
+ *
+ * Its discovery depends on catalog data — whether any variant actually has a
+ * valid analysis document linked — and `STATIC_ROUTES` is a synchronous list of
+ * routes that are always published. Keeping it here means one predicate,
+ * `hasLinkedDocuments()`, decides the page's robots directive, its sitemap entry
+ * and its llms.txt entry together, so a `noindex` page can never be advertised
+ * in a sitemap. `categoryEntries()` above withholds empty categories for exactly
+ * the same reason.
+ *
+ * The predicate counts validated documents only. `metadata.coa_status` is
+ * placeholder data and is never consulted — see `lib/coa-documents.ts`.
+ */
+const COA_CHECKER_ENTRY = {
+	path: "/coa-pruefen",
+	title: "COA nachschlagen: Analysedokumentation je Packgröße",
+	description:
+		"Nachschlagen, ob zu einem Produkt und einer Packgröße im Katalog Analysedokumentation hinterlegt ist.",
+	keywords: ["COA", "Analysedokumentation", "Analysezertifikat", "Charge", "Packgröße"],
+	changeFrequency: "weekly" as const,
+	priority: 0.75,
+};
+
+export async function coaCheckerEntries(
+	lastModified = buildDate(),
+): Promise<IndexedEntry[]> {
+	const { buildCoaLookupModel, hasLinkedDocuments } = await import("./coa-documents");
+	const { allowedDocumentOrigins } = await import("./coa-origins");
+	const model = buildCoaLookupModel(
+		await listProductsInSourceOrder({ limit: 1000 }),
+		allowedDocumentOrigins(),
+	);
+	if (!hasLinkedDocuments(model)) return [];
+	return withTimestamp([COA_CHECKER_ENTRY], lastModified);
+}
+
+/**
+ * The same route for on-site search, regardless of indexability.
+ *
+ * Site search is not a crawler: the page is a valid, useful public URL even
+ * while it is `noindex`, and someone searching "COA" on the site should find it.
+ * `allCategoryEntries()` makes the same distinction for empty categories, and
+ * `robots.txt` disallows `/api/` anyway.
+ */
+export function coaCheckerSearchEntries(lastModified = buildDate()): IndexedEntry[] {
+	return withTimestamp([COA_CHECKER_ENTRY], lastModified);
+}
+
 export async function categoryEntries(lastModified = buildDate()): Promise<IndexedEntry[]> {
 	const [categories, products] = await Promise.all([
 		listCategories(),

@@ -14,9 +14,13 @@ const source = (file: string) => readFileSync(join(SRC, file), "utf8");
 const output = (file: string) => readFileSync(join(DIST, file), "utf8");
 
 const cards = [
-	["COA-Zertifikat", "/qualitaet-analyse/"],
+	// The COA card sends visitors to the lookup tool, which answers the question
+	// the card asks; /qualitaet-analyse/ explains how to read a certificate and is
+	// linked from the tool itself. The Stack-Builder card pointed at /produkte/
+	// because the tools page was written before /stack-builder/ existed.
+	["COA-Zertifikat", "/coa-pruefen/"],
 	["Peptid-Rechner", "/peptid-rechner/"],
-	["Stack-Builder", "/produkte/"],
+	["Stack-Builder", "/stack-builder/"],
 	["Vergleichstool", "/produkte/"],
 	["Produktanfrage", "/support/anfrage/"],
 	["Lagerungs-Guide", "/wissen/lagerung-lyophilisierter-peptide/"],
