@@ -214,17 +214,20 @@ These can be done at any time:
 - [x] ~~IndexNow~~ — built 2026-07-30. The build emits the key file and
       `deploy.sh` pushes the URLs whose HTML changed to Bing, Yandex and the
       other participants after publishing. See [indexnow.md](indexnow.md).
-      Ships **off**: `INDEXNOW_KEY` is unset in `/srv/peptides/.env`.
+      Runs **on**: `INDEXNOW_KEY` is configured in `/srv/peptides/.env`.
 
-      - [ ] Decide whether to switch it on now. The site is public and crawlable
-            since 2026-07-29, so Bing will index it regardless; IndexNow only
-            decides whether that takes minutes or weeks. Accelerating it while
-            purity values are fabricated and the legal pages say `[Platzhalter]`
-            is a choice, not an obvious win.
-      - [ ] When switching on: set `INDEXNOW_KEY` in `/srv/peptides/.env`,
-            deploy, then run a full first submission on the server:
-            `cd /srv/peptides/repo/storefront && node scripts/indexnow-submit.mjs
-            --state /srv/peptides/indexnow-state.json --all`
+      - [x] ~~Decide whether to switch it on~~ — enabled. The site is public and
+            crawlable since 2026-07-29, so Bing would index it regardless;
+            IndexNow only decides whether that takes minutes or weeks. Note this
+            was switched on while purity values are still fabricated and the
+            legal pages still say `[Platzhalter]`.
+      - [x] ~~Switch it on~~ — `INDEXNOW_KEY` set in `/srv/peptides/.env`. The
+            2026-08-06 deploy submitted 38 URLs.
+      - Submissions are sourced from the generated sitemaps, so a route the
+        sitemaps withhold is never submitted. `/coa-pruefen/` is excluded while
+        it has no valid linked document — the same predicate that keeps it
+        `noindex, follow` keeps it out of IndexNow, which is the intended
+        behaviour and not a gap to fix.
 - [x] ~~Deployment~~ — done 2026-07-28. Hetzner VPS, no Docker: Postgres, Redis,
       Node and Caddy from apt, Medusa as a systemd service. DNS from Hostinger,
       TLS via Let's Encrypt. See [deploy.md](deploy.md).
