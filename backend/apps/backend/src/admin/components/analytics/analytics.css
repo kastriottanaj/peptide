@@ -752,6 +752,15 @@
   .pa-bar__fill {
     transition: none;
   }
+  /*
+   * The map's pulse is a repeating animation in the reader's peripheral
+   * vision for as long as the tab is open — exactly what this preference is
+   * about. The marker stays; only the ring stops.
+   */
+  .pa-worldmap__pulse {
+    animation: none;
+    opacity: 0.25;
+  }
 }
 
 @keyframes pa-shimmer {
@@ -866,46 +875,159 @@
   font-variant-numeric: tabular-nums;
 }
 
-.pa-map {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 8px;
+/* ------------------------------------------------------------- world map -- */
+
+/*
+ * The map is one flat SVG with no interactive controls: no pan, no zoom, no
+ * projection switch. It answers "where are they" at a glance and hands the
+ * exact numbers to the ranked list beside it and the hidden table beneath it.
+ */
+
+.pa-worldmap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.pa-region {
+.pa-worldmap__frame {
+  position: relative;
+  background: var(--pa-surface-muted);
   border: 1px solid var(--pa-border);
   border-radius: var(--pa-radius-sm);
-  padding: 9px 11px;
-  background: var(--pa-surface-muted);
-  position: relative;
+  padding: 8px;
   overflow: hidden;
 }
 
-.pa-region__fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  background: var(--pa-accent-soft);
+.pa-worldmap__svg {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
-.pa-region__content {
-  position: relative;
+/* Quiet countries are the basemap: present for orientation, not competing. */
+.pa-worldmap__country {
+  fill: var(--pa-border-strong);
+  stroke: var(--pa-surface-muted);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+
+/*
+ * Active countries take the accent at an opacity the component computes from
+ * the value, which is why the colour is set here and the strength is not.
+ */
+.pa-worldmap__country--active {
+  fill: var(--pa-accent);
+  cursor: pointer;
+}
+
+.pa-worldmap__marker {
+  cursor: pointer;
+}
+
+.pa-worldmap__dot {
+  fill: var(--pa-accent);
+  stroke: var(--pa-surface);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+}
+
+.pa-worldmap__marker--hover .pa-worldmap__dot {
+  stroke-width: 2;
+}
+
+/*
+ * The pulse is the one animation on the page, and it earns its place: this
+ * panel refreshes on a 60-second poll with no other cue that what is on screen
+ * is current. It is decorative, so it does not carry the value.
+ */
+.pa-worldmap__pulse {
+  fill: var(--pa-accent);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pa-map-pulse 2.4s ease-out infinite;
+}
+
+@keyframes pa-map-pulse {
+  0% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+.pa-worldmap__tip {
+  position: absolute;
+  pointer-events: none;
   display: flex;
-  justify-content: space-between;
+  gap: 8px;
   align-items: baseline;
+  background: var(--pa-primary);
+  color: #f4f7f4;
+  border-radius: var(--pa-radius-sm);
+  padding: 5px 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  box-shadow: 0 4px 12px rgba(16, 26, 20, 0.25);
+  z-index: 20;
+  white-space: nowrap;
+  transform: translate(-50%, calc(-100% - 8px));
+}
+
+.dark .pa-worldmap__tip {
+  color: #171a18;
+}
+
+.pa-worldmap__tip-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.pa-worldmap__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: 8px;
 }
 
-.pa-region__name {
-  font-size: 12px;
-  color: var(--pa-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.pa-worldmap__legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.pa-region__value {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--pa-accent);
+.pa-worldmap__legend-label {
+  font-size: 11px;
+  color: var(--pa-text-faint);
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The ramp mirrors `intensity()` in the component: it starts pale rather than
+ * at nothing, because the fill does — the lightest country on the map is still
+ * meant to be visible.
+ */
+.pa-worldmap__ramp {
+  width: 96px;
+  height: 7px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--pa-accent-soft),
+    var(--pa-accent)
+  );
+}
+
+.pa-worldmap__note {
+  font-size: 11px;
+  color: var(--pa-text-muted);
+  margin: 0;
 }

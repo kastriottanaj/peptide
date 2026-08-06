@@ -37,6 +37,7 @@ import {
   statusTone,
   type SectionState,
 } from "./primitives";
+import { WorldMap } from "./world-map";
 import { Link } from "react-router-dom";
 
 const REALTIME_WINDOW = "GA4 realtime · approximately the last 30 minutes";
@@ -121,17 +122,16 @@ export function LiveTab({ realtime, live, todaySummary, polling }: Props) {
       <Grid>
         <Col span={8}>
           {/*
-            No map. The repository has no mapping library and no world
-            topology asset, and adding one — plus the GeoJSON it needs — to
-            colour twenty country names would be a large dependency for a
-            panel that is fully readable as a ranked list. The list below is
-            the accessible presentation the design asks to accompany a map, so
-            it stands on its own.
+            The map draws from committed SVG path data, not a mapping library
+            — see `world-map.tsx`. It is a picture of *where*, deliberately
+            paired with the ranked list beside it for *how many*: reading an
+            exact figure off a choropleth is guesswork, and this panel is
+            often looking at single-digit counts.
           */}
           <Card
             title="Active users by country"
             hint={REALTIME_WINDOW}
-            note="Shown as a ranked distribution rather than a map: no mapping library is bundled with this admin, and adding one for this panel was not judged worth the payload."
+            note="Shading and marker size show each country's share of active users. Exact counts are in Top locations."
           >
             <Section
               state={realtime}
@@ -144,35 +144,16 @@ export function LiveTab({ realtime, live, todaySummary, polling }: Props) {
                 />
               }
             >
-              {(data) => {
-                const max = rowsPeak(data.activeUsersByCountry, "activeUsers");
-
-                return (
-                  <div className="pa-map">
-                    {data.activeUsersByCountry.slice(0, 12).map((row) => {
-                      const users = Number(row.activeUsers) || 0;
-                      return (
-                        <div className="pa-region" key={String(row.country)}>
-                          <div
-                            className="pa-region__fill"
-                            style={{
-                              width: `${max ? (users / max) * 100 : 0}%`,
-                            }}
-                          />
-                          <div className="pa-region__content">
-                            <span className="pa-region__name">
-                              {String(row.country) || "(not set)"}
-                            </span>
-                            <span className="pa-region__value">
-                              {formatNumber(users)}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              }}
+              {(data) => (
+                <WorldMap
+                  rows={data.activeUsersByCountry.map((row) => ({
+                    name: String(row.country ?? ""),
+                    value: Number(row.activeUsers) || 0,
+                  }))}
+                  unit="active users"
+                  formatValue={formatNumber}
+                />
+              )}
             </Section>
           </Card>
         </Col>

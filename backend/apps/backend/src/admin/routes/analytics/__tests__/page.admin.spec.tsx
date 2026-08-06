@@ -530,15 +530,17 @@ describe("Live tab", () => {
     expect(screen.getByText(/Medusa · .* received/)).toBeInTheDocument();
   });
 
-  it("renders a location distribution and a ranked list, not a map", () => {
+  it("renders a world map alongside the ranked list", () => {
     renderPage("/analytics?tab=live");
 
     expect(screen.getByText("Active users by country")).toBeInTheDocument();
     expect(screen.getByText("Top locations")).toBeInTheDocument();
     expect(screen.getAllByText("Germany").length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(/no mapping library is bundled/),
-    ).toBeInTheDocument();
+
+    // The map is a picture of *where*; the list beside it stays because
+    // reading an exact count off a choropleth is guesswork.
+    const map = screen.getByRole("img", { name: /Active users by country/ });
+    expect(map.tagName.toLowerCase()).toBe("svg");
   });
 
   it("renders the activity panels", () => {
