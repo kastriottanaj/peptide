@@ -133,17 +133,16 @@ export function LiveTab({ realtime, live, todaySummary, polling }: Props) {
             hint={REALTIME_WINDOW}
             note="Shading and marker size show each country's share of active users. Exact counts are in Top locations."
           >
-            <Section
-              state={realtime}
-              skeleton={<SkeletonRows rows={6} />}
-              isEmpty={(data) => data.activeUsersByCountry.length === 0}
-              empty={
-                <EmptyState
-                  title="Nobody is active right now"
-                  description="No visitors with statistics consent in the last 30 minutes."
-                />
-              }
-            >
+            {/*
+              No `isEmpty` here, deliberately. Every other panel on this tab
+              collapses to an empty state with nothing to report, and for a
+              ranked list that is right. A map is different: the basemap is
+              most of the information, and an idle half-hour is this shop's
+              normal reading rather than an error. Collapsing it made the panel
+              look broken — the map was invisible until someone happened to be
+              on the site. The "nobody is active" copy now sits *over* the map.
+            */}
+            <Section state={realtime} skeleton={<SkeletonRows rows={6} />}>
               {(data) => (
                 <WorldMap
                   rows={data.activeUsersByCountry.map((row) => ({
@@ -152,6 +151,8 @@ export function LiveTab({ realtime, live, todaySummary, polling }: Props) {
                   }))}
                   unit="active users"
                   formatValue={formatNumber}
+                  emptyTitle="Nobody is active right now"
+                  emptyDescription="No visitors with statistics consent in the last 30 minutes."
                 />
               )}
             </Section>

@@ -47,6 +47,16 @@ type Props = {
    */
   unit: string;
   formatValue: (value: number) => string;
+  /**
+   * Shown over the basemap when there is nothing to plot.
+   *
+   * The map deliberately does **not** collapse to an empty state. An empty
+   * ranked list is nothing to look at, but an empty map is still a map — and
+   * for this shop "nobody is active" is the normal reading, not an error. The
+   * panel should look the same at 3am as it does at noon, minus the markers.
+   */
+  emptyTitle?: string;
+  emptyDescription?: string;
 };
 
 const capitalize = (text: string) =>
@@ -77,7 +87,13 @@ function markerRadius(value: number, max: number): number {
   return MARKER_MIN + (MARKER_MAX - MARKER_MIN) * Math.sqrt(Math.min(1, value / max));
 }
 
-export function WorldMap({ rows, unit, formatValue }: Props) {
+export function WorldMap({
+  rows,
+  unit,
+  formatValue,
+  emptyTitle,
+  emptyDescription,
+}: Props) {
   const titleId = useId();
   const [hovered, setHovered] = useState<string | null>(null);
 
@@ -104,6 +120,7 @@ export function WorldMap({ rows, unit, formatValue }: Props) {
     : `No ${unit} to show.`;
 
   const active = hovered ? activeById.get(hovered) : null;
+  const nothingToPlot = located.length === 0 && unlocated.length === 0;
 
   return (
     <div className="pa-worldmap">
@@ -182,6 +199,17 @@ export function WorldMap({ rows, unit, formatValue }: Props) {
           </g>
         </svg>
 
+        {nothingToPlot && (emptyTitle || emptyDescription) && (
+          <div className="pa-worldmap__empty">
+            {emptyTitle && (
+              <p className="pa-worldmap__empty-title">{emptyTitle}</p>
+            )}
+            {emptyDescription && (
+              <p className="pa-worldmap__empty-text">{emptyDescription}</p>
+            )}
+          </div>
+        )}
+
         {active && (
           <div
             className="pa-worldmap__tip"
@@ -199,13 +227,16 @@ export function WorldMap({ rows, unit, formatValue }: Props) {
       </div>
 
       <div className="pa-worldmap__foot">
-        <div className="pa-worldmap__legend" aria-hidden="true">
-          <span className="pa-worldmap__legend-label">1</span>
-          <span className="pa-worldmap__ramp" />
-          <span className="pa-worldmap__legend-label">
-            {formatValue(Math.max(1, max))}
-          </span>
-        </div>
+        {/* A scale with nothing on it explains nothing, so it waits for data. */}
+        {!nothingToPlot && (
+          <div className="pa-worldmap__legend" aria-hidden="true">
+            <span className="pa-worldmap__legend-label">1</span>
+            <span className="pa-worldmap__ramp" />
+            <span className="pa-worldmap__legend-label">
+              {formatValue(Math.max(1, max))}
+            </span>
+          </div>
+        )}
 
         {/*
           Unplaceable rows are stated, not hidden. Natural Earth 110m has no

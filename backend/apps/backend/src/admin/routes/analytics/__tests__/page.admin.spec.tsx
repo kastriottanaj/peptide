@@ -577,6 +577,26 @@ describe("Live tab", () => {
     expect(screen.getByText("Nobody is active right now")).toBeInTheDocument();
     expect(screen.getByText("No orders today")).toBeInTheDocument();
   });
+
+  /**
+   * The map shipped behind the ranked list's empty-state guard, so it was
+   * invisible with nobody on the site — the normal state here, and the one a
+   * dashboard is usually opened in. The assertion above passed throughout,
+   * because the copy was there; only the map was missing.
+   */
+  it("still renders the map when nobody is on the site", () => {
+    mocked.useGa4Realtime.mockReturnValue(asResult(loaded(fixtures.emptyRealtime)));
+    mocked.useOpsLive.mockReturnValue(asResult(loaded(fixtures.emptyLive)));
+
+    const { container } = renderPage("/analytics?tab=live");
+
+    expect(
+      screen.getByRole("img", { name: /Active users by country/ }),
+    ).toBeInTheDocument();
+    expect(
+      container.querySelectorAll(".pa-worldmap__country").length,
+    ).toBeGreaterThan(150);
+  });
 });
 
 /* -------------------------------------------------------------- polling -- */
