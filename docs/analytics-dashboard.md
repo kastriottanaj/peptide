@@ -117,8 +117,8 @@ discount code, sales channel, sales by product).
 ### Live (`?tab=live`)
 
 Visitors now (GA4 realtime), visitors today (GA4 summary for `today`), orders
-today and revenue today (both Medusa). Location distribution, active pages,
-events, devices.
+today and revenue today (both Medusa). A world map of active users with the
+ranked location list beside it, active pages, events, devices.
 
 **Polls every 60 seconds while the browser tab is visible, and stops entirely
 when it is hidden.** A hidden tab spends the property's shared Data API quota
@@ -240,8 +240,10 @@ into the file is lost the moment it is mailed on.
 | `src/lib/ops/errors.ts`, `http.ts` | The safe error funnel |
 | `src/api/admin/analytics/ops/*/route.ts` | The three routes |
 | `src/admin/routes/analytics/page.tsx` | The route, nav item, tabs, URL state |
-| `src/admin/components/analytics/*.tsx` | Tabs, primitives, SVG charts |
+| `src/admin/components/analytics/*.tsx` | Tabs, primitives, SVG charts, the world map |
 | `src/admin/components/analytics/analytics.css` | Scoped design tokens and styling |
+| `src/admin/lib/world-geo.ts` | Generated country paths and marker anchors |
+| `src/admin/lib/country-lookup.ts` | GA4 names → map geometry, and what will not match |
 | `src/admin/lib/metrics.ts` | The blended-ratio trap, named once: labels, warnings, safe division |
 | `src/admin/lib/*.ts` | SDK client, queries, formatting, CSV, error taxonomy |
 
@@ -286,12 +288,57 @@ series and a tooltip, one sparkline, and horizontal bars. Every chart carries
 `role="img"` with a generated description and is followed by a visually hidden
 table of the same numbers.
 
-### No map
+### The map, and no mapping library
 
-The Live tab shows a location distribution and a ranked list rather than a world
-map. Adding a mapping library plus its topology data to colour twenty country
-names was not judged worth the payload, and the ranked list is the accessible
-presentation such a map would need anyway.
+The Live tab draws a world map, and it does it the same way the charts are
+drawn: by hand. `src/admin/lib/world-geo.ts` holds 176 countries as SVG path
+data, generated once from `world-atlas` (Natural Earth 110m, public domain) and
+committed as source. There is no mapping library, no topology asset loaded at
+runtime and no projection computed on render — the projection is plate carrée,
+which makes `project(lon, lat)` two multiplications, so a marker can be placed
+without one. The file is 59 kB, about 11 kB over the wire; the library-plus-atlas
+route it replaces is several hundred.
+
+**Do not swap this for a mapping library without a reason that names the
+payload.** The alternative was measured, not assumed: the prior-art project
+does this with `three.js`, `d3-geo`, `topojson-client` and `world-atlas`
+together.
+
+Three things about the geometry are non-obvious, and each was a visible bug
+before it was a rule. The regeneration recipe in the file header repeats them:
+
+- **Rings are split at the antimeridian.** Russia and Fiji are single rings
+  that leave the right edge and continue on the left; drawn whole, the seam
+  becomes a horizontal streak across the entire map.
+- **Marker anchors are per-piece area centroids taken before rounding.** The
+  centroid of a wrapping ring is meaningless — Russia's landed at 203°E, off
+  the map, and Fiji's in the middle of Africa.
+- **Missing ISO ids are not zero-padded.** Kosovo, Northern Cyprus and
+  Somaliland have no code; padding an empty one gives all three `000`, and
+  colouring any one of them colours the other two.
+
+The ranked list stays beside the map. Reading an exact figure off a choropleth
+is guesswork, and this panel routinely shows single-digit counts.
+
+#### Country names
+
+GA4 and Natural Earth are different naming authorities and they disagree —
+"United States" against "United States of America", "Congo - Kinshasa" against
+"Dem. Rep. Congo". `src/admin/lib/country-lookup.ts` reconciles them by
+expanding Natural Earth's abbreviations and then applying a small alias table,
+and it deliberately does **no fuzzy matching**: edit distance puts Niger next to
+Nigeria and Austria next to Australia, and a map showing the wrong country looks
+authoritative in a way a missing one does not.
+
+Two consequences the panel makes visible rather than hiding:
+
+- Names that do not resolve — including GA4's `(not set)` — are listed under
+  the map as "Not on the map", so the map's total can never quietly drift from
+  the list's.
+- Natural Earth 110m contains no micro-states, so Liechtenstein, Malta,
+  Singapore and the like are carried as hand-placed markers with no outline.
+  Every active country gets a marker regardless of size, which is what keeps a
+  city-state findable at all.
 
 ## Running it locally
 
