@@ -160,3 +160,63 @@ describe("honesty about what it cannot place", () => {
     expect(container.querySelectorAll(".pa-worldmap__dot")).toHaveLength(0);
   });
 });
+
+/**
+ * The panel shipped once with the ranked list's empty-state guard still in
+ * front of it, so the map was invisible whenever nobody was on the site —
+ * which is this shop's normal state, and is exactly when someone opens the
+ * dashboard to look. These pin the map to the screen.
+ */
+describe("with nothing active", () => {
+  it("still draws the world", () => {
+    const { container } = renderMap([]);
+
+    expect(
+      container.querySelectorAll(".pa-worldmap__country").length,
+    ).toBeGreaterThan(150);
+  });
+
+  it("puts the explanation over the map rather than replacing it", () => {
+    const { container } = render(
+      <WorldMap
+        rows={[]}
+        unit="active users"
+        formatValue={format}
+        emptyTitle="Nobody is active right now"
+        emptyDescription="No visitors with statistics consent in the last 30 minutes."
+      />,
+    );
+
+    expect(screen.getByText("Nobody is active right now")).toBeInTheDocument();
+    expect(
+      container.querySelectorAll(".pa-worldmap__country").length,
+    ).toBeGreaterThan(150);
+  });
+
+  it("hides the legend, which would otherwise scale nothing", () => {
+    const { container } = renderMap([]);
+
+    expect(container.querySelector(".pa-worldmap__legend")).toBeNull();
+  });
+
+  it("shows the legend again as soon as there is data", () => {
+    const { container } = renderMap([{ name: "Germany", value: 3 }]);
+
+    expect(container.querySelector(".pa-worldmap__legend")).not.toBeNull();
+  });
+
+  it("keeps the empty copy out of the way once data arrives", () => {
+    render(
+      <WorldMap
+        rows={[{ name: "Germany", value: 3 }]}
+        unit="active users"
+        formatValue={format}
+        emptyTitle="Nobody is active right now"
+      />,
+    );
+
+    expect(
+      screen.queryByText("Nobody is active right now"),
+    ).not.toBeInTheDocument();
+  });
+});
