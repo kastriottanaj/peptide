@@ -66,7 +66,7 @@ without touching a page:
 |---|---|
 | `PUBLIC_CONTACT_EMAIL` | `info@peptideeinkaufen.de` — set and live |
 | `PUBLIC_CONTACT_PHONE` | set 2026-08-15 — a German mobile number, read it from the server |
-| `PUBLIC_CONTACT_HOURS` (optional, needs a phone) | **open** — no hours published, so the line promises no availability |
+| `PUBLIC_CONTACT_HOURS` (optional, needs a phone) | `24/7 erreichbar` — set 2026-08-15 |
 
 > **The address is configured and public**, on `/contact/`, `/datenschutz/` and
 > now `/impressum/`. The mailbox is also the one the support inbox polls
@@ -93,9 +93,27 @@ that becomes a problem the fix is to unset `PUBLIC_CONTACT_PHONE` and redeploy �
 the Impressum returns to `[Telefonnummer]`, `/contact/` drops the channel, and
 the JSON-LD omits the property. Nothing else has to change.
 
-No opening hours are configured, and `resolveContactChannels` drops hours
-without a phone anyway, so the site promises no availability window on the
-line — only that it exists.
+⚠️ **`24/7 erreichbar` is an availability promise, and it is published on an
+indexable page.** It renders under the number on `/contact/`. Everything else on
+this site was written to avoid stating an operational fact nothing backs — no
+delivery time, no response time, no dispatch SLA, all enforced by
+`operational-claims.test.ts` — and a permanent-availability claim is the same
+shape of statement. Nothing enforces it here because hours are free text from
+the environment, not page copy.
+
+Two reasons to keep an eye on it:
+
+- **It is checkable.** A customer who calls at 03:00 and gets no answer has a
+  concrete discrepancy between the page and reality. In Germany a misleading
+  availability claim is the kind of thing § 5 UWG covers, and competitors and
+  Abmahnvereine act on exactly this class of statement.
+- **It raises the cost of the number itself.** The line is a personal mobile
+  published on a crawled page; "24/7" invites calls at any hour from anyone who
+  scrapes it.
+
+Narrowing it later is a one-line env change and a redeploy — for example real
+hours (`Mo–Fr 9–18 Uhr`), or unsetting the variable so the number is published
+with no availability claim attached.
 
 **Hosting provider** — this one is already known and needs an Art. 28 DSGVO
 processing agreement (AVV) in place:
