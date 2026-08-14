@@ -254,9 +254,10 @@ codebase. That project is read-only prior art; never edit or deploy it from here
 **The storefront is public.** The pre-launch gate (HTTP basic auth plus a
 site-wide `X-Robots-Tag: noindex`) was removed on 2026-07-29 by explicit decision,
 ahead of the blockers in [docs/go-live-checklist.md](docs/go-live-checklist.md).
-Those blockers are still open: bank details are empty, the legal pages still render
-`[Platzhalter]` company data, there is no order confirmation email, and catalog
-purity values are fabricated.
+Most are still open: the legal pages still render `[Platzhalter]` company data,
+there is no order confirmation email, and catalog purity values are fabricated.
+Bank details are configured as of 2026-08-15, but with an **interim personal Wise
+account** rather than the business account.
 
 Three consequences for any change you make here:
 
@@ -265,9 +266,11 @@ Three consequences for any change you make here:
   WebMCP tool are not rendered, and the store API refuses cart completion with
   503. The switch lives in `storefront/src/lib/shop.ts` and
   `backend/apps/backend/src/api/middlewares.ts`. **Reopening it is a launch
-  decision** tied to the bank details, governed by
-  [docs/go-live-checklist.md](docs/go-live-checklist.md) §1 — never a side effect
-  of other work, and never one app without the other.
+  decision**, governed by
+  [docs/go-live-checklist.md](docs/go-live-checklist.md) — never a side effect
+  of other work, and never one app without the other. Configuring the bank
+  details on 2026-08-15 deliberately did *not* reopen it: §2, §3 and §6 are
+  still open, and §6 means a customer would receive nothing in writing.
 - The four legal pages keep their own `noindex` via the `draft` prop in
   `LegalLayout`. **Do not remove a `draft` prop** until that page's real company
   data is in place — it is the only thing keeping unreviewed legal text out of

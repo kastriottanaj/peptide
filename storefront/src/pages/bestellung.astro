@@ -16,8 +16,10 @@ const placeholderBank = bankDetailsArePlaceholder();
 		<div data-order-missing hidden>
 			<h1>Bestellung nicht gefunden</h1>
 			<p>
-				Zu diesem Link liegt keine Bestellung vor. Bitte prüfen Sie die
-				Bestätigungs-E-Mail oder kontaktieren Sie den Support.
+				Zu diesem Link liegt keine Bestellung vor. Sie können Ihre Bestellung
+				mit Bestellnummer und E-Mail-Adresse
+				unter <a href="/bestellung/suchen/">Bestellung suchen</a> erneut
+				aufrufen.
 			</p>
 			<a class="btn btn--green" href="/contact/">Support kontaktieren</a>
 		</div>
@@ -26,8 +28,9 @@ const placeholderBank = bankDetailsArePlaceholder();
 			<span class="eyebrow">Bestellung eingegangen</span>
 			<h1>Vielen Dank für Ihre Bestellung</h1>
 			<p class="lead">
-				Bestellnummer <strong data-order-number></strong>. Eine Bestätigung geht
-				an <strong data-order-email></strong>.
+				Bestellnummer <strong data-order-number></strong>, hinterlegt
+				für <strong data-order-email></strong>. Bitte notieren Sie sich
+				die Angaben unten — Sie erhalten sie nicht per E-Mail.
 			</p>
 
 			<section class="pay">
@@ -61,16 +64,18 @@ const placeholderBank = bankDetailsArePlaceholder();
 
 				<p class="pay__warning" data-reference-missing hidden>
 					<strong>Bitte noch nicht überweisen.</strong> Der Verwendungszweck zu
-					dieser Bestellung liegt uns gerade nicht vor. Wir senden ihn Ihnen per
-					E-Mail zu — ohne ihn können wir Ihre Zahlung nicht zuordnen.
+					dieser Bestellung liegt uns gerade nicht vor. Bitte kontaktieren Sie
+					den <a href="/contact/">Support</a> — ohne ihn können wir Ihre Zahlung
+					nicht zuordnen.
 				</p>
 
 				<p class="pay__note">
 					Bitte geben Sie den Verwendungszweck exakt an — daran ordnen wir Ihre
 					Zahlung zu. Der Versand erfolgt nach Zahlungseingang.
 					<br />
-					Diese Angaben können Sie jederzeit unter
-					<a href="/bestellung/suchen/">Bestellung suchen</a> erneut aufrufen.
+					Diese Angaben können Sie jederzeit
+					unter <a href="/bestellung/suchen/">Bestellung suchen</a> erneut
+					aufrufen.
 				</p>
 			</section>
 

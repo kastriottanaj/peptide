@@ -157,12 +157,19 @@ const SECTIONS: LegalSection[] = Object.values(S);
 
 	<h2 id={S.payment.id}>{S.payment.heading}</h2>
 	<p>
-		Die Zahlung erfolgt ausschließlich per Vorkasse durch Banküberweisung. Ein
-		Zahlungsdienstleister ist nicht zwischengeschaltet. Wir erhalten von Ihrer
-		Bank die zur Zuordnung der Zahlung erforderlichen Angaben, insbesondere Name
-		des Kontoinhabers, Betrag und den von uns vergebenen Verwendungszweck.
+		Die Zahlung erfolgt ausschließlich per Vorkasse durch Banküberweisung. Im
+		Bestellvorgang selbst ist kein Zahlungsdienstleister zwischengeschaltet:
 		Kreditkarten- oder sonstige Zahlungsdaten verarbeiten wir nicht und erheben
-		sie auch nicht im Bestellvorgang.
+		sie auch nicht. Die Überweisung lösen Sie selbst bei Ihrer Bank aus.
+	</p>
+	<p>
+		Das Empfängerkonto wird bei Wise
+		geführt — <span class="todo">[Firmierung und Anschrift des
+		Kontoanbieters]</span>. Wise verarbeitet als Anbieter
+		dieses Kontos die mit Ihrer Überweisung übermittelten Angaben — insbesondere
+		Name des Kontoinhabers, Betrag und den von uns vergebenen Verwendungszweck —
+		und stellt sie uns zur Zuordnung der Zahlung bereit. Weitere Angaben zu Ihrer
+		Person übermitteln wir Wise nicht.
 	</p>
 	<p><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. b DSGVO.</p>
 

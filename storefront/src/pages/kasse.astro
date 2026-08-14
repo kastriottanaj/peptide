@@ -245,6 +245,13 @@ const countries = ORDERS_ENABLED ? await listDeliveryCountries() : [];
 					boundShippingOptionId = optionId;
 					paint(cart);
 					showError("");
+					// `withCartWrite` already ran its last `syncSubmitState()` from
+					// `finally`, while this was still null — so without re-syncing
+					// here the button never comes back and no order can be placed
+					// at all. Arming it is deliberately the last step: the option is
+					// bound on the server and the new total is on screen first, so
+					// the button is never live against a stale figure.
+					syncSubmitState();
 				} catch (error) {
 					console.error(error);
 					showError(

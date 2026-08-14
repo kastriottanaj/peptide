@@ -20,34 +20,35 @@ Update it as items land.
 > **The site went public on 2026-07-29, with §1, §2, §3 and §6 still open.** The
 > pre-launch gate was removed by explicit decision ahead of these items, so
 > everything below is now a **live exposure**, not a pre-launch task. The shop is
-> reachable and can accept an order it cannot be paid for. Data to fill the gaps
-> is to follow.
+> reachable and every page is crawlable. It does not take orders: that is
+> `ORDERS_ENABLED`, still unset, and not a consequence of the items below.
 
-**Hard blockers, none of them cleared:** real bank details (§1), real company
-data on the legal pages (§2), the B2B/B2C decision (§3), and the order
-confirmation email (§6). The shop either cannot take money or cannot lawfully
-trade without them.
+**Hard blockers:** real company data on the legal pages (§2), the B2B/B2C
+decision (§3), and the order confirmation email (§6). §1 is **provisionally
+cleared** — an interim personal account is configured, see below — but the shop
+still cannot lawfully trade without §2 and §3.
 
 Two mitigations are in place:
 
 - **Ordering is closed** as of 2026-07-30 (`ORDERS_ENABLED` unset in
   `/srv/peptides/.env`): the catalog is public, but add-to-cart and the checkout
-  form are not rendered and the API refuses cart completion with 503. So the
-  worst case above — an order nobody can pay for — is not reachable while §1 is
-  open. See [checkout.md](checkout.md).
+  form are not rendered and the API refuses cart completion with 503. It stayed
+  closed on 2026-08-15 when the interim bank details were configured — an
+  explicit decision, because §2, §3 and §6 are still open. See
+  [checkout.md](checkout.md).
 - The four legal pages keep a per-page `noindex` from the `draft` prop, so
   unreviewed legal text is publicly reachable but not indexed. `deploy.sh` checks
   `/impressum` for it on every deploy.
 
 ---
 
-## 1. Bank account — blocks all payments
+## 1. Bank account — provisionally cleared 2026-08-15
 
-Payment is direct bank transfer only. Until the account exists, no customer can
-pay. Every order confirmation currently shows `PLATZHALTER` and an orange
-warning telling the customer **not** to transfer.
+Payment is direct bank transfer only. An **interim personal Wise account** is
+configured, so a confirmation now shows real details and no orange warning.
+This is explicitly a stopgap until the business account exists.
 
-Set in `storefront/.env`, then rebuild:
+Set in `/srv/peptides/.env` (and `storefront/.env` locally), then rebuild:
 
 ```dotenv
 PUBLIC_BANK_ACCOUNT_HOLDER=   # exactly as registered with the bank
@@ -59,12 +60,24 @@ PUBLIC_BANK_NAME=
 No code change needed — see [checkout.md](checkout.md). `.env` is git-ignored;
 the IBAN must never be committed.
 
-- [ ] Business bank account opened
-- [ ] Four variables set and storefront rebuilt
+- [x] ~~Four variables set and storefront rebuilt~~ — 2026-08-15, interim
+      personal Wise account (Belgian IBAN). Verified against two local test
+      orders: real details, no warning, and the reference on screen equals
+      `metadata->>'bank_reference'` in Postgres.
+- [ ] **Business bank account opened** — still open. Three things follow from
+      the interim account being personal and foreign, and none of them is
+      cosmetic:
+      - the payee name is a private individual while the Impressum is still
+        `[Platzhalter]` (§2), which to a customer looks exactly like a scam;
+      - the IBAN is Belgian, not German — legitimate for SEPA, but it needs the
+        Impressum to explain who is being paid;
+      - Wise is named in `datenschutz.astro` as the recipient of the payment
+        data, with its company data still `[Platzhalter]` pending §4.
 - [ ] `ORDERS_ENABLED=true` in `/srv/peptides/.env` — reopens add-to-cart, the
-      checkout form and cart completion. Do this **with** the four values above,
-      never before them
-- [ ] Test order shows real details and no warning
+      checkout form and cart completion. **Deliberately still unset.** The bank
+      details alone were never the whole gate: §2, §3 and §6 remain open, and
+      §6 in particular means a customer gets nothing in writing.
+- [ ] Test order against production once it is open
 
 ## 2. Company details — blocks the legal pages
 
