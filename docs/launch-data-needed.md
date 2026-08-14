@@ -65,8 +65,8 @@ without touching a page:
 | Variable | Value |
 |---|---|
 | `PUBLIC_CONTACT_EMAIL` | `info@peptideeinkaufen.de` — set and live |
-| `PUBLIC_CONTACT_PHONE` (only if publicly offered) | **open** — the Impressum shows `[Telefonnummer]` |
-| `PUBLIC_CONTACT_HOURS` (optional, needs a phone) | |
+| `PUBLIC_CONTACT_PHONE` | set 2026-08-15 — a German mobile number, read it from the server |
+| `PUBLIC_CONTACT_HOURS` (optional, needs a phone) | **open** — no hours published, so the line promises no availability |
 
 > **The address is configured and public**, on `/contact/`, `/datenschutz/` and
 > now `/impressum/`. The mailbox is also the one the support inbox polls
@@ -79,11 +79,23 @@ without touching a page:
 > the mailbox is ever retired, unset the variable and redeploy rather than
 > leaving it on the page.
 
-A phone number is **not** required by § 5 DDG as long as the email enables fast
-electronic contact, so the missing number does not block the Impressum. It is
-listed above because the page currently renders a visible `[Telefonnummer]`
-placeholder — either configure one or drop the row deliberately during the
-legal review.
+⚠️ **The number is published in three places, one of them indexable.** § 5 DDG
+does not require a phone number at all when the email enables fast electronic
+contact, so this was a choice rather than an obligation, and it has costs worth
+knowing:
+
+- `/impressum/` and `/datenschutz/` — `noindex`, so not crawled;
+- **`/contact/` — public and indexable**, as a `tel:` link;
+- the site-wide `Organization` JSON-LD `telephone` property, on every page.
+
+A number on an indexable page is scraped, so expect cold calls and SMS spam. If
+that becomes a problem the fix is to unset `PUBLIC_CONTACT_PHONE` and redeploy —
+the Impressum returns to `[Telefonnummer]`, `/contact/` drops the channel, and
+the JSON-LD omits the property. Nothing else has to change.
+
+No opening hours are configured, and `resolveContactChannels` drops hours
+without a phone anyway, so the site promises no availability window on the
+line — only that it exists.
 
 **Hosting provider** — this one is already known and needs an Art. 28 DSGVO
 processing agreement (AVV) in place:
