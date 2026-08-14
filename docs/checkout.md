@@ -43,11 +43,25 @@ order, sees our account details plus a payment reference, and transfers the
 money themselves. There is no card processor and no crypto.
 
 The configured account is an **interim personal Wise account with a Belgian
-IBAN**, not the business account. It is a stopgap: the payee is a private
-individual, which reads badly next to an Impressum that still says
-`[Platzhalter]`, and swapping it for the business account later is a `.env`
-change plus a redeploy. Wise is named as the recipient of the payment data in
-`datenschutz.astro`; go-live-checklist §1 tracks what is still owed.
+IBAN**, not the business account. It is a stopgap, and swapping it for the
+business account later is a `.env` change plus a redeploy. Wise is named as the
+recipient of the payment data in `datenschutz.astro`; go-live-checklist §1
+tracks what is still owed.
+
+**The payee does not match the Impressum, and that is a known, accepted state**
+(owner's decision, 2026-08-15). The Impressum names a Virginia LLC; the account
+is held by a private individual. It will be reconciled when the business bank
+account is opened.
+
+Two things follow for anyone touching this:
+
+- **Do not set `PUBLIC_BANK_ACCOUNT_HOLDER` to the company name** to make the
+  two agree. The holder must be the name the account is actually held under, or
+  the transfer is rejected by the bank — a mismatch a customer can see beats one
+  their payment silently fails on.
+- **It is dormant only because ordering is closed.** No customer is shown bank
+  details today. Opening `ORDERS_ENABLED` publishes the mismatch in the same
+  moment, so the two decisions are one decision.
 
 The four values live in `/srv/peptides/.env` on the server and
 `storefront/.env` locally:
