@@ -97,7 +97,10 @@ the Datenschutz controller block. All four legal pages still carry the
       wants the authorised representative, and per § 4.4 of the Operating
       Agreement the other members cannot bind the company)
 - [x] ~~Email for the Impressum~~ — configured and live
-- [ ] Phone for the Impressum, or a deliberate decision to drop the row
+- [x] ~~Phone for the Impressum~~ — set 2026-08-15. Not required by § 5 DDG
+      given the email, so this was a choice; note it also publishes on the
+      indexable `/contact/` page and in the site-wide `Organization` JSON-LD.
+      See [launch-data-needed.md](launch-data-needed.md) §1
 - [ ] Register authority and entity number — the Virginia SCC entity ID is not
       in the Operating Agreement
 - [ ] USt-IdNr. — **a US seller shipping to German consumers has German VAT
