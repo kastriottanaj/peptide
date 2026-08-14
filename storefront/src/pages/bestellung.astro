@@ -1,8 +1,15 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { BANK_DETAILS, bankDetailsArePlaceholder } from "../lib/bank";
+import {
+	BANK_DETAILS,
+	bankDetailsArePlaceholder,
+	payeeDiffersFromCompany,
+	payeeExplanation,
+} from "../lib/bank";
+import { COMPANY } from "../lib/company";
 
 const placeholderBank = bankDetailsArePlaceholder();
+const payeeNeedsExplaining = payeeDiffersFromCompany(COMPANY.name);
 ---
 
 <BaseLayout
@@ -61,6 +68,12 @@ const placeholderBank = bankDetailsArePlaceholder();
 						<dd data-order-reference></dd>
 					</div>
 				</dl>
+
+				{
+					payeeNeedsExplaining && (
+						<p class="pay__payee">{payeeExplanation(COMPANY.name!)}</p>
+					)
+				}
 
 				<p class="pay__warning" data-reference-missing hidden>
 					<strong>Bitte noch nicht überweisen.</strong> Der Verwendungszweck zu
@@ -265,6 +278,15 @@ const placeholderBank = bankDetailsArePlaceholder();
 			margin: 1rem 0 0;
 			font-size: 0.82rem;
 			color: var(--c-muted);
+		}
+		/* Louder than .pay__note, quieter than .pay__warning: nothing is wrong,
+		   but the customer is about to type this name into their bank. */
+		.pay__payee {
+			margin: 1rem 0 0;
+			padding-left: 0.9rem;
+			border-left: 3px solid var(--c-border);
+			font-size: 0.85rem;
+			color: var(--c-ink);
 		}
 		.items ul {
 			list-style: none;

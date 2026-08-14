@@ -9,32 +9,22 @@ This file is the operational picture.
 
 ---
 
-## Ordering is closed (2026-07-30)
+## Ordering is OPEN (2026-08-15)
 
-**No order can be placed right now, by design.** The site is public but cannot be
-paid, so `ORDERS_ENABLED` is unset in `/srv/peptides/.env`, which means:
+**The shop takes real orders and real money.** `ORDERS_ENABLED=true` in
+`/srv/peptides/.env`, so add-to-cart, the checkout form, the `add_to_cart` WebMCP
+tool and `POST /store/carts/:id/complete` are all live.
 
-- add-to-cart, the "Zur Kasse" button and the whole checkout form are not
-  rendered — the pack sizes and prices still are;
-- the `add_to_cart` WebMCP tool is neither registered nor advertised in
-  `llms.txt`;
-- `POST /store/carts/:id/complete` answers **503** with a German message, so a
-  cart id left in a browser plus a direct API call cannot create an order either.
+It was closed from 2026-07-30 and reopened by explicit owner decision **with
+go-live-checklist §2, §3, §4, §5 and §6 still open** — most sharply §5, the
+fabricated purity and COA data the catalog still ships, and §6, which means a
+customer receives nothing in writing after paying.
 
-Reopening is one value on the server — `ORDERS_ENABLED=true`, then deploy; the
-backend reads it at runtime and `deploy.sh` derives the storefront's
-`PUBLIC_ORDERS_ENABLED` from it, so the two cannot disagree. Design:
+Closing it again is one value on the server — unset `ORDERS_ENABLED`, then
+deploy; the backend reads it at runtime and `deploy.sh` derives the storefront's
+`PUBLIC_ORDERS_ENABLED` from it, so the two cannot disagree. Never change one
+app without the other. Design:
 [specs/2026-07-30-orders-closed.md](specs/2026-07-30-orders-closed.md).
-
-Bank details were configured on 2026-08-15 and ordering **stayed closed** by
-explicit decision. The details were the loudest blocker, not the only one:
-go-live-checklist §2 (legal pages still `[Platzhalter]`), §3 (B2B/B2C) and §6
-(no confirmation email) are open, and §6 means a customer who orders receives
-nothing in writing at all. Opening the shop is a decision about those, taken
-deliberately — never a side effect of other work.
-
-Everything described in the rest of this file is implemented and working; it is
-switched off, not missing.
 
 ## Bank details — interim account configured 2026-08-15
 
@@ -59,9 +49,12 @@ Two things follow for anyone touching this:
   two agree. The holder must be the name the account is actually held under, or
   the transfer is rejected by the bank — a mismatch a customer can see beats one
   their payment silently fails on.
-- **It is dormant only because ordering is closed.** No customer is shown bank
-  details today. Opening `ORDERS_ENABLED` publishes the mismatch in the same
-  moment, so the two decisions are one decision.
+- **It is explained, not hidden.** `payeeDiffersFromCompany()` compares the
+  holder against `COMPANY.name`, and when they differ `/bestellung/` and
+  `/bestellung/suchen/` print `payeeExplanation()`: who the payee is, and a
+  warning not to retype the company name into the transfer. Because the check is
+  derived rather than configured, the explanation **retires itself** the day the
+  holder becomes the business account.
 
 The four values live in `/srv/peptides/.env` on the server and
 `storefront/.env` locally:

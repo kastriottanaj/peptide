@@ -2,16 +2,17 @@
 
 Monorepo for the peptides project.
 
-> **⚠️ Open before launch.** Payment is direct bank transfer. An **interim
-> personal Wise account** is configured as of 2026-08-15
-> (`PUBLIC_BANK_ACCOUNT_HOLDER`, `PUBLIC_BANK_IBAN`, `PUBLIC_BANK_BIC`,
-> `PUBLIC_BANK_NAME` in `.env`, never committed), so confirmations show real
-> details — but the business account is still owed.
+> **⚠️ The shop is trading with known gaps.** Ordering opened 2026-08-15 by
+> explicit decision, with several blockers still open — most sharply that
+> **every purity value, COA status and price in the catalog is fabricated**,
+> and that no order confirmation email exists, so a customer receives nothing
+> in writing after paying.
 >
-> **Ordering stayed closed anyway.** Three hard blockers remain: real company
-> data on the legal pages, the B2B/B2C decision, and the order confirmation
-> email. **[docs/go-live-checklist.md](docs/go-live-checklist.md) is the
-> canonical list; read it before any deployment.**
+> Payment is direct bank transfer into an **interim personal Wise account**
+> (`PUBLIC_BANK_*` in `.env`, never committed), not the business account; the
+> confirmation page explains the payee mismatch.
+> **[docs/go-live-checklist.md](docs/go-live-checklist.md) is the canonical
+> list; read it before any deployment.**
 
 | Folder        | Stack                          | Description              |
 | ------------- | ------------------------------ | ------------------------ |
@@ -77,11 +78,10 @@ the URLs whose HTML changed to Bing, Yandex and the other participants. Unset me
 key file and no submissions. It is currently unset in production on purpose — see
 [docs/indexnow.md](docs/indexnow.md).
 
-**Ordering is closed in production.** The catalog is public, but add-to-cart, the
-checkout form and the `add_to_cart` WebMCP tool are not rendered, and the API refuses
-cart completion with 503. Bank details are configured as of 2026-08-15 and it stayed
-closed regardless: the legal pages, the B2B/B2C decision and the confirmation email are
-still open. One variable governs both apps: `ORDERS_ENABLED` in
+**Ordering is OPEN in production as of 2026-08-15** — real customers can order and
+transfer real money. It was reopened by explicit decision with the legal pages, the
+B2B/B2C decision, the confirmation email and the fabricated catalog data still open.
+One variable governs both apps: `ORDERS_ENABLED` in
 `/srv/peptides/.env`, which the Medusa service reads at runtime and from which
 `deploy.sh` derives the storefront's `PUBLIC_ORDERS_ENABLED`. Unset means closed. Set
 both to `true` locally (`storefront/.env` and `backend/apps/backend/.env`) to work on
