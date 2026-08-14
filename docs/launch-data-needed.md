@@ -18,22 +18,44 @@ Blocks: `impressum.astro`, `datenschutz.astro`, `agb.astro`, `widerruf.astro`.
 All four currently render red `[Platzhalter]` markers, carry a "not legally
 binding" banner and are `noindex`.
 
-Source: your commercial register entry (Handelsregister) or trade registration
-(Gewerbeanmeldung).
+**The operator is a US company.** Identified on 2026-08-15 from the signed
+Operating Agreement: a Virginia multi-member LLC, represented by its Chief
+Executive Member. The name, address and representative are configured in
+`/srv/peptides/.env` as `PUBLIC_COMPANY_*` and render on `/impressum/` and in
+the Datenschutz controller block.
 
-| Field | Value |
+The values are **not recorded here** — same rule as the bank details in §2. The
+Impressum names a real company and a real natural person, and git history is
+permanent, so they live in `.env` and nowhere else. Read them from the server.
+
+| Field | Status |
 |---|---|
-| Firmierung incl. legal form (GmbH / UG / e.K. / …) | |
-| Street and number | |
-| Postcode and town | |
-| Managing director / owner | |
-| Email for the Impressum | |
-| Phone for the Impressum | |
-| Registergericht | |
-| HRB / HRA number (or "none") | |
-| USt-IdNr. (or "Kleinunternehmer §19 UStG") | |
-| Supervisory authority (follows from company seat) | |
-| Shipping provider (DHL / DPD / …) | |
+| `PUBLIC_COMPANY_NAME` incl. legal form | set 2026-08-15 |
+| `PUBLIC_COMPANY_STREET` / `_LOCALITY` / `_COUNTRY` | set 2026-08-15 — but see the warning below |
+| `PUBLIC_COMPANY_REPRESENTATIVE` | set 2026-08-15 |
+| `PUBLIC_COMPANY_REGISTER_AUTHORITY` | **open** — Virginia SCC, authority name and format to confirm |
+| `PUBLIC_COMPANY_REGISTER_NUMBER` | **open** — the SCC entity ID is not in the Operating Agreement |
+| `PUBLIC_COMPANY_VAT_ID` | **open** — see the VAT warning below |
+| Supervisory authority | **open** — a non-EU controller has no German Landesbehörde by company seat |
+| Shipping provider (DHL / DPD / …) | **open** |
+
+⚠️ **Three consequences of the operator being a US entity, none of them
+cosmetic. All three need the legal review in §4 of the checklist.**
+
+1. **The address is a private mailbox.** The Operating Agreement gives the
+   principal office as a `PMB` (private mail box) suite. § 5 DDG wants a
+   *ladungsfähige Anschrift* — an address at which legal service can actually
+   be effected. A mail-forwarding box is contested at best. Confirm what
+   address may be published, and whether the registered-agent address is the
+   right one instead.
+2. **An Art. 27 DSGVO representative in the Union is mandatory**, because the
+   controller is not established in the EU and offers goods to data subjects
+   in Germany. It must be appointed in writing and named in the
+   Datenschutzerklärung; the page carries a `[Platzhalter]` saying so.
+3. **VAT is not optional and not obviously zero.** A non-EU business selling
+   goods to German consumers has German VAT obligations (registration, or
+   OSS/IOSS). The `USt-IdNr.` field cannot be answered by the Kleinunternehmer
+   question in §3 of the checklist, which assumes a German seller.
 
 **The contact email and phone are also configuration, not page edits.** `/contact/`,
 the Datenschutz controller block and the `Organization` JSON-LD all read them from
@@ -42,30 +64,26 @@ without touching a page:
 
 | Variable | Value |
 |---|---|
-| `PUBLIC_CONTACT_EMAIL` | `info@peptideeinkaufen.de` — **PENDING VERIFICATION** (see below) |
-| `PUBLIC_CONTACT_PHONE` (only if publicly offered) | |
+| `PUBLIC_CONTACT_EMAIL` | `info@peptideeinkaufen.de` — set and live |
+| `PUBLIC_CONTACT_PHONE` (only if publicly offered) | **open** — the Impressum shows `[Telefonnummer]` |
 | `PUBLIC_CONTACT_HOURS` (optional, needs a phone) | |
 
-> **`info@peptideeinkaufen.de` is the intended address, not a verified one.**
-> Confirmed with the owner on 2026-08-01 that the mailbox has **not** been
-> tested. It is therefore set nowhere — not in `/srv/peptides/.env`, not in
-> `storefront/.env`, not in any tracked file — and every build still renders the
-> "no contact channel" state.
->
-> - [ ] Send a test message to the mailbox from an unrelated account and confirm
->       it arrives and can be replied to.
-> - [ ] Only then configure it, following
->       ["Publishing the contact email"](deploy.md) in the deploy runbook: back
->       up `/srv/peptides/.env`, set the key exactly once, **rebuild and
->       deploy** — the static storefront bakes the value in at build time, so
->       restarting Medusa changes nothing.
+> **The address is configured and public**, on `/contact/`, `/datenschutz/` and
+> now `/impressum/`. The mailbox is also the one the support inbox polls
+> (`INBOX_SMTP_*` / `INBOX_IMAP_*` on the server, see [inbox.md](inbox.md)), so
+> it is a real mailbox rather than an intended one — which is what the earlier
+> "pending verification" note here was waiting for.
 >
 > Publishing an address that bounces is worse than publishing none: § 5 DDG
-> wants a channel that works, and the customer only finds out after writing.
+> wants a channel that works, and the customer only finds out after writing. If
+> the mailbox is ever retired, unset the variable and redeploy rather than
+> leaving it on the page.
 
-Until one of them is set, `/contact/` states plainly that the channels are being
-set up rather than printing a placeholder — it is a public, indexable page. Set
-them in `/srv/peptides/.env` and redeploy, the same way as the bank details below.
+A phone number is **not** required by § 5 DDG as long as the email enables fast
+electronic contact, so the missing number does not block the Impressum. It is
+listed above because the page currently renders a visible `[Telefonnummer]`
+placeholder — either configure one or drop the row deliberately during the
+legal review.
 
 **Hosting provider** — this one is already known and needs an Art. 28 DSGVO
 processing agreement (AVV) in place:

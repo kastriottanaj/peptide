@@ -1,9 +1,20 @@
 ---
 import LegalLayout from "../layouts/LegalLayout.astro";
+import { COMPANY, CONTACT } from "../lib/company";
 
-// Pflichtangaben nach § 5 DDG (vormals § 5 TMG) und § 18 Abs. 2 MStV.
-// TODO: alle .todo-Felder durch die echten Angaben aus dem Handelsregister-
-// auszug bzw. der Gewerbeanmeldung ersetzen.
+/**
+ * Pflichtangaben nach § 5 DDG (vormals § 5 TMG) und § 18 Abs. 2 MStV.
+ *
+ * Every value comes from PUBLIC_COMPANY_* / PUBLIC_CONTACT_* — see
+ * `lib/legal-entity.ts` for why none of it is written into this file. A field
+ * that is not configured renders as a visible `[Platzhalter]` rather than
+ * vanishing: on an Impressum an omitted mandatory field is indistinguishable
+ * from a provider hiding it, so it has to show as outstanding.
+ *
+ * The register block is deliberately not labelled "Amtsgericht" / "HRB": the
+ * provider is not necessarily on a German register, and those two labels
+ * cannot be filled in truthfully by a company that is not.
+ */
 ---
 
 <LegalLayout
@@ -14,26 +25,42 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 	<h2>Angaben gemäß § 5 DDG</h2>
 	<dl>
 		<dt>Anbieter</dt>
-		<dd><span class="todo">[Firmierung inkl. Rechtsform]</span></dd>
+		<dd>
+			{COMPANY.name ?? <span class="todo">[Firmierung inkl. Rechtsform]</span>}
+		</dd>
 
 		<dt>Anschrift</dt>
 		<dd>
-			<span class="todo">[Straße und Hausnummer]</span><br />
-			<span class="todo">[PLZ und Ort]</span><br />
-			<span class="todo">[Land]</span>
+			{COMPANY.street ?? <span class="todo">[Straße und Hausnummer]</span>}<br />
+			{COMPANY.locality ?? <span class="todo">[PLZ und Ort]</span>}<br />
+			{COMPANY.country ?? <span class="todo">[Land]</span>}
 		</dd>
 
 		<dt>Vertreten durch</dt>
-		<dd><span class="todo">[Geschäftsführer / Inhaber]</span></dd>
+		<dd>
+			{
+				COMPANY.representative ?? (
+					<span class="todo">[Geschäftsführer / Inhaber]</span>
+				)
+			}
+		</dd>
 	</dl>
 
 	<h2>Kontakt</h2>
 	<dl>
 		<dt>E-Mail</dt>
-		<dd><span class="todo">[E-Mail-Adresse]</span></dd>
+		<dd>
+			{
+				CONTACT.email ? (
+					<a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+				) : (
+					<span class="todo">[E-Mail-Adresse]</span>
+				)
+			}
+		</dd>
 
 		<dt>Telefon</dt>
-		<dd><span class="todo">[Telefonnummer]</span></dd>
+		<dd>{CONTACT.phone ?? <span class="todo">[Telefonnummer]</span>}</dd>
 	</dl>
 	<p>
 		Eine schnelle elektronische Kontaktaufnahme ist über die oben genannte
@@ -42,35 +69,43 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 
 	<h2>Registereintrag</h2>
 	<dl>
-		<dt>Registergericht</dt>
-		<dd><span class="todo">[Amtsgericht]</span></dd>
+		<dt>Registerbehörde</dt>
+		<dd>
+			{
+				COMPANY.registerAuthority ?? (
+					<span class="todo">[Registerführende Stelle]</span>
+				)
+			}
+		</dd>
 
 		<dt>Registernummer</dt>
-		<dd><span class="todo">[HRB / HRA-Nummer]</span></dd>
+		<dd>
+			{COMPANY.registerNumber ?? <span class="todo">[Registernummer]</span>}
+		</dd>
 	</dl>
-	<p class="todo">
-		[Entfällt, falls kein Registereintrag besteht — dann diesen Abschnitt
-		streichen.]
-	</p>
 
 	<h2>Umsatzsteuer-Identifikationsnummer</h2>
 	<p>
 		Umsatzsteuer-Identifikationsnummer gemäß § 27 a Umsatzsteuergesetz:
-		<span class="todo">[USt-IdNr.]</span>
+		{" "}{COMPANY.vatId ?? <span class="todo">[USt-IdNr.]</span>}
 	</p>
 
 	<h2>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2>
 	<p>
-		<span class="todo">[Name]</span>,
-		<span class="todo">[Anschrift wie oben]</span>
+		{COMPANY.representative ?? <span class="todo">[Name]</span>}
+		{COMPANY.identifiable ? `, ${COMPANY.street}, ${COMPANY.locality}` : null}
+		{
+			COMPANY.identifiable ? null : (
+				<span class="todo">, [Anschrift wie oben]</span>
+			)
+		}
 	</p>
 
 	<h2>Streitbeilegung</h2>
-	<p>
-		Die Europäische Kommission stellt eine Plattform zur Online-Streitbeilegung
-		(OS) bereit: <a href="https://ec.europa.eu/consumers/odr/" rel="noopener"
-			>https://ec.europa.eu/consumers/odr/</a
-		>. Unsere E-Mail-Adresse finden Sie oben.
+	<p class="todo">
+		[Der Verweis auf die OS-Plattform der Europäischen Kommission ist zu prüfen:
+		die Plattform wurde eingestellt. Formulierung im Rahmen der juristischen
+		Prüfung festlegen — siehe docs/go-live-checklist.md §4.]
 	</p>
 	<p>
 		Wir sind nicht bereit und nicht verpflichtet, an Streitbeilegungsverfahren

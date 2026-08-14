@@ -297,8 +297,28 @@ test("the legal pages still mark every field that is genuinely missing", { skip 
 	// The other direction: a rewrite must not quietly delete a placeholder
 	// instead of filling it. These fields have no source in the repository (see
 	// docs/launch-data-needed.md), so each must still be visibly outstanding.
+	//
+	// The controller's own Firmierung and Anschrift were removed from this list
+	// on 2026-08-15 — deliberately, not by deletion. They are now supplied by
+	// PUBLIC_COMPANY_* and rendered through `lib/legal-entity.ts`, which falls
+	// back to the same `[…]` markers when a value is unset. Asserting the marker
+	// here would now fail on a correctly configured build, which is the opposite
+	// of what this test is for. What replaces the guard: "contact details are
+	// read from configuration, never written into the page" below, plus the
+	// hard-coded-identifier scan at the top of this file, which together forbid
+	// the only dangerous version of this change — writing the company into
+	// source. The third-party names below stay: none of them is configurable.
 	const required: Array<[(typeof ALL)[number], string[]]> = [
-		[TRUST_PAGES.privacy, ["[Firmierung", "[Anschrift", "Versanddienstleister"]],
+		[
+			TRUST_PAGES.privacy,
+			[
+				"Versanddienstleister",
+				// The processor's own address, and the Art. 27 DSGVO representative
+				// the non-EU controller still has to appoint.
+				"Vollständige Anschrift der Hetzner Online GmbH",
+				"Art. 27",
+			],
+		],
 		[TRUST_PAGES.terms, ["[Firmierung", "Umsatzsteuer", "Gerichtsstand"]],
 	];
 

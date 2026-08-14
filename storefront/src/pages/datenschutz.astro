@@ -17,7 +17,7 @@
 import LegalLayout from "../layouts/LegalLayout.astro";
 import type { LegalSection } from "../layouts/LegalLayout.astro";
 import { ANALYTICS_ENABLED } from "../lib/analytics";
-import { CONTACT } from "../lib/company";
+import { COMPANY, CONTACT, postalAddress } from "../lib/company";
 
 /**
  * The storage keys named in section 3, so a reader can find and delete them.
@@ -63,9 +63,17 @@ const SECTIONS: LegalSection[] = Object.values(S);
 	<p>Verantwortlich für die Datenverarbeitung auf dieser Website ist:</p>
 	<dl>
 		<dt>Anbieter</dt>
-		<dd><span class="todo">[Firmierung inkl. Rechtsform]</span></dd>
+		<dd>
+			{COMPANY.name ?? <span class="todo">[Firmierung inkl. Rechtsform]</span>}
+		</dd>
 		<dt>Anschrift</dt>
-		<dd><span class="todo">[Anschrift wie im Impressum]</span></dd>
+		<dd>
+			{
+				postalAddress(COMPANY) ?? (
+					<span class="todo">[Anschrift wie im Impressum]</span>
+				)
+			}
+		</dd>
 		<dt>E-Mail</dt>
 		<dd>
 			{
@@ -80,6 +88,12 @@ const SECTIONS: LegalSection[] = Object.values(S);
 	<p class="todo">
 		[Prüfen, ob ein Datenschutzbeauftragter benannt werden muss (Art. 37 DSGVO,
 		§ 38 BDSG) — falls ja, Kontaktdaten hier ergänzen.]
+	</p>
+	<p class="todo">
+		[Der Verantwortliche ist nicht in der Union niedergelassen. Nach Art. 27
+		DSGVO ist deshalb ein Vertreter in der Union schriftlich zu benennen und
+		hier mit Namen und Anschrift anzugeben. Siehe
+		docs/go-live-checklist.md §2.]
 	</p>
 
 	<h2 id={S.hosting.id}>{S.hosting.heading}</h2>
