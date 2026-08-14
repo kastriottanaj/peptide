@@ -23,6 +23,7 @@
 import LegalLayout from "../layouts/LegalLayout.astro";
 import type { LegalSection } from "../layouts/LegalLayout.astro";
 import { ORDERS_ENABLED } from "../lib/shop";
+import { COMPANY } from "../lib/company";
 import {
 	FREE_SHIPPING_THRESHOLD_EUR,
 	QUANTITY_DISCOUNT_TIERS,
@@ -76,7 +77,8 @@ const SECTIONS: LegalSection[] = Object.values(S);
 	<h2 id={S.scope.id}>{S.scope.heading}</h2>
 	<p>
 		Diese Allgemeinen Geschäftsbedingungen gelten für alle Bestellungen, die über
-		diesen Online-Shop bei <span class="todo">[Firmierung]</span> (nachfolgend
+		diesen Online-Shop
+		bei {COMPANY.name ?? <span class="todo">[Firmierung]</span>} (nachfolgend
 		„Anbieter") aufgegeben werden. Abweichende Bedingungen des Bestellers werden
 		nicht Vertragsbestandteil, es sei denn, der Anbieter stimmt ihrer Geltung
 		ausdrücklich schriftlich zu.
