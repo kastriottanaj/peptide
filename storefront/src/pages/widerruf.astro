@@ -1,5 +1,6 @@
 ---
 import LegalLayout from "../layouts/LegalLayout.astro";
+import { COMPANY, CONTACT, postalAddress } from "../lib/company";
 
 // Diese Seite gibt bewusst die VERBRAUCHER-Variante wieder (gesetzliches
 // Muster nach Anlage 1 zu Art. 246a § 1 Abs. 2 S. 2 EGBGB).
@@ -42,13 +43,27 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 	</p>
 	<dl>
 		<dt>Anbieter</dt>
-		<dd><span class="todo">[Firmierung]</span></dd>
+		<dd>{COMPANY.name ?? <span class="todo">[Firmierung]</span>}</dd>
 		<dt>Anschrift</dt>
-		<dd><span class="todo">[Anschrift wie im Impressum]</span></dd>
+		<dd>
+			{
+				postalAddress(COMPANY) ?? (
+					<span class="todo">[Anschrift wie im Impressum]</span>
+				)
+			}
+		</dd>
 		<dt>E-Mail</dt>
-		<dd><span class="todo">[E-Mail-Adresse]</span></dd>
+		<dd>
+			{
+				CONTACT.email ? (
+					<a href={`mailto:${CONTACT.email}`}>{CONTACT.email}</a>
+				) : (
+					<span class="todo">[E-Mail-Adresse]</span>
+				)
+			}
+		</dd>
 		<dt>Telefon</dt>
-		<dd><span class="todo">[Telefonnummer]</span></dd>
+		<dd>{CONTACT.phone ?? <span class="todo">[Telefonnummer]</span>}</dd>
 	</dl>
 	<p>
 		mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief
@@ -119,7 +134,13 @@ import LegalLayout from "../layouts/LegalLayout.astro";
 	</p>
 	<div class="muster">
 		<p>
-			An <span class="todo">[Firmierung, Anschrift, E-Mail-Adresse]</span>:
+			An {
+				COMPANY.identifiable && CONTACT.email ? (
+					`${COMPANY.name}, ${postalAddress(COMPANY)}, ${CONTACT.email}`
+				) : (
+					<span class="todo">[Firmierung, Anschrift, E-Mail-Adresse]</span>
+				)
+			}:
 		</p>
 		<p>
 			Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen

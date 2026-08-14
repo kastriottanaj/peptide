@@ -319,7 +319,12 @@ test("the legal pages still mark every field that is genuinely missing", { skip 
 				"Art. 27",
 			],
 		],
-		[TRUST_PAGES.terms, ["[Firmierung", "Umsatzsteuer", "Gerichtsstand"]],
+		// `[Firmierung` left this list on 2026-08-15 for the same reason it left
+		// the privacy list: AGB § 1 now names the provider from PUBLIC_COMPANY_*.
+		// What stays are the two genuinely unanswered questions — the VAT
+		// treatment that waits on §3, and the Gerichtsstand clause that waits on
+		// the same B2B/B2C decision.
+		[TRUST_PAGES.terms, ["Umsatzsteuer", "Gerichtsstand"]],
 	];
 
 	for (const [page, fields] of required) {
