@@ -64,15 +64,19 @@ the IBAN must never be committed.
       personal Wise account (Belgian IBAN). Verified against two local test
       orders: real details, no warning, and the reference on screen equals
       `metadata->>'bank_reference'` in Postgres.
-- [ ] **Business bank account opened** — still open. Three things follow from
-      the interim account being personal and foreign, and none of them is
-      cosmetic:
-      - the payee name is a private individual while the Impressum is still
-        `[Platzhalter]` (§2), which to a customer looks exactly like a scam;
+- [ ] **Business bank account opened** — still open, and **the interim account
+      stays until it is** (owner's decision, 2026-08-15: fix the payee when the
+      business account exists, not before). Three things follow from the interim
+      account being personal and foreign, and none of them is cosmetic:
+      - the payee is a private individual while the Impressum names an LLC (§2),
+        so the name a customer is asked to pay appears nowhere else on the site;
       - the IBAN is Belgian, not German — legitimate for SEPA, but it needs the
         Impressum to explain who is being paid;
       - Wise is named in `datenschutz.astro` as the recipient of the payment
         data, with its company data still `[Platzhalter]` pending §4.
+
+      All three are dormant while ordering is closed and all three go live
+      together with it.
 - [ ] `ORDERS_ENABLED=true` in `/srv/peptides/.env` — reopens add-to-cart, the
       checkout form and cart completion. **Deliberately still unset.** The bank
       details alone were never the whole gate: §2, §3 and §6 remain open, and
@@ -119,10 +123,21 @@ the Datenschutz controller block. All four legal pages still carry the
       been discontinued. Replacement wording is a legal-review question and is
       marked `[Platzhalter]` on the page
 
-**The payee and the operator now disagree.** The Impressum names the LLC; the
-bank details in §1 are a private individual's Wise account. A customer is asked
-to transfer to a name that does not appear anywhere on the site. Resolve before
-opening ordering — either the account changes or the Impressum does.
+**The payee and the operator disagree — knowingly, decided 2026-08-15.** The
+Impressum names the LLC; the bank details in §1 are a private individual's Wise
+account, so a customer would be asked to transfer to a name appearing nowhere
+else on the site.
+
+**Leave it as it is.** The owner's decision on 2026-08-15 was to keep the
+interim account and reconcile the two when the business bank account is opened,
+rather than change either side now. Do not "fix" this by editing
+`PUBLIC_BANK_ACCOUNT_HOLDER` to the LLC — that would name a payee the account is
+not held under, which banks reject and which is worse than the mismatch.
+
+It costs nothing while **ordering is closed**, because no customer is shown bank
+details at all. It becomes live the moment `ORDERS_ENABLED` is set, so it stays
+a hard gate on §1: opening ordering and resolving the payee are the same
+decision, not two.
 
 Pages affected: `impressum.astro`, `datenschutz.astro`, `agb.astro`,
 `widerruf.astro`. Remove `draft` from the `LegalLayout` props once a page is
