@@ -17,24 +17,39 @@ Update it as items land.
 > value down and how to apply it. This file stays the canonical list of *what
 > blocks launch and why*.
 
-> **The site went public on 2026-07-29, with §1, §2, §3 and §6 still open.** The
-> pre-launch gate was removed by explicit decision ahead of these items, so
-> everything below is now a **live exposure**, not a pre-launch task. The shop is
-> reachable and every page is crawlable. It does not take orders: that is
-> `ORDERS_ENABLED`, still unset, and not a consequence of the items below.
+> **The shop is trading as of 2026-08-15, with §2, §3, §4, §5 and §6 open.**
+> The site went public on 2026-07-29 and ordering was opened on 2026-08-15, both
+> by explicit owner decision ahead of the items below. Nothing here is a
+> pre-launch task any more: each one is a **live exposure against real customers
+> and real money**, and this file is the record of what was accepted and when.
 
-**Hard blockers:** real company data on the legal pages (§2), the B2B/B2C
-decision (§3), and the order confirmation email (§6). §1 is **provisionally
-cleared** — an interim personal account is configured, see below — but the shop
-still cannot lawfully trade without §2 and §3.
+**Open while trading**, in the order that matters if only one gets fixed:
 
-Two mitigations are in place:
+1. **§5 — every purity value, COA status and price in the catalog is
+   fabricated.** This is the only item where the customer is misled about the
+   product itself rather than about paperwork, and it is the reason the rest of
+   this list exists. Selling research chemicals against invented analytical
+   figures is what the repo has called its largest exposure since 2026-07-26.
+2. **§6 — no order confirmation email.** A customer who orders receives nothing
+   in writing. `/bestellung/suchen` and an explicit "note this down" line on the
+   confirmation page are damage control, not a substitute.
+3. **§2 — the legal pages are incomplete and unreviewed**: no register number,
+   no VAT ID, no Art. 27 DSGVO representative, and a `PMB` address that may not
+   be a *ladungsfähige Anschrift*. All four still carry `draft` and `noindex`.
+4. **§3 — the B2B/B2C decision is unmade**, so AGB § 4 still carries a
+   `[Platzhalter]` on VAT while consumers can buy.
+5. **§4 — no lawyer has read any of it.**
 
-- **Ordering is closed** as of 2026-07-30 (`ORDERS_ENABLED` unset in
-  `/srv/peptides/.env`): the catalog is public, but add-to-cart and the checkout
-  form are not rendered and the API refuses cart completion with 503. It stayed
-  closed on 2026-08-15 when the interim bank details were configured — an
-  explicit decision, because §2, §3 and §6 are still open. See
+§1 is **provisionally cleared**: an interim personal account is configured and
+the payee mismatch is explained on the confirmation page. See below.
+
+One mitigation remains:
+
+- ~~**Ordering is closed**~~ — **the shop has been open since 2026-08-15**
+  (`ORDERS_ENABLED=true`). It was closed from 2026-07-30 and was reopened by
+  explicit owner decision **with §2, §3, §4, §5 and §6 still open**. That was
+  the mitigation holding every item below in a dormant state; it is gone, so
+  each one is now live against real customers and real money. See
   [checkout.md](checkout.md).
 - The four legal pages keep a per-page `noindex` from the `draft` prop, so
   unreviewed legal text is publicly reachable but not indexed. `deploy.sh` checks
@@ -75,13 +90,13 @@ the IBAN must never be committed.
       - Wise is named in `datenschutz.astro` as the recipient of the payment
         data, with its company data still `[Platzhalter]` pending §4.
 
-      All three are dormant while ordering is closed and all three go live
-      together with it.
-- [ ] `ORDERS_ENABLED=true` in `/srv/peptides/.env` — reopens add-to-cart, the
-      checkout form and cart completion. **Deliberately still unset.** The bank
-      details alone were never the whole gate: §2, §3 and §6 remain open, and
-      §6 in particular means a customer gets nothing in writing.
-- [ ] Test order against production once it is open
+      All three went live with ordering on 2026-08-15. The first is explained on
+      the confirmation page; the other two are not.
+- [x] ~~`ORDERS_ENABLED=true` in `/srv/peptides/.env`~~ — **the shop is open as
+      of 2026-08-15**, by explicit owner decision, with §2, §3, §4, §5 and §6
+      still open. Add-to-cart, the checkout form and cart completion are live
+      and real customers can transfer real money.
+- [ ] Test order against production now that it is open
 
 ## 2. Company details — partially filled 2026-08-15
 
@@ -134,10 +149,13 @@ rather than change either side now. Do not "fix" this by editing
 `PUBLIC_BANK_ACCOUNT_HOLDER` to the LLC — that would name a payee the account is
 not held under, which banks reject and which is worse than the mismatch.
 
-It costs nothing while **ordering is closed**, because no customer is shown bank
-details at all. It becomes live the moment `ORDERS_ENABLED` is set, so it stays
-a hard gate on §1: opening ordering and resolving the payee are the same
-decision, not two.
+**It is live.** Ordering opened the same day, so customers now see it. It is
+mitigated rather than hidden: `payeeDiffersFromCompany()` in `lib/bank.ts`
+detects the mismatch and both `/bestellung/` and `/bestellung/suchen/` explain
+who the payee is and warn against retyping the company name, which would get the
+transfer rejected. The check is derived, not configured, so the explanation
+**disappears by itself** the day `PUBLIC_BANK_ACCOUNT_HOLDER` becomes the
+business account. Nothing has to remember to remove it.
 
 Pages affected: `impressum.astro`, `datenschutz.astro`, `agb.astro`,
 `widerruf.astro`. Remove `draft` from the `LegalLayout` props once a page is

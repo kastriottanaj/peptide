@@ -1,8 +1,15 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import { BANK_DETAILS, bankDetailsArePlaceholder } from "../../lib/bank";
+import {
+	BANK_DETAILS,
+	bankDetailsArePlaceholder,
+	payeeDiffersFromCompany,
+	payeeExplanation,
+} from "../../lib/bank";
+import { COMPANY } from "../../lib/company";
 
 const placeholderBank = bankDetailsArePlaceholder();
+const payeeNeedsExplaining = payeeDiffersFromCompany(COMPANY.name);
 ---
 
 <BaseLayout
@@ -59,6 +66,12 @@ const placeholderBank = bankDetailsArePlaceholder();
 					<div><dt>Betrag</dt><dd data-r-total></dd></div>
 					<div class="ref"><dt>Verwendungszweck</dt><dd data-r-reference></dd></div>
 				</dl>
+
+				{
+					payeeNeedsExplaining && (
+						<p class="payee">{payeeExplanation(COMPANY.name!)}</p>
+					)
+				}
 			</div>
 
 			<h3>Artikel</h3>
@@ -242,6 +255,15 @@ const placeholderBank = bankDetailsArePlaceholder();
 			margin-top: 2.5rem;
 			padding-top: 2rem;
 			border-top: 1px solid var(--c-border);
+		}
+		/* Mirrors .pay__payee on the confirmation page: the same explanation has
+		   to read the same way in both places a customer meets the payee. */
+		.payee {
+			margin: 1rem 0 0;
+			padding-left: 0.9rem;
+			border-left: 3px solid var(--c-border);
+			font-size: 0.85rem;
+			color: var(--c-ink);
 		}
 		.result h2 {
 			font-size: 1.2rem;

@@ -251,26 +251,27 @@ read it before touching anything on the server.
 Do not copy deploy scripts or server credentials from the `peptide` project into this
 codebase. That project is read-only prior art; never edit or deploy it from here.
 
-**The storefront is public.** The pre-launch gate (HTTP basic auth plus a
-site-wide `X-Robots-Tag: noindex`) was removed on 2026-07-29 by explicit decision,
-ahead of the blockers in [docs/go-live-checklist.md](docs/go-live-checklist.md).
-Most are still open: the legal pages still render `[Platzhalter]` company data,
-there is no order confirmation email, and catalog purity values are fabricated.
-Bank details are configured as of 2026-08-15, but with an **interim personal Wise
-account** rather than the business account.
+**The storefront is public and trading.** The pre-launch gate was removed on
+2026-07-29 and ordering was opened on 2026-08-15, both by explicit decision
+ahead of the blockers in
+[docs/go-live-checklist.md](docs/go-live-checklist.md). Most are still open: the
+legal pages still render `[Platzhalter]` company data, there is no order
+confirmation email, and **catalog purity values and COA statuses are
+fabricated** — that last one now ships to paying customers, so treat the catalog
+as customer-facing claims rather than demo data. Bank details are configured
+with an **interim personal Wise account** rather than the business account.
 
 Three consequences for any change you make here:
 
-- **Ordering is closed** (2026-07-30). `ORDERS_ENABLED` is unset in
-  `/srv/peptides/.env`, so add-to-cart, the checkout form and the `add_to_cart`
-  WebMCP tool are not rendered, and the store API refuses cart completion with
-  503. The switch lives in `storefront/src/lib/shop.ts` and
-  `backend/apps/backend/src/api/middlewares.ts`. **Reopening it is a launch
-  decision**, governed by
-  [docs/go-live-checklist.md](docs/go-live-checklist.md) — never a side effect
-  of other work, and never one app without the other. Configuring the bank
-  details on 2026-08-15 deliberately did *not* reopen it: §2, §3 and §6 are
-  still open, and §6 means a customer would receive nothing in writing.
+- **Ordering is OPEN** (2026-08-15). `ORDERS_ENABLED=true` in
+  `/srv/peptides/.env`, so add-to-cart, the checkout form, the `add_to_cart`
+  WebMCP tool and cart completion are all live — **real customers can order and
+  transfer real money.** The switch lives in `storefront/src/lib/shop.ts` and
+  `backend/apps/backend/src/api/middlewares.ts`; never change one app without
+  the other. It was reopened by explicit owner decision with
+  [docs/go-live-checklist.md](docs/go-live-checklist.md) §2–§6 still open, so
+  treat anything touching the catalog, checkout, prices or legal pages as
+  changing something a paying customer sees today, not a staging site.
 - The four legal pages keep their own `noindex` via the `draft` prop in
   `LegalLayout`. **Do not remove a `draft` prop** until that page's real company
   data is in place — it is the only thing keeping unreviewed legal text out of
