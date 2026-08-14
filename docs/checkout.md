@@ -23,25 +23,34 @@ paid, so `ORDERS_ENABLED` is unset in `/srv/peptides/.env`, which means:
 
 Reopening is one value on the server — `ORDERS_ENABLED=true`, then deploy; the
 backend reads it at runtime and `deploy.sh` derives the storefront's
-`PUBLIC_ORDERS_ENABLED` from it, so the two cannot disagree. **Do it together with
-the bank details below, not before.** Design:
+`PUBLIC_ORDERS_ENABLED` from it, so the two cannot disagree. Design:
 [specs/2026-07-30-orders-closed.md](specs/2026-07-30-orders-closed.md).
+
+Bank details were configured on 2026-08-15 and ordering **stayed closed** by
+explicit decision. The details were the loudest blocker, not the only one:
+go-live-checklist §2 (legal pages still `[Platzhalter]`), §3 (B2B/B2C) and §6
+(no confirmation email) are open, and §6 means a customer who orders receives
+nothing in writing at all. Opening the shop is a decision about those, taken
+deliberately — never a side effect of other work.
 
 Everything described in the rest of this file is implemented and working; it is
 switched off, not missing.
 
-## ⚠️ BLOCKER — real bank details are still missing
+## Bank details — interim account configured 2026-08-15
 
 Payment is **Banküberweisung (direct bank transfer)**: the customer places the
 order, sees our account details plus a payment reference, and transfers the
 money themselves. There is no card processor and no crypto.
 
-That means **the shop cannot take a single real payment until the business
-account exists and its details are configured.** Right now every confirmation
-page shows `PLATZHALTER` and an orange warning telling the customer *not* to
-transfer yet.
+The configured account is an **interim personal Wise account with a Belgian
+IBAN**, not the business account. It is a stopgap: the payee is a private
+individual, which reads badly next to an Impressum that still says
+`[Platzhalter]`, and swapping it for the business account later is a `.env`
+change plus a redeploy. Wise is named as the recipient of the payment data in
+`datenschutz.astro`; go-live-checklist §1 tracks what is still owed.
 
-When the account is open, set these four in `storefront/.env`:
+The four values live in `/srv/peptides/.env` on the server and
+`storefront/.env` locally:
 
 ```dotenv
 PUBLIC_BANK_ACCOUNT_HOLDER=   # exactly as registered with the bank
@@ -53,11 +62,11 @@ PUBLIC_BANK_NAME=
 No code change is needed. `src/lib/bank.ts` detects that all four are real,
 `bankDetailsArePlaceholder()` returns false, and the warning disappears by
 itself. Rebuild the storefront afterwards — the values are baked in at build
-time.
+time, so editing `.env` alone changes nothing that a visitor sees.
 
 `storefront/.env` is git-ignored. The IBAN must never be committed.
 
-**Verify after setting them:** place a test order and confirm the confirmation
+**Verify after changing them:** place a test order and confirm the confirmation
 page shows the real holder, IBAN, BIC and bank, with no orange warning, and that
 the amount matches the order total exactly.
 
@@ -157,13 +166,16 @@ The threshold rule uses `item_total` (merchandise after discount). Not
 
 ## Known gaps before go-live
 
-1. **Bank details** — the blocker above.
+1. **The account is an interim personal one** — see above. Not a blocker for
+   taking a payment; it is one for looking like a business that can be paid.
 2. **No confirmation email — deferred 2026-07-27, required before launch.**
    Nothing is sent after an order. For a bank-transfer shop this matters more
    than usual: the payment reference exists only on the confirmation page, so a
    customer who closes the tab cannot pay correctly and the transfer cannot be
    matched. Needs a notification provider plus an `order.placed` subscriber.
    Full requirements in [go-live-checklist.md](go-live-checklist.md#6-order-confirmation-email--must-be-done-before-deploying-live).
+   The confirmation page says outright that the details do not arrive by email
+   and points at `/bestellung/suchen`; that is damage control, not a fix.
 3. **Legal pages need real company data.** `/impressum`, `/datenschutz`, `/agb`
    and `/widerruf` exist and are linked from the mandatory consent checkbox, but
    render company details as visible placeholders and stay `noindex` until

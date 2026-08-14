@@ -88,18 +88,22 @@ indexable.
 
 ---
 
-## 2. Bank details
+## 2. Bank details — interim account set 2026-08-15
 
-Blocks: every order confirmation. Payment is direct bank transfer only, so until
-these are real **no customer can pay** — the confirmation page shows
-`PLATZHALTER` and an orange warning telling them not to transfer.
+Payment is direct bank transfer only. All four are configured with an **interim
+personal Wise account** (Belgian IBAN), so confirmations show real details and
+no warning. What is still owed is the **business** account.
+
+The values are not recorded here or anywhere else in git — read them from
+`/srv/peptides/.env` on the server. Fill the table in only when the business
+account replaces them, and even then keep the IBAN out of this file.
 
 | Variable | Value |
 |---|---|
-| `PUBLIC_BANK_ACCOUNT_HOLDER` (exactly as registered) | |
-| `PUBLIC_BANK_IBAN` | |
-| `PUBLIC_BANK_BIC` | |
-| `PUBLIC_BANK_NAME` | |
+| `PUBLIC_BANK_ACCOUNT_HOLDER` (exactly as registered) | set — personal, interim |
+| `PUBLIC_BANK_IBAN` | set — interim |
+| `PUBLIC_BANK_BIC` | set — interim |
+| `PUBLIC_BANK_NAME` | set — interim |
 
 **How to apply:** set them in `/srv/peptides/.env` on the server, then redeploy —
 they are baked into the static build, so a redeploy is required, not just a
