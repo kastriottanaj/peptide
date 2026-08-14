@@ -20,6 +20,7 @@
  */
 
 import { resolveContactChannels } from "./contact";
+import { resolveLegalEntity } from "./legal-entity";
 
 export const CONTACT = resolveContactChannels({
 	email: import.meta.env.PUBLIC_CONTACT_EMAIL,
@@ -27,4 +28,22 @@ export const CONTACT = resolveContactChannels({
 	hours: import.meta.env.PUBLIC_CONTACT_HOURS,
 });
 
+/**
+ * The operating company for the Impressum and the Datenschutz controller block.
+ * `legal-entity.ts` decides what counts as a real value; this only reads the
+ * environment. Unset fields render as `[Platzhalter]` rather than disappearing:
+ * on a legal page a missing mandatory field has to be visible.
+ */
+export const COMPANY = resolveLegalEntity({
+	name: import.meta.env.PUBLIC_COMPANY_NAME,
+	street: import.meta.env.PUBLIC_COMPANY_STREET,
+	locality: import.meta.env.PUBLIC_COMPANY_LOCALITY,
+	country: import.meta.env.PUBLIC_COMPANY_COUNTRY,
+	representative: import.meta.env.PUBLIC_COMPANY_REPRESENTATIVE,
+	registerAuthority: import.meta.env.PUBLIC_COMPANY_REGISTER_AUTHORITY,
+	registerNumber: import.meta.env.PUBLIC_COMPANY_REGISTER_NUMBER,
+	vatId: import.meta.env.PUBLIC_COMPANY_VAT_ID,
+});
+
 export { mailtoHref, telHref } from "./contact";
+export { postalAddress } from "./legal-entity";

@@ -79,22 +79,47 @@ the IBAN must never be committed.
       §6 in particular means a customer gets nothing in writing.
 - [ ] Test order against production once it is open
 
-## 2. Company details — blocks the legal pages
+## 2. Company details — partially filled 2026-08-15
 
-Every legal page renders company data as red `[Platzhalter]` markers and carries
-a banner saying it is not legally binding. All four are `noindex` until then.
+The operator is **a Virginia LLC**, identified from the signed Operating
+Agreement. Firmierung, address and representative are configured as
+`PUBLIC_COMPANY_*` in `/srv/peptides/.env` and render on `/impressum/` and in
+the Datenschutz controller block. All four legal pages still carry the
+`[Platzhalter]` markers below, the "not legally binding" banner and `noindex`.
 
-Needed, from the commercial register entry or trade registration:
-
-- [ ] Firmierung including legal form (GmbH, UG, e.K., …)
-- [ ] Business address
-- [ ] Managing director / owner name
-- [ ] Email and phone for the Impressum
-- [ ] Registergericht and HRB/HRA number (or confirmation that none exists)
-- [ ] USt-IdNr., or confirmation of Kleinunternehmerregelung
-- [ ] Competent data-protection supervisory authority (follows from company seat)
+- [x] ~~Firmierung including legal form~~ — set 2026-08-15
+- [x] ~~Business address~~ — set 2026-08-15, **but see the mailbox warning in
+      [launch-data-needed.md](launch-data-needed.md) §1**: it is a `PMB`
+      private mail box, which may not be a *ladungsfähige Anschrift* under
+      § 5 DDG
+- [x] ~~Managing director / owner name~~ — set 2026-08-15 (Chief Executive
+      Member; the second member is deliberately **not** published — § 5 DDG
+      wants the authorised representative, and per § 4.4 of the Operating
+      Agreement the other members cannot bind the company)
+- [x] ~~Email for the Impressum~~ — configured and live
+- [ ] Phone for the Impressum, or a deliberate decision to drop the row
+- [ ] Register authority and entity number — the Virginia SCC entity ID is not
+      in the Operating Agreement
+- [ ] USt-IdNr. — **a US seller shipping to German consumers has German VAT
+      obligations.** This is not answered by the Kleinunternehmer question in
+      §3, which assumes a German seller
+- [ ] **Art. 27 DSGVO representative in the Union** — mandatory for a
+      controller not established in the EU that offers goods to data subjects
+      here. Must be appointed in writing and named in the Datenschutzerklärung,
+      which currently says so in a `[Platzhalter]`
+- [ ] Competent data-protection supervisory authority — a non-EU controller has
+      no German Landesbehörde by company seat; follows from the Art. 27
+      representative's seat
 - [ ] Hosting provider named, with an Art. 28 DSGVO processing agreement
 - [ ] Shipping provider named
+- [ ] The Streitbeilegung section still points at the EU ODR platform, which has
+      been discontinued. Replacement wording is a legal-review question and is
+      marked `[Platzhalter]` on the page
+
+**The payee and the operator now disagree.** The Impressum names the LLC; the
+bank details in §1 are a private individual's Wise account. A customer is asked
+to transfer to a name that does not appear anywhere on the site. Resolve before
+opening ordering — either the account changes or the Impressum does.
 
 Pages affected: `impressum.astro`, `datenschutz.astro`, `agb.astro`,
 `widerruf.astro`. Remove `draft` from the `LegalLayout` props once a page is
