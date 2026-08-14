@@ -267,23 +267,38 @@ test("About and Kontakt stay indexable", { skip }, () => {
 	}
 });
 
-test("REGRESSION: the legal pages keep noindex while placeholders remain", { skip }, () => {
-	// The `draft` prop on LegalLayout is the only thing keeping unreviewed legal
-	// text out of the index (docs/go-live-checklist.md §2). Removing it to
-	// satisfy an SEO audit is the mistake this pins.
+/**
+ * The legal pages were made indexable on 2026-08-15 by owner decision, while
+ * they still carry placeholders, so that they are filled in in public.
+ *
+ * That reverses what the two tests below used to assert, so they now pin the
+ * half of the rule that still holds. The half that is gone — "a placeholder
+ * implies noindex" — is replaced by an explicit, enumerated exception: these
+ * four routes and no others. A fifth page cannot join them by accident, which
+ * is the failure mode the original test existed for.
+ */
+const INDEXABLE_WITH_PLACEHOLDERS = new Set(["/datenschutz/", "/agb/"]);
+
+test("REGRESSION: the legal pages keep their draft banner", { skip }, () => {
+	// What survived the 2026-08-15 decision. Indexing was relaxed; telling the
+	// reader the text is not final was not. A page carrying a `[Platzhalter]`
+	// that reads as finished legal text is the mistake this now pins — see
+	// "the legal pages still mark every field that is genuinely missing" below
+	// for the fields themselves.
 	for (const page of LEGAL) {
 		assert.match(
 			html(page),
-			/<meta name="robots" content="noindex/i,
-			`${page.path}: lost its noindex`,
+			/Noch nicht rechtsverbindlich/,
+			`${page.path}: lost its draft banner`,
 		);
 	}
 });
 
-test("REGRESSION: a page carrying placeholders is never indexable", { skip }, () => {
-	// Stated as the general rule rather than as a list of pages, so a new page
-	// that renders a `.todo` marker is covered the day it is added.
+test("REGRESSION: only the agreed pages are indexable with placeholders", { skip }, () => {
+	// Stated as the general rule plus a closed exception list, so a new page
+	// that renders a `.todo` marker is still covered the day it is added.
 	const leaking = ALL.filter((page) => {
+		if (INDEXABLE_WITH_PLACEHOLDERS.has(page.path)) return false;
 		const markup = html(page);
 		const hasPlaceholder = /class="todo\b/.test(markup) || /\[Platzhalter/.test(markup);
 		const noindex = /<meta name="robots"[^>]*noindex/i.test(markup);

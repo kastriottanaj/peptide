@@ -4,10 +4,20 @@
  * narrow measure, consistent heading rhythm, and a visible banner while the
  * page still contains placeholders.
  *
- * `draft` is the only thing keeping unreviewed legal text out of the index — it
- * sets `noindex` on the page, and `content-index.ts` leaves these routes out of
- * the sitemap for the same reason. Do not remove it from a page until that
- * page's real company data is in place; see docs/go-live-checklist.md §2.
+ * `draft` and indexability were one flag until 2026-08-15 and are now two, by
+ * owner decision: the legal pages are indexable **while they still carry
+ * placeholders**, so they are filled in in public rather than in private.
+ *
+ * `draft` therefore still means "this text is not final" and still renders the
+ * banner saying so — that part was not relaxed, and a page that shows a
+ * `[Platzhalter]` must keep it. `noindex` defaults to `draft`, so any *other*
+ * page using this layout keeps the old all-or-nothing behaviour and a new draft
+ * page cannot become indexable by omission. The four legal routes opt out
+ * explicitly with `noindex={false}`.
+ *
+ * They stay out of the sitemap regardless: `content-index.ts` adds a legal route
+ * at priority 0.2 once it is **final**, and "indexable" is not "final". Nothing
+ * here promotes an unfinished page — it only stops forbidding it.
  *
  * Pages that pass `sections` get a table of contents. The section list is the
  * page's own constant, and the page renders its `<h2 id>` from the same objects,
@@ -33,14 +43,27 @@ export interface Props {
 	 * review. Renders a visible warning so it cannot be mistaken for final text.
 	 */
 	draft?: boolean;
+	/**
+	 * Index directive. Defaults to `draft`, which is the safe default: a page
+	 * that forgets to decide stays out of the index. Pass `false` to publish a
+	 * draft deliberately.
+	 */
+	noindex?: boolean;
 	/** Renders a table of contents when non-empty. */
 	sections?: LegalSection[];
 }
 
-const { title, description, updated, draft = false, sections = [] } = Astro.props;
+const {
+	title,
+	description,
+	updated,
+	draft = false,
+	noindex = draft,
+	sections = [],
+} = Astro.props;
 ---
 
-<BaseLayout title={title} description={description} noindex={draft}>
+<BaseLayout title={title} description={description} noindex={noindex}>
 	<article class="legal">
 		<h1>{title}</h1>
 		{updated && <p class="legal__updated">Stand: {updated}</p>}

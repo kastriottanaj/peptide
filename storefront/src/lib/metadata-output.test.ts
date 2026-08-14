@@ -230,19 +230,23 @@ const EXPECTED: Record<string, PageMeta> = {
  * list on 2026-08-03 by explicit decision and are indexed; their own test files
  * pin that. `/versand-zahlung/` and `/retouren-reklamation/` stayed, because
  * shipping, payment, return and refund details are still open.
+ *
+ * **The four legal pages left on 2026-08-15**, also by explicit decision: they
+ * are indexable while still carrying placeholders, so they get filled in in
+ * public. They keep the `draft` banner, and `trust-pages.test.ts` pins that plus
+ * the fields still outstanding. What remains here is the checkout and order
+ * flow, which is transactional and has no business being indexed at all, and the
+ * two pages whose procedures are unfinished — a different situation from a legal
+ * page with a visible gap, because those two read as complete.
  */
 const MUST_STAY_NOINDEX = [
 	"/404.html",
-	"/agb/",
 	"/bestellung/",
 	"/bestellung/suchen/",
-	"/datenschutz/",
-	"/impressum/",
 	"/kasse/",
 	"/retouren-reklamation/",
 	"/versand-zahlung/",
 	"/warenkorb/",
-	"/widerruf/",
 ];
 
 // ---------------------------------------------------------------------------
