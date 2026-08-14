@@ -51,9 +51,13 @@ One mitigation remains:
   the mitigation holding every item below in a dormant state; it is gone, so
   each one is now live against real customers and real money. See
   [checkout.md](checkout.md).
-- The four legal pages keep a per-page `noindex` from the `draft` prop, so
-  unreviewed legal text is publicly reachable but not indexed. `deploy.sh` checks
-  `/impressum` for it on every deploy.
+- ~~The four legal pages keep a per-page `noindex`~~ — **removed 2026-08-15 by
+  explicit decision.** All four are indexable while still carrying
+  `[Platzhalter]` data; the plan is to fill them in in public. They keep the
+  `draft` banner ("Noch nicht rechtsverbindlich"), which is now the only thing
+  telling a visitor arriving from a search result that the text is not final —
+  `deploy.sh` checks `/impressum` for that banner on every deploy. They are
+  still absent from the sitemap: indexable is not final.
 
 ---
 
@@ -158,8 +162,10 @@ transfer rejected. The check is derived, not configured, so the explanation
 business account. Nothing has to remember to remove it.
 
 Pages affected: `impressum.astro`, `datenschutz.astro`, `agb.astro`,
-`widerruf.astro`. Remove `draft` from the `LegalLayout` props once a page is
-final — that drops the banner and makes it indexable.
+`widerruf.astro`. All four are already indexable (`draft noindex={false}`).
+Remove `draft` from the `LegalLayout` props once a page is final — that drops
+the banner and, at that point, the page also earns its sitemap entry at
+priority 0.2 in `content-index.ts`.
 
 ## 3. The B2B / B2C decision — changes the terms
 

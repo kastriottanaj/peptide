@@ -272,10 +272,14 @@ Three consequences for any change you make here:
   [docs/go-live-checklist.md](docs/go-live-checklist.md) §2–§6 still open, so
   treat anything touching the catalog, checkout, prices or legal pages as
   changing something a paying customer sees today, not a staging site.
-- The four legal pages keep their own `noindex` via the `draft` prop in
-  `LegalLayout`. **Do not remove a `draft` prop** until that page's real company
-  data is in place — it is the only thing keeping unreviewed legal text out of
-  the index.
+- The four legal pages are **indexable as of 2026-08-15** by explicit decision,
+  while they still carry `[Platzhalter]` data — they are being filled in in
+  public. `draft` and `noindex` are now separate props on `LegalLayout`: the
+  pages pass `draft noindex={false}`. **Keep the `draft` prop** until a page's
+  real data is in place — its banner is now the only thing telling a visitor
+  arriving from a search result that the text is not final, and `deploy.sh`
+  checks `/impressum` for it on every deploy. They stay out of the sitemap until
+  they are final.
 - Anything you ship is immediately public and crawlable. There is no longer a
   password between a half-finished change and a real visitor.
 

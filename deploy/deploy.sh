@@ -315,12 +315,14 @@ elif ! grep -qiE '<!doctype|<html' <<<"${site_body}"; then
 	warn "the handle_errors block in deploy/Caddyfile."
 fi
 
-# The legal pages carry their own noindex until the [Platzhalter] company data
-# is replaced (docs/go-live-checklist.md §2). Losing that silently would put
-# unreviewed legal text into the index, so it is checked on every deploy.
-if ! grep -qi 'noindex' "${WEB_ROOT}/impressum/index.html" 2>/dev/null; then
-	warn "/impressum no longer carries noindex. If its company data is still"
-	warn "[Platzhalter], restore the draft prop before Google crawls it."
+# The legal pages became indexable on 2026-08-15 by explicit decision, while
+# they still carry [Platzhalter] data (docs/go-live-checklist.md §2). So the
+# noindex check is gone and the draft banner is checked instead: that banner is
+# now the only thing telling a visitor arriving from a search result that the
+# text is not final, which makes losing it the silent failure worth catching.
+if ! grep -q 'Noch nicht rechtsverbindlich' "${WEB_ROOT}/impressum/index.html" 2>/dev/null; then
+	warn "/impressum no longer carries the draft banner. If its company data is"
+	warn "still [Platzhalter], restore the draft prop — the page is indexable."
 fi
 
 # ---------------------------------------------------------------------------

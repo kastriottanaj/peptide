@@ -94,8 +94,12 @@ test("routes build with exact canonicals, H1s and robots behavior", { skip }, ()
 		const robots = [...html.matchAll(/<meta name="robots" content="([^"]+)"/g)].map((m) => m[1]);
 		assert.deepEqual(robots, route.noindex ? ["noindex, nofollow"] : []);
 	}
+	// /datenschutz/ became indexable on 2026-08-15 by explicit decision, while
+	// still carrying placeholders — see metadata-output.test.ts. What it must not
+	// lose is the banner telling the reader the text is not final.
 	const policy = output("datenschutz/index.html");
-	assert.deepEqual([...policy.matchAll(/<meta name="robots" content="([^"]+)"/g)].map((m) => m[1]), ["noindex, nofollow"]);
+	assert.deepEqual([...policy.matchAll(/<meta name="robots" content="([^"]+)"/g)].map((m) => m[1]), []);
+	assert.match(policy, /Noch nicht rechtsverbindlich/);
 });
 
 test("public discovery includes only security exactly once", { skip }, () => {

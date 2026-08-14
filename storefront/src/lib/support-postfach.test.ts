@@ -315,11 +315,16 @@ test("the shipped page carries the section and its anchor", { skip }, () => {
 });
 
 /**
- * The page must stay out of the index while it carries placeholders and has had
- * no legal review — including this section's draft legal bases.
+ * The page became indexable on 2026-08-15 by explicit decision, while it still
+ * carries placeholders and has had no legal review — including this section's
+ * draft legal bases (metadata-output.test.ts records the reasoning).
+ *
+ * So the assertion moves to the thing that still has to hold: a reader who
+ * arrives from a search result must be told the text is not final, because
+ * they arrive without the context someone following a footer link would have.
  */
-test("the shipped page is still noindex, nofollow", { skip }, () => {
-	assert.match(html(), /<meta name="robots" content="noindex, nofollow"\s*\/?>/);
+test("the shipped page still declares itself a draft", { skip }, () => {
+	assert.match(html(), /Noch nicht rechtsverbindlich/);
 });
 
 test("the shipped page states the safeguards in full", { skip }, () => {
