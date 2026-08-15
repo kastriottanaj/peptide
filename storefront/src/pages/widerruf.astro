@@ -2,46 +2,99 @@
 import LegalLayout from "../layouts/LegalLayout.astro";
 import { COMPANY, CONTACT, postalAddress } from "../lib/company";
 
-// Diese Seite gibt bewusst die VERBRAUCHER-Variante wieder (gesetzliches
-// Muster nach Anlage 1 zu Art. 246a § 1 Abs. 2 S. 2 EGBGB).
-//
-// Begründung: Solange nicht entschieden ist, ob ausschließlich an Unternehmer
-// und Forschungseinrichtungen verkauft wird, ist dies die sichere Richtung.
-// Fehlt gegenüber einem Verbraucher eine ordnungsgemäße Belehrung, verlängert
-// sich die Widerrufsfrist auf bis zu zwölf Monate und 14 Tage (§ 356 Abs. 3
-// BGB). Eine überflüssige Belehrung schadet dagegen nicht.
-//
-// TODO: Steht fest, dass ausschließlich B2B verkauft wird, wird diese Seite
-// durch einen kurzen Hinweis ersetzt, dass ein Widerrufsrecht nur Verbrauchern
-// zusteht und daher nicht besteht. Siehe docs/go-live-checklist.md.
+/**
+ * Widerruf und Retouren — the B2B variant.
+ *
+ * This page carried the statutory CONSUMER Widerrufsbelehrung (Anlage 1 zu
+ * Art. 246a § 1 Abs. 2 S. 2 EGBGB) until 2026-08-15, deliberately, because the
+ * customer model was undecided and that was the safe direction: a consumer who
+ * buys without a proper instruction gets up to twelve months and fourteen days
+ * to withdraw (§ 356 Abs. 3 BGB), whereas a superfluous instruction costs
+ * nothing.
+ *
+ * The model is now decided — business customers only, docs/go-live-checklist.md
+ * §3 and docs/specs/2026-08-15-b2b-only.md — so the instruction is replaced by
+ * the notice that no consumer withdrawal right arises.
+ *
+ * **This text is only defensible because the shop actually restricts to
+ * businesses.** `kasse.astro` requires a confirmation that the order is placed
+ * commercially, and AGB § 2 makes the same confirmation contractual. If either
+ * is ever removed, this page becomes the expensive mistake described above and
+ * must go back to the consumer variant. They are one change, never three.
+ *
+ * The return conditions are the ones this shop can actually keep: no return
+ * address exists yet (go-live-checklist §1), so returns are handled case by
+ * case after approval rather than promised as a process.
+ */
 ---
 
 <LegalLayout
-	title="Widerrufsbelehrung"
-	description="Widerrufsrecht und Muster-Widerrufsformular."
+	title="Widerruf und Retouren"
+	description="Kundenkreis, Widerrufsrecht und Rücksendungen bei Peptide Einkaufen."
 	draft
 	noindex={false}
 >
+	<h2>Kein Verbrauchershop</h2>
 	<p>
-		<strong>Hinweis:</strong> Ein Widerrufsrecht steht nur Verbrauchern im Sinne
-		des § 13 BGB zu. Bestellungen von Unternehmen, Forschungseinrichtungen und
-		Behörden im Rahmen ihrer gewerblichen oder selbständigen beruflichen
-		Tätigkeit sind davon nicht erfasst.
+		Dieses Angebot richtet sich ausschließlich an Unternehmer im Sinne des
+		§ 14 BGB, an Forschungseinrichtungen, Labore, Behörden und sonstige
+		geschäftliche oder institutionelle Kunden. Verträge mit Verbrauchern im
+		Sinne des § 13 BGB werden nicht geschlossen.
+	</p>
+	<p>
+		Verbraucher und private Selbstanwender dürfen über diese Website keine
+		Bestellungen abgeben. Mit dem Absenden einer Bestellung bestätigt der
+		Kunde, dass er ausschließlich geschäftlich oder institutionell bestellt und
+		dass die Produkte ausschließlich für Forschungs-, Analyse- und Laborzwecke
+		beschafft werden.
 	</p>
 
-	<h2>Widerrufsrecht</h2>
+	<h2>Kein Verbraucherwiderrufsrecht</h2>
 	<p>
-		Sie haben das Recht, binnen vierzehn Tagen ohne Angabe von Gründen diesen
-		Vertrag zu widerrufen.
+		Das gesetzliche Widerrufsrecht steht Verbrauchern zu. Da dieses Angebot
+		nicht auf Verbraucher ausgerichtet ist und keine Verbraucherverträge
+		geschlossen werden, besteht kein Widerrufsrecht und wird keine
+		Verbraucher-Widerrufsbelehrung bereitgestellt.
 	</p>
 	<p>
-		Die Widerrufsfrist beträgt vierzehn Tage ab dem Tag, an dem Sie oder ein von
-		Ihnen benannter Dritter, der nicht der Beförderer ist, die Waren in Besitz
-		genommen haben bzw. hat.
+		Im unternehmerischen Geschäftsverkehr sind Bestellungen nach Vertragsschluss
+		verbindlich, soweit nicht zwingende gesetzliche Mängelrechte, ausdrücklich
+		vereinbarte Zusagen oder eine schriftlich bestätigte Kulanzregelung etwas
+		anderes vorsehen.
+	</p>
+
+	<h2>Keine reguläre Rückgabe</h2>
+	<p>
+		Eine Rückgabe, ein Umtausch oder eine Erstattung wegen Meinungsänderung,
+		Fehlbestellung, geänderter Projektplanung oder Problemen bei der
+		Weiterverwendung ist ausgeschlossen, soweit keine zwingenden gesetzlichen
+		Rechte entgegenstehen.
+	</p>
+
+	<h2>Rücksendungen nur nach Freigabe</h2>
+	<p>
+		Rücksendungen bedürfen immer einer vorherigen Freigabe in Textform. Bitte
+		senden Sie keine Produkte unaufgefordert zurück. Unangekündigte
+		Rücksendungen können aus Qualitäts-, Sicherheits-, Hygiene-, Lager- oder
+		Dokumentationsgründen abgelehnt werden.
 	</p>
 	<p>
-		Um Ihr Widerrufsrecht auszuüben, müssen Sie uns
+		Soweit eine Rücksendung freigegeben wird, muss die Ware ungeöffnet,
+		versiegelt und in der Originalverpackung sein. Die Rücksendeadresse wird im
+		Einzelfall nach der Freigabe mitgeteilt; auf dieser Seite steht keine
+		Rücksendeadresse.
 	</p>
+
+	<h2>Mängel und Reklamationen</h2>
+	<p>
+		Die gesetzlichen Mängelrechte bleiben unberührt. Beschädigte, falsche oder
+		unvollständige Lieferungen melden Sie bitte über die
+		{" "}<a href="/contact/">Kontaktseite</a>; das Vorgehen ist unter
+		{" "}<a href="/retouren-reklamation/">Retouren und Reklamationen</a>{" "}
+		beschrieben.
+	</p>
+
+	<h2>Kontakt</h2>
 	<dl>
 		<dt>Anbieter</dt>
 		<dd>{COMPANY.name ?? <span class="todo">[Firmierung]</span>}</dd>
@@ -66,93 +119,4 @@ import { COMPANY, CONTACT, postalAddress } from "../lib/company";
 		<dt>Telefon</dt>
 		<dd>{CONTACT.phone ?? <span class="todo">[Telefonnummer]</span>}</dd>
 	</dl>
-	<p>
-		mittels einer eindeutigen Erklärung (z. B. ein mit der Post versandter Brief
-		oder eine E-Mail) über Ihren Entschluss, diesen Vertrag zu widerrufen,
-		informieren. Sie können dafür das beigefügte Muster-Widerrufsformular
-		verwenden, das jedoch nicht vorgeschrieben ist.
-	</p>
-	<p>
-		Zur Wahrung der Widerrufsfrist reicht es aus, dass Sie die Mitteilung über
-		die Ausübung des Widerrufsrechts vor Ablauf der Widerrufsfrist absenden.
-	</p>
-
-	<h2>Folgen des Widerrufs</h2>
-	<p>
-		Wenn Sie diesen Vertrag widerrufen, haben wir Ihnen alle Zahlungen, die wir
-		von Ihnen erhalten haben, einschließlich der Lieferkosten (mit Ausnahme der
-		zusätzlichen Kosten, die sich daraus ergeben, dass Sie eine andere Art der
-		Lieferung als die von uns angebotene, günstigste Standardlieferung gewählt
-		haben), unverzüglich und spätestens binnen vierzehn Tagen ab dem Tag
-		zurückzuzahlen, an dem die Mitteilung über Ihren Widerruf dieses Vertrags bei
-		uns eingegangen ist. Für diese Rückzahlung verwenden wir dasselbe
-		Zahlungsmittel, das Sie bei der ursprünglichen Transaktion eingesetzt haben,
-		es sei denn, mit Ihnen wurde ausdrücklich etwas anderes vereinbart; in keinem
-		Fall werden Ihnen wegen dieser Rückzahlung Entgelte berechnet.
-	</p>
-	<p>
-		Wir können die Rückzahlung verweigern, bis wir die Waren wieder
-		zurückerhalten haben oder bis Sie den Nachweis erbracht haben, dass Sie die
-		Waren zurückgesandt haben, je nachdem, welches der frühere Zeitpunkt ist.
-	</p>
-	<p>
-		Sie haben die Waren unverzüglich und in jedem Fall spätestens binnen vierzehn
-		Tagen ab dem Tag, an dem Sie uns über den Widerruf dieses Vertrags
-		unterrichten, an uns zurückzusenden oder zu übergeben. Die Frist ist
-		gewahrt, wenn Sie die Waren vor Ablauf der Frist von vierzehn Tagen absenden.
-	</p>
-	<p>
-		Wir tragen die unmittelbaren Kosten der Rücksendung der Waren.
-	</p>
-	<p>
-		Sie müssen für einen etwaigen Wertverlust der Waren nur aufkommen, wenn
-		dieser Wertverlust auf einen zur Prüfung der Beschaffenheit, Eigenschaften
-		und Funktionsweise der Waren nicht notwendigen Umgang mit ihnen
-		zurückzuführen ist.
-	</p>
-
-	<h2>Ausschluss und vorzeitiges Erlöschen</h2>
-	<p>
-		Das Widerrufsrecht besteht nicht bzw. erlischt vorzeitig bei Verträgen zur
-		Lieferung versiegelter Waren, die aus Gründen des Gesundheitsschutzes oder
-		der Hygiene nicht zur Rückgabe geeignet sind, wenn ihre Versiegelung nach der
-		Lieferung entfernt wurde (§ 312g Abs. 2 Nr. 3 BGB).
-	</p>
-	<p class="todo">
-		[Prüfen lassen, ob und für welche Artikel dieser Ausschluss greift — bei
-		versiegelten Vials ist das regelmäßig der Fall, muss aber vor Inbetriebnahme
-		konkret bewertet und gegenüber dem Kunden klar gekennzeichnet werden.]
-	</p>
-
-	<h2>Muster-Widerrufsformular</h2>
-	<p>
-		(Wenn Sie den Vertrag widerrufen wollen, füllen Sie bitte dieses Formular aus
-		und senden Sie es zurück.)
-	</p>
-	<div class="muster">
-		<p>
-			An {
-				COMPANY.identifiable && CONTACT.email ? (
-					`${COMPANY.name}, ${postalAddress(COMPANY)}, ${CONTACT.email}`
-				) : (
-					<span class="todo">[Firmierung, Anschrift, E-Mail-Adresse]</span>
-				)
-			}:
-		</p>
-		<p>
-			Hiermit widerrufe(n) ich/wir (*) den von mir/uns (*) abgeschlossenen
-			Vertrag über den Kauf der folgenden Waren (*)/die Erbringung der folgenden
-			Dienstleistung (*)
-		</p>
-		<ul>
-			<li>Bestellt am (*)/erhalten am (*)</li>
-			<li>Name des/der Verbraucher(s)</li>
-			<li>Anschrift des/der Verbraucher(s)</li>
-			<li>
-				Unterschrift des/der Verbraucher(s) (nur bei Mitteilung auf Papier)
-			</li>
-			<li>Datum</li>
-		</ul>
-		<p>(*) Unzutreffendes streichen.</p>
-	</div>
 </LegalLayout>

@@ -279,6 +279,13 @@ Three consequences for any change you make here:
   utility forms, and `/coa-pruefen/` while no analysis document is linked. Those
   are `noindex` for ordinary SEO reasons — user-specific, thin or duplicate —
   not because anything is unfinished, so do not "open them up" as a batch.
+- **The shop sells to businesses only** (decided 2026-08-15,
+  [docs/specs/2026-08-15-b2b-only.md](docs/specs/2026-08-15-b2b-only.md)). Three
+  things enforce it and they are **one change, never three**: the required
+  business confirmation in `kasse.astro`, the § 14 BGB confirmation in AGB § 2,
+  and the "kein Verbraucherwiderrufsrecht" notice on `/widerruf/`. Remove the
+  checkout gate alone and a consumer who slips through gains roughly twelve
+  months to withdraw instead of fourteen days (§ 356 Abs. 3 BGB).
 - The four legal pages are **indexable as of 2026-08-15** by explicit decision,
   while they still carry `[Platzhalter]` data — they are being filled in in
   public. `draft` and `noindex` are now separate props on `LegalLayout`: the

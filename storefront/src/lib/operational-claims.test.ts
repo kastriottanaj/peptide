@@ -154,9 +154,21 @@ test("the orders-closed copy states the state without explaining it", () => {
 test("the AGB keeps its unresolved VAT and delivery-time markers", () => {
 	// The other direction: stripping a claim must not become stripping the
 	// placeholder that records the open question.
+	//
+	// The VAT marker was reworded on 2026-08-15, not removed. Answering §3
+	// (business customers only) takes away the PAngV duty to show gross prices,
+	// which is what "je nach Kleinunternehmerregelung" was about — but it does
+	// not say what tax a US seller owes on goods shipped to German business
+	// customers. So the question survives its old wording, and this asserts the
+	// question rather than the sentence that used to phrase it.
 	const agb = readFileSync(join(SRC, "pages/agb.astro"), "utf8");
 
-	assert.match(agb, /\[inkl\. \/ zzgl\. gesetzlicher Umsatzsteuer/);
+	assert.match(agb, /\[Umsatzsteuerausweis festlegen/);
+	assert.doesNotMatch(
+		agb,
+		/Kleinunternehmerregelung und Zielgruppe festlegen/,
+		"the old VAT marker is back; it assumed a German seller and a consumer audience",
+	);
 	assert.match(agb, /\[Anzahl\]<\/span> Werktage ab Zahlungseingang/);
 	assert.match(agb, /\bdraft\b/, "AGB lost its draft flag");
 });
