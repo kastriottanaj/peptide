@@ -241,13 +241,7 @@ const EXPECTED: Record<string, PageMeta> = {
  * two pages whose procedures are unfinished — a different situation from a legal
  * page with a visible gap, because those two read as complete.
  */
-const MUST_STAY_NOINDEX = [
-	"/404.html",
-	"/bestellung/",
-	"/bestellung/suchen/",
-	"/kasse/",
-	"/warenkorb/",
-];
+const MUST_STAY_NOINDEX: string[] = [];
 
 // ---------------------------------------------------------------------------
 
