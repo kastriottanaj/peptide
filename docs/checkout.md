@@ -175,14 +175,12 @@ The threshold rule uses `item_total` (merchandise after discount). Not
 
 1. **The account is an interim personal one** — see above. Not a blocker for
    taking a payment; it is one for looking like a business that can be paid.
-2. **No confirmation email — deferred 2026-07-27, required before launch.**
-   Nothing is sent after an order. For a bank-transfer shop this matters more
-   than usual: the payment reference exists only on the confirmation page, so a
-   customer who closes the tab cannot pay correctly and the transfer cannot be
-   matched. Needs a notification provider plus an `order.placed` subscriber.
-   Full requirements in [go-live-checklist.md](go-live-checklist.md#6-order-confirmation-email--must-be-done-before-deploying-live).
-   The confirmation page says outright that the details do not arrive by email
-   and points at `/bestellung/suchen`; that is damage control, not a fix.
+2. **The confirmation email may land in spam.** Built 2026-08-15 — an
+   `order.placed` subscriber sends the order number, lines, totals, bank details
+   and the payment reference, gated on `ORDER_EMAIL_ENABLED`. What is still
+   missing is SPF, DKIM and DMARC at Hostinger, and without them a
+   bank-transfer instruction is exactly the shape of message a filter distrusts.
+   See [specs/2026-08-15-order-confirmation-email.md](specs/2026-08-15-order-confirmation-email.md).
 3. **Legal pages need real company data.** `/impressum`, `/datenschutz`, `/agb`
    and `/widerruf` exist and are linked from the mandatory consent checkbox, but
    render company details as visible placeholders and stay `noindex` until
