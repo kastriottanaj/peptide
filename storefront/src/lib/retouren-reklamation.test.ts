@@ -124,13 +124,23 @@ test("the page links the Widerrufsbelehrung instead of restating it", () => {
 	assert.match(body(), /href="\/widerruf\/"/, "no link to /widerruf/");
 });
 
-test("REGRESSION: /widerruf/ itself is untouched and still draft", () => {
+test("REGRESSION: /widerruf/ stays a draft and stays B2B", () => {
 	// This page links there; it may not become a reason to edit the legal page.
-	// `draft` is what keeps unreviewed legal text out of the index.
+	//
+	// The Muster-Widerrufsformular assertion was removed on 2026-08-15: the shop
+	// sells to businesses only (docs/specs/2026-08-15-b2b-only.md), so the
+	// consumer instruction and its form are gone by decision, not by accident.
+	// What replaces it is the assertion that the B2B position is actually
+	// stated — a /widerruf/ that says neither thing would be the real failure.
 	const widerruf = readFileSync(join(SRC, "pages/widerruf.astro"), "utf8");
 
 	assert.match(widerruf, /<LegalLayout[\s\S]*?\bdraft\b/, "widerruf.astro lost its draft flag");
-	assert.match(widerruf, /Muster-Widerrufsformular/);
+	assert.match(widerruf, /Kein Verbraucherwiderrufsrecht/);
+	assert.doesNotMatch(
+		widerruf,
+		/Muster-Widerrufsformular/,
+		"the consumer withdrawal form is back without the customer model changing",
+	);
 });
 
 test("the order-status section is derived from ORDERS_ENABLED, not asserted", () => {

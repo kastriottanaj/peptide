@@ -108,12 +108,13 @@ const SECTIONS: LegalSection[] = Object.values(S);
 		Der Anbieter erteilt keine Auskünfte zu Anwendung, Dosierung oder
 		gesundheitlichen Wirkungen und macht hierzu keine Angaben.
 	</p>
-	<p class="todo">
-		[Sofern ausschließlich an Unternehmer, Forschungseinrichtungen und Behörden
-		geliefert wird, hier ausdrücklich aufnehmen: „Ein Verkauf an Verbraucher im
-		Sinne des § 13 BGB findet nicht statt." Diese Entscheidung muss vor
-		Inbetriebnahme getroffen werden — sie bestimmt § 7, § 8 und die
-		Widerrufsbelehrung.]
+	<p>
+		Ein Verkauf an Verbraucher im Sinne des § 13 BGB findet nicht statt. Mit
+		dem Absenden der Bestellung bestätigt der Kunde, Unternehmer im Sinne des
+		§ 14 BGB, Forschungseinrichtung, Labor, Behörde oder sonstiger
+		institutioneller Beschaffer zu sein, mindestens 18 Jahre alt zu sein und
+		die Produkte ausschließlich für Forschungs-, Analyse- und Laborzwecke zu
+		beziehen.
 	</p>
 
 	<h2 id={S.formation.id}>{S.formation.heading}</h2>
@@ -139,8 +140,12 @@ const SECTIONS: LegalSection[] = Object.values(S);
 	<h2 id={S.prices.id}>{S.prices.heading}</h2>
 	<p>
 		Alle Preise verstehen sich in Euro{" "}
-		<span class="todo">[inkl. / zzgl. gesetzlicher Umsatzsteuer — je nach
-		Kleinunternehmerregelung und Zielgruppe festlegen]</span>.
+		<span class="todo">[Umsatzsteuerausweis festlegen. Die Entscheidung zu § 2
+		nimmt nur die Pflicht zur Bruttopreisangabe nach PAngV weg, die den
+		Verbraucher schützt — sie beantwortet nicht, welche Steuer anfällt. Der
+		Anbieter sitzt in den Vereinigten Staaten und liefert an gewerbliche
+		Kunden in Deutschland; die Kleinunternehmerregelung ist dafür nicht
+		einschlägig. Steuerlich klären und hier abschließend angeben.]</span>.
 	</p>
 	<p>
 		<strong>Mengenrabatt:</strong> Rabatte werden automatisch je Position anhand
@@ -225,21 +230,15 @@ const SECTIONS: LegalSection[] = Object.values(S);
 
 	<h2 id={S.withdrawal.id}>{S.withdrawal.heading}</h2>
 	<p>
-		Verbrauchern im Sinne des § 13 BGB steht ein gesetzliches Widerrufsrecht zu.
-		Die Einzelheiten, die Fristen, die Folgen des Widerrufs und das
-		Muster-Widerrufsformular ergeben sich aus der{" "}
-		<a href="/widerruf/">Widerrufsbelehrung</a>, die Bestandteil dieser
-		Bedingungen ist.
+		Das gesetzliche Widerrufsrecht steht Verbrauchern im Sinne des § 13 BGB zu.
+		Da nach § 2 keine Verträge mit Verbrauchern geschlossen werden, besteht
+		kein Widerrufsrecht.
 	</p>
 	<p>
-		Bestellungen von Unternehmen, Forschungseinrichtungen und Behörden im Rahmen
-		ihrer gewerblichen oder selbständigen beruflichen Tätigkeit sind davon nicht
-		erfasst.
-	</p>
-	<p class="todo">
-		[Nach der Entscheidung zu § 2 anpassen. Bei reinem B2B-Vertrieb entfällt
-		dieser Paragraf und die Widerrufsbelehrung wird durch einen entsprechenden
-		Hinweis ersetzt.]
+		Die Einzelheiten zum Kundenkreis, zu Rücksendungen und zu Reklamationen
+		ergeben sich aus der Seite{" "}
+		<a href="/widerruf/">Widerruf und Retouren</a>, die Bestandteil dieser
+		Bedingungen ist. Die gesetzlichen Mängelrechte nach § 8 bleiben unberührt.
 	</p>
 
 	<h2 id={S.warranty.id}>{S.warranty.heading}</h2>
@@ -300,7 +299,13 @@ const SECTIONS: LegalSection[] = Object.values(S);
 		Es gilt das Recht der Bundesrepublik Deutschland unter Ausschluss des
 		UN-Kaufrechts.{" "}
 		<span class="todo"
-			>[Gerichtsstandsklausel ergänzen — nur zulässig gegenüber Kaufleuten.]</span
+			>[Gerichtsstand festlegen. Nach § 2 ist eine Gerichtsstandsvereinbarung
+			jetzt grundsätzlich möglich, aber nur gegenüber Kaufleuten und
+			juristischen Personen des öffentlichen Rechts (§ 38 ZPO) — nicht
+			gegenüber jedem Unternehmer. Offen bleibt der Ort: der Anbieter hat
+			seinen Sitz in den Vereinigten Staaten, sodass die übliche Anknüpfung an
+			den Anbietersitz und die hier gewählte Geltung deutschen Rechts
+			auseinanderfallen. Im Rahmen der juristischen Prüfung festlegen.]</span
 		>
 	</p>
 	<p>

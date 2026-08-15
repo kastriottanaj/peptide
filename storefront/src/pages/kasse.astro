@@ -96,19 +96,35 @@ const countries = ORDERS_ENABLED ? await listDeliveryCountries() : [];
 				</p>
 			</section>
 
+			{/* Two separate confirmations, deliberately. The first is what makes the
+			    B2B position on /widerruf/ and in AGB § 2 defensible at all: without
+			    a customer actually confirming they order commercially, "kein
+			    Verbraucherwiderrufsrecht" would be a claim about someone we never
+			    asked, and a consumer who slipped through would gain twelve months
+			    to withdraw instead of fourteen days (§ 356 Abs. 3 BGB). Merging it
+			    into the terms checkbox would bury the one statement the customer is
+			    actually making about themselves.
+			    See docs/specs/2026-08-15-b2b-only.md. */}
 			<section class="card">
+				<label class="confirm">
+					<input type="checkbox" name="business" required />
+					<span>
+						Ich bestelle ausschließlich geschäftlich bzw. institutionell und bin
+						kein Verbraucher im Sinne des § 13 BGB. Die Produkte werden
+						ausschließlich für
+						{" "}<a href="/forschungszwecke/" target="_blank"
+							>Forschungs-, Analyse- und Laborzwecke</a
+						>{" "}beschafft. *
+					</span>
+				</label>
 				<label class="confirm">
 					<input type="checkbox" name="terms" required />
 					<span>
-						Ich habe die <a href="/agb/" target="_blank">AGB</a>, die
-						<a href="/datenschutz/" target="_blank">Datenschutzerklärung</a> und die
-						<a href="/widerruf/" target="_blank">Widerrufsbelehrung</a> gelesen und
-						akzeptiere sie. *
+						Ich habe die <a href="/agb/" target="_blank">AGB</a> und
+						die <a href="/datenschutz/" target="_blank">Datenschutzerklärung</a>
+						{" "}gelesen und akzeptiere sie. *
 					</span>
 				</label>
-				<p class="muted">
-					Bestellung ausschließlich für Forschungs-, Analyse- und Laborzwecke.
-				</p>
 			</section>
 		</div>
 
@@ -371,8 +387,18 @@ const countries = ORDERS_ENABLED ? await listDeliveryCountries() : [];
 				const data = new FormData(form);
 				const value = (name: string) => String(data.get(name) ?? "").trim();
 
+				// Checked separately so the message names the box that is missing.
+				// `required` already blocks submission via reportValidity(); this is
+				// the belt-and-braces path for a form submitted programmatically.
+				if (!data.get("business")) {
+					showError(
+						"Bitte bestätigen Sie, dass Sie geschäftlich bzw. institutionell bestellen.",
+					);
+					return;
+				}
+
 				if (!data.get("terms")) {
-					showError("Bitte bestätigen Sie AGB, Datenschutz und Widerruf.");
+					showError("Bitte bestätigen Sie AGB und Datenschutz.");
 					return;
 				}
 

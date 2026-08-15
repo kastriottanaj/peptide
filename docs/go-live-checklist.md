@@ -36,8 +36,9 @@ Update it as items land.
 3. **§2 — the legal pages are incomplete and unreviewed**: no register number,
    no VAT ID, no Art. 27 DSGVO representative, and a `PMB` address that may not
    be a *ladungsfähige Anschrift*. All four still carry `draft` and `noindex`.
-4. **§3 — the B2B/B2C decision is unmade**, so AGB § 4 still carries a
-   `[Platzhalter]` on VAT while consumers can buy.
+4. ~~**§3 — the B2B/B2C decision is unmade**~~ — decided 2026-08-15: business
+   customers only, enforced by a required confirmation at checkout. VAT and the
+   Gerichtsstand survive it as separate open questions.
 5. **§4 — no lawyer has read any of it.**
 
 §1 is **provisionally cleared**: an interim personal account is configured and
@@ -167,29 +168,39 @@ Remove `draft` from the `LegalLayout` props once a page is final — that drops
 the banner and, at that point, the page also earns its sitemap entry at
 priority 0.2 in `content-index.ts`.
 
-## 3. The B2B / B2C decision — changes the terms
+## 3. The B2B / B2C decision — DECIDED 2026-08-15: **business customers only**
 
-**This one is a decision, not a lookup, and it needs making before launch.**
+Owner decision, following the sister project `peptidebestellung.de`, which is
+live with the same position. Design and non-goals:
+[specs/2026-08-15-b2b-only.md](specs/2026-08-15-b2b-only.md).
 
-Selling only to businesses, research institutions and public bodies is a very
-different legal position from selling to consumers:
+- [x] ~~Decide the customer group~~ — Unternehmer (§ 14 BGB), research
+      institutions, laboratories, public bodies and institutional buyers. **No
+      contracts with consumers (§ 13 BGB).**
+- [x] ~~State it explicitly in AGB § 2~~ — the customer confirms Unternehmer
+      status on placing the order
+- [x] ~~Replace `widerruf.astro` with a notice that no withdrawal right
+      applies~~ — the page is now *Widerruf und Retouren* and carries **zero
+      placeholders**
+- [x] ~~Required business confirmation at checkout~~ — a separate checkbox in
+      `kasse.astro`, not merged into the terms box
 
-| | B2B only | Consumers included |
-|---|---|---|
-| Widerrufsrecht | Does not apply | 14 days, statutory instruction required |
-| Warranty | Can be limited | § 476 BGB restricts limitation |
-| Price display | Net prices permissible | Gross prices with VAT required |
-| Gerichtsstand clause | Permissible | Not permissible |
+**The gate is what makes the text lawful, and the three parts are one change.**
+The checkout confirmation, AGB § 2 and `/widerruf/` stand or fall together: put
+"kein Verbraucherwiderrufsrecht" on a shop that still accepts consumers and a
+consumer who slips through gets roughly twelve months to withdraw instead of
+fourteen days (§ 356 Abs. 3 BGB). Never remove one of the three alone.
 
-`widerruf.astro` currently ships the **consumer** version deliberately. If a
-consumer buys without a proper Widerrufsbelehrung, the withdrawal period
-stretches to about twelve months instead of fourteen days — so having it and not
-needing it is the cheap mistake, and the reverse is the expensive one.
+Two things this decision did **not** settle, contrary to the old table here:
 
-- [ ] Decide the customer group
-- [ ] If B2B only: state it explicitly in AGB § 2 and replace `widerruf.astro`
-      with a short notice that no withdrawal right applies
-- [ ] If consumers included: confirm gross pricing and who bears return shipping
+- [ ] **VAT.** B2B removes the PAngV duty to display gross prices — it does not
+      say what tax is owed. The seller is a US LLC shipping to German business
+      customers, so the Kleinunternehmer question never applied. AGB § 4 keeps a
+      placeholder, reworded to ask the right question.
+- [ ] **Gerichtsstand.** Now permissible in principle, but only towards
+      Kaufleute and public-law bodies (§ 38 ZPO), not every Unternehmer — and
+      the venue is unresolved because the provider sits in the United States
+      while the AGB choose German law. AGB § 12 keeps a placeholder.
 
 ## 4. Legal review
 
@@ -198,16 +209,16 @@ were written to the right statutory sections but have not been checked by a
 lawyer, and this product category (research chemicals) carries specific risk.
 
 - [ ] All four pages reviewed by a lawyer
-- [ ] **Decide whether the withdrawal right is excluded for sealed vials**
-      (§ 312g Abs. 2 Nr. 3 BGB) and label affected products accordingly. This is
-      the last `[Platzhalter]` on `/widerruf/` — the page is otherwise complete
-      and indexable, so it is one decision from losing its draft banner.
-- [x] ~~Who bears the cost of a return~~ — decided 2026-08-15: **the seller
-      does.** `/widerruf/` states "Wir tragen die unmittelbaren Kosten der
-      Rücksendung der Waren." Note this is now a published commitment to every
-      consumer who reads it; under Art. 246a § 1 Abs. 2 Nr. 2 EGBGB the seller
-      bears them by default anyway unless the customer is told otherwise, so
-      the statement matches the fallback rather than giving anything away.
+- [x] ~~Decide whether the withdrawal right is excluded for sealed vials
+      (§ 312g Abs. 2 Nr. 3 BGB)~~ — **moot as of 2026-08-15.** That provision
+      carves an exception out of the *consumer* withdrawal right, and §3 removed
+      the consumer right entirely. Nothing to exclude. The practical effect it
+      would have had is now an ordinary B2B term instead: returns only after
+      approval, and only unopened and sealed.
+- [x] ~~Who bears the cost of a return~~ — **also moot.** The seller-bears-costs
+      line was published on 2026-08-15 and removed the same day with the
+      consumer Widerrufsbelehrung. Art. 246a EGBGB governs consumer contracts;
+      returns are now discretionary and settled case by case after approval.
 - [ ] Check export restrictions per destination country
 
 ## 5. Product data
