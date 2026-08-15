@@ -61,7 +61,12 @@ test("navigation, discovery, and empty category relationship are scoped", () => 
 	assert.ok((layout.match(/href="\/stack-builder\/"/g) ?? []).length >= 2);
 	assert.match(index, /path: "\/stack-builder"[\s\S]*changeFrequency: "weekly"[\s\S]*priority: 0\.75/);
 	assert.match(category, /category\.handle === "peptid-stacks"/);
-	assert.match(category, /noindexFollow=\{products\.length === 0\}/);
+	// The `noindexFollow={products.length === 0}` assertion was removed on
+	// 2026-08-15: every page is indexable by owner decision, empty categories
+	// included. What still has to hold is the part this test is actually about —
+	// an empty category explains itself and points somewhere useful rather than
+	// being a dead end, which matters *more* now that it can be landed on from a
+	// search result.
 	assert.match(category, /Vergleichswerkzeug/);
 });
 

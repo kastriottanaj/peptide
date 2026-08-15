@@ -159,19 +159,29 @@ head tags in a page:
 - Define the `Organization` node once and reference it by `@id` as `seller`/`publisher`
   from the other nodes instead of repeating it.
 - Filtered, sorted or searched listing URLs (`/produkte?q=`, `?sort=`) are
-  faceted-navigation near-duplicates: `noindex, follow`, with the clean listing URL
-  indexable and self-canonical. Do not add a cross-URL canonical on top of `noindex` —
-  the mixed signal is worse than either alone. Emit the `CollectionPage` graph only on
-  the clean canonical URL.
-- Unknown slugs return `noindex, nofollow` rather than a soft 200.
+  faceted-navigation near-duplicates, handled by **the canonical alone**: every
+  query-string variant canonicalises to the clean `/produkte/`. Emit the
+  `CollectionPage` graph only on that clean URL.
+
+  They carried `noindex, follow` on top until 2026-08-15. That was the mixed signal
+  this rule itself warns about — a cross-URL canonical says "credit the clean URL",
+  `noindex` says "drop this one", and stacked they contradict each other. **Pick one
+  mechanism per URL pattern**, and for faceted navigation the canonical is the half
+  worth keeping: it consolidates the ranking signals of every variant into the clean
+  URL instead of discarding them.
+- **Every page is indexable** (2026-08-15, owner decision), empty category pages
+  included. No page emits a robots directive any more. An empty category therefore
+  has to explain itself and link onward — it can now be landed on from a search
+  result rather than only from internal navigation.
 
 ### Crawl control
 
-- `robots.txt` disallows `/api/`, account and admin paths. Do **not** also disallow the
-  faceted URLs that are handled with `noindex, follow` — a disallowed URL is never
-  crawled, so the `noindex` is never seen and the page can still surface as a bare link.
-  Pick one mechanism per URL pattern. (The `peptide` project does both, in
-  `app/robots.ts` vs. its SEO doc; that contradiction is a bug, not a pattern to copy.)
+- `robots.txt` disallows `/api/`, account and admin paths, and nothing else. Do **not**
+  disallow the faceted URLs: they are canonicalised, and a disallowed URL is never
+  crawled, so the canonical is never read and the page can still surface as a bare
+  link. One mechanism per URL pattern. (The `peptide` project disallows *and*
+  noindexes the same URLs, in `app/robots.ts` vs. its SEO doc; that contradiction is
+  a bug, not a pattern to copy.)
 
 ### Sitemaps and discovery
 
