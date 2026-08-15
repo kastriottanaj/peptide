@@ -247,14 +247,18 @@ test("the built route has the exact canonical, one H1 and no forbidden schema", 
 	}
 });
 
-test("with today's catalog the page is noindex and lists no document", { skip }, () => {
+test("with real documents the page is indexable and lists them", { skip }, () => {
+	// Inverted on 2026-08-15, when the fabricated analytical metadata was
+	// replaced with the real certificates. Both halves of the predicate flipped
+	// together and neither was touched by hand: linking a document is what makes
+	// the checker indexable and what puts it in the sitemap.
 	const html = builtFile("coa-pruefen/index.html");
-	assert.match(html, /<meta name="robots" content="noindex, follow"/);
-	// No documents linked anywhere → no ItemList describing any.
-	assert.ok(!html.includes('"@type":"ItemList"'));
-	// Every real variant says so, in the server HTML.
-	const occurrences = html.split(NO_DOCUMENT).length - 1;
-	assert.equal(occurrences, 11, "all 11 catalog variants must state no document");
+	assert.doesNotMatch(html, /<meta name="robots" content="noindex/);
+	assert.ok(html.includes('"@type":"ItemList"'), "documents exist, so an ItemList must describe them");
+	// Five of eleven variants carry a certificate; the other six are pack sizes
+	// the laboratory did not analyse and must still say so.
+	assert.equal(html.split(NO_DOCUMENT).length - 1, 6, "six variants have no matching certificate");
+	// The raw metadata key never reaches the page — only resolved URLs do.
 	assert.ok(!html.includes("coa_document_url"));
 });
 
@@ -281,16 +285,19 @@ test("no Medusa identifier or storage path reaches the built page", { skip }, ()
 	assert.doesNotMatch(html, /\/srv\/peptides/);
 });
 
-test("a noindex checker stays out of the sitemap and llms.txt", { skip }, () => {
-	assert.ok(!builtFile("sitemap-pages.xml").includes("/coa-pruefen/"));
-	assert.ok(!builtFile("llms.txt").includes("/coa-pruefen/"));
+test("an indexable checker is listed in the sitemap and llms.txt", { skip }, () => {
+	// Same predicate as the indexability above, which is the point: discovery
+	// and the robots directive cannot disagree about whether documents exist.
+	assert.ok(builtFile("sitemap-pages.xml").includes("/coa-pruefen/"));
+	assert.ok(builtFile("llms.txt").includes("/coa-pruefen/"));
 	// llms-full.txt reproduces editorial bodies, so the Wissen article's own
 	// inline link to the tool appears there as prose. What must not appear is a
 	// map entry advertising the route.
-	assert.ok(
-		!/^- \[[^\]]*\]\([^)]*\/coa-pruefen\/\)/m.test(builtFile("llms-full.txt")),
-		"llms-full.txt must not list /coa-pruefen/ as an entry",
-	);
+	// llms-full.txt reproduces editorial bodies rather than a route map, so the
+	// tool appears there only as the Wissen article's inline prose link — that
+	// was true while the page was noindex and is still true now. The map entry
+	// asserted above lives in llms.txt, which is the file that lists routes.
+	assert.match(builtFile("llms-full.txt"), /\]\(\/coa-pruefen\/\)/);
 	// Site search keeps it: it is a valid public page, and search is not a crawler.
 	assert.ok(builtFile("api/search.json").includes("/coa-pruefen/"));
 });
@@ -299,7 +306,11 @@ test("the built product page states the honest per-pack-size status", { skip }, 
 	const html = builtFile("produkte/bpc-157/index.html");
 	assert.ok(!html.includes("COA-Zertifikat"));
 	assert.ok(!/COA[^<]{0,40}verfügbar/i.test(html));
-	assert.equal(html.split(NO_DOCUMENT).length - 1, 2, "BPC-157 has two pack sizes");
+	// BPC-157 sells 5 mg and 10 mg; only the 10 mg was analysed, so exactly one
+	// pack size still reports no document. Asserting the *mix* rather than
+	// "everything has one" is what keeps an over-broad mapping visible.
+	assert.equal(html.split(NO_DOCUMENT).length - 1, 1, "only BPC-157 5 mg lacks a certificate");
+	assert.match(html, /coa\/bpc-157-10mg-coa\.pdf/);
 	assert.match(html, /Analysedokumentation<\/h2>/);
 	assert.match(html, /href="\/coa-pruefen\/"/);
 });
