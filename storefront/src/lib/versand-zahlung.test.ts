@@ -157,10 +157,12 @@ test("the order-status section is derived from ORDERS_ENABLED, not asserted", ()
 	assert.match(text, /!ORDERS_ENABLED && <OrdersClosedNotice/);
 });
 
-test("the page is withheld from the sitemap and llms.txt inventory", () => {
+test("the page is registered in the content index", () => {
+	// The source-level counterpart of the built-output check below. It was an
+	// absence assertion until 2026-08-15, when the page became indexable.
 	const index = readFileSync(join(SRC, "lib/content-index.ts"), "utf8");
 
-	assert.doesNotMatch(index, /versand-zahlung/);
+	assert.match(index, /versand-zahlung/);
 });
 
 test("the footer points at the page itself, not at the contact-page anchor", () => {
@@ -202,12 +204,14 @@ test("the page ships the approved title and description", { skip }, () => {
 	assert.deepEqual(descriptions, [DESCRIPTION]);
 });
 
-test("REGRESSION: the page stays noindex, nofollow", { skip }, () => {
-	// The operational details are not final, so the page must not be indexed —
-	// the same role `draft` plays on the legal pages.
+test("REGRESSION: the page is indexable and emits no robots directive", { skip }, () => {
+	// Indexable since 2026-08-15 by owner decision: the shop is trading, so this
+	// page has to be findable. It never carried a `[Platzhalter]` — the earlier
+	// noindex guarded operational details that are not final, and those are still
+	// named as open in the text rather than filled with a plausible value.
 	const robots = [...html().matchAll(/<meta name="robots" content="([^"]*)"/g)].map((m) => m[1]);
 
-	assert.deepEqual(robots, ["noindex, nofollow"]);
+	assert.deepEqual(robots, []);
 });
 
 test("the canonical is self-referencing and slashed", { skip }, () => {
@@ -222,17 +226,20 @@ test("the canonical is self-referencing and slashed", { skip }, () => {
 	assert.equal(url.search, "");
 });
 
-test("the page appears in no sitemap and in no llms inventory", { skip }, () => {
+test("the page is listed in a sitemap", { skip }, () => {
+	// Follows from indexability: an indexable page withheld from the sitemap is
+	// the mirror of the mistake this test used to guard. The legal pages are
+	// the deliberate exception there — they are indexable but not final.
 	const files = readdirSync(DIST, { withFileTypes: true })
 		.filter((entry) => entry.isFile())
 		.map((entry) => entry.name)
-		.filter((name) => /^sitemap.*\.xml$/.test(name) || /^llms(-full)?\.txt$/.test(name));
+		.filter((name) => /^sitemap.*\.xml$/.test(name));
 
-	const leaking = files.filter((name) =>
+	const listing = files.filter((name) =>
 		readFileSync(join(DIST, name), "utf8").includes("versand-zahlung"),
 	);
 
-	assert.deepEqual(leaking, [], `noindex page listed in: ${leaking.join(", ")}`);
+	assert.ok(listing.length > 0, "indexable page missing from every sitemap");
 });
 
 /** Visible text of `<main>`, tags and entities removed. */

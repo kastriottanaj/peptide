@@ -272,6 +272,13 @@ Three consequences for any change you make here:
   [docs/go-live-checklist.md](docs/go-live-checklist.md) §2–§6 still open, so
   treat anything touching the catalog, checkout, prices or legal pages as
   changing something a paying customer sees today, not a staging site.
+- `/versand-zahlung/` and `/retouren-reklamation/` became **indexable and
+  sitemapped on 2026-08-15** — the pages a customer reads before and after
+  ordering. What still stays `noindex` is the transactional flow (`/kasse/`,
+  `/warenkorb/`, `/bestellung/`, `/bestellung/suchen/`, `/404.html`), the two
+  utility forms, and `/coa-pruefen/` while no analysis document is linked. Those
+  are `noindex` for ordinary SEO reasons — user-specific, thin or duplicate —
+  not because anything is unfinished, so do not "open them up" as a batch.
 - The four legal pages are **indexable as of 2026-08-15** by explicit decision,
   while they still carry `[Platzhalter]` data — they are being filled in in
   public. `draft` and `noindex` are now separate props on `LegalLayout`: the

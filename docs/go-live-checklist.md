@@ -198,8 +198,16 @@ were written to the right statutory sections but have not been checked by a
 lawyer, and this product category (research chemicals) carries specific risk.
 
 - [ ] All four pages reviewed by a lawyer
-- [ ] Decide whether the withdrawal right is excluded for sealed vials
-      (§ 312g Abs. 2 Nr. 3 BGB) and label affected products accordingly
+- [ ] **Decide whether the withdrawal right is excluded for sealed vials**
+      (§ 312g Abs. 2 Nr. 3 BGB) and label affected products accordingly. This is
+      the last `[Platzhalter]` on `/widerruf/` — the page is otherwise complete
+      and indexable, so it is one decision from losing its draft banner.
+- [x] ~~Who bears the cost of a return~~ — decided 2026-08-15: **the seller
+      does.** `/widerruf/` states "Wir tragen die unmittelbaren Kosten der
+      Rücksendung der Waren." Note this is now a published commitment to every
+      consumer who reads it; under Art. 246a § 1 Abs. 2 Nr. 2 EGBGB the seller
+      bears them by default anyway unless the customer is told otherwise, so
+      the statement matches the fallback rather than giving anything away.
 - [ ] Check export restrictions per destination country
 
 ## 5. Product data
