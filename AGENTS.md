@@ -272,13 +272,23 @@ Three consequences for any change you make here:
   [docs/go-live-checklist.md](docs/go-live-checklist.md) §2–§6 still open, so
   treat anything touching the catalog, checkout, prices or legal pages as
   changing something a paying customer sees today, not a staging site.
-- `/versand-zahlung/` and `/retouren-reklamation/` became **indexable and
-  sitemapped on 2026-08-15** — the pages a customer reads before and after
-  ordering. What still stays `noindex` is the transactional flow (`/kasse/`,
-  `/warenkorb/`, `/bestellung/`, `/bestellung/suchen/`, `/404.html`), the two
-  utility forms, and `/coa-pruefen/` while no analysis document is linked. Those
-  are `noindex` for ordinary SEO reasons — user-specific, thin or duplicate —
-  not because anything is unfinished, so do not "open them up" as a batch.
+- **Every page is indexable as of 2026-08-15**, by explicit owner decision — the
+  legal pages, `/versand-zahlung/`, `/retouren-reklamation/`, and then the
+  transactional and utility routes (`/kasse/`, `/warenkorb/`, `/bestellung/`,
+  `/bestellung/suchen/`, `/404.html`, `/cookie-einstellungen/`,
+  `/datenschutz-anfrage/`). `MUST_STAY_NOINDEX` in `metadata-output.test.ts` is
+  now empty. Indexable is **not** the same as sitemapped: only pages that are
+  finished and worth ranking are listed in `content-index.ts`.
+- Two mechanisms survive that decision because they suppress **duplicate and
+  thin** content rather than holding a finished page back. Do not remove them to
+  "finish the job":
+  - `/coa-pruefen/` is `noindex, follow` while no analysis document is linked,
+    from the same predicate that withholds it from the sitemap. It flips itself
+    the moment a COA is attached to a variant.
+  - Filtered and sorted listing URLs (`/produkte?q=`, `?sort=`) get
+    `noindex, follow` from a client-side script; the clean `/produkte/` is
+    indexable and self-canonical. Removing this creates competing near-duplicate
+    URLs, which costs rankings rather than gaining them.
 - **The shop sells to businesses only** (decided 2026-08-15,
   [docs/specs/2026-08-15-b2b-only.md](docs/specs/2026-08-15-b2b-only.md)). Three
   things enforce it and they are **one change, never three**: the required

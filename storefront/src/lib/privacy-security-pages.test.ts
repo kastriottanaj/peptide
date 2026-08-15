@@ -9,8 +9,8 @@ const DIST = fileURLToPath(new URL("../../dist/", import.meta.url));
 const built = existsSync(DIST);
 const skip = built ? false : "no dist; run the build first";
 const routes = [
-	{ path: "/datenschutz-anfrage/", source: "pages/datenschutz-anfrage.astro", output: "datenschutz-anfrage/index.html", noindex: true },
-	{ path: "/cookie-einstellungen/", source: "pages/cookie-einstellungen.astro", output: "cookie-einstellungen/index.html", noindex: true },
+	{ path: "/datenschutz-anfrage/", source: "pages/datenschutz-anfrage.astro", output: "datenschutz-anfrage/index.html", noindex: false },
+	{ path: "/cookie-einstellungen/", source: "pages/cookie-einstellungen.astro", output: "cookie-einstellungen/index.html", noindex: false },
 	{ path: "/sicherheit/", source: "pages/sicherheit.astro", output: "sicherheit/index.html", noindex: false },
 ] as const;
 const source = (file: string) => readFileSync(join(SRC, file), "utf8");
@@ -41,7 +41,10 @@ test("privacy request covers rights and data minimisation", () => {
 		assert.ok(text.includes(phrase), "privacy page is missing: " + phrase);
 	}
 	for (const path of ["/datenschutz/", "/support/anfrage/", "/contact/"]) assert.ok(text.includes('href="' + path + '"'));
-	assert.match(text, /<BaseLayout[\s\S]*\bnoindex\b/);
+	// The noindex assertion was dropped on 2026-08-15: every page is indexable by
+	// owner decision. The page is still withheld from the sitemap and llms.txt —
+	// see "public discovery includes only security exactly once" below — so it is
+	// crawlable if found rather than advertised.
 });
 
 test("cookie page uses the real consent implementation", () => {
