@@ -15,11 +15,14 @@
  * purpose (see its own comment), and the customer model behind it is still
  * open — so this page links there and takes no position of its own.
  *
- * `noindex` is set directly rather than through `LegalLayout`'s `draft` prop:
- * this page carries no `[Platzhalter]` fields, so that layout's banner would
- * not describe it. The reason is the same though — the process is not final —
- * and it must stay until it is. The page is consequently absent from
- * `content-index.ts`, so no sitemap and no llms.txt lists it.
+ * **Indexable since 2026-08-15**, by the same owner decision that published the
+ * legal pages: the shop is trading, so the page a customer looks for after
+ * ordering has to be findable. It carries no `[Platzhalter]` fields and states
+ * every outstanding detail as outstanding, which is what makes publishing it
+ * honest rather than premature.
+ *
+ * Unlike the legal pages it **is** listed in `content-index.ts`: nothing on it
+ * is a draft, so there is no reason to withhold it from the sitemap.
  */
 import BaseLayout from "../layouts/BaseLayout.astro";
 import OrdersClosedNotice from "../components/OrdersClosedNotice.astro";
@@ -84,7 +87,6 @@ const jsonLd = [
 	title={META_TITLE}
 	description={META_DESCRIPTION}
 	rawTitle
-	noindex
 	jsonLd={jsonLd}
 >
 	<div class="returns">
@@ -100,8 +102,8 @@ const jsonLd = [
 			<p class="draft__heading">Vorgehen noch nicht abschließend festgelegt</p>
 			<p>
 				Diese Seite beschreibt den derzeitigen Stand. Der Ablauf für
-				Rücksendungen und Erstattungen wird vervollständigt, bevor der
-				Bestellvorgang aktiviert wird; die verbindlichen Regelungen ergeben sich
+				Rücksendungen und Erstattungen ist noch nicht abschließend festgelegt;
+				die verbindlichen Regelungen ergeben sich
 				aus den juristisch geprüften Bedingungen des Shops und nicht aus dieser
 				Seite.
 			</p>
@@ -115,13 +117,13 @@ const jsonLd = [
 			    that ordering is available. */}
 			{!ORDERS_ENABLED && <OrdersClosedNotice contact={false} />}
 			<p>
-				Der Bestellvorgang ist derzeit nicht aktiviert. Die abschließenden
-				Bedingungen für Rücksendungen und Erstattungen werden veröffentlicht,
-				bevor Bestellungen wieder möglich sind.
+				Die abschließenden Bedingungen für Rücksendungen und Erstattungen sind
+				noch nicht veröffentlicht. Bis dahin klären wir jeden Fall einzeln über
+				die <a href="/contact/">Kontaktseite</a>.
 			</p>
 			<p class="section__note">
-				Bis dahin beschreibt diese Seite ausschließlich, wie ein Anliegen
-				gemeldet werden kann.
+				Diese Seite beschreibt deshalb, wie ein Anliegen gemeldet wird, und
+				sagt keinen Ablauf zu, der noch nicht feststeht.
 			</p>
 		</section>
 
@@ -161,8 +163,7 @@ const jsonLd = [
 			</ul>
 			<p class="section__note">
 				Solange diese Punkte offen sind, sagen wir für keinen Artikel eine
-				Rücknahme zu. Die Angaben werden ergänzt, bevor der Bestellvorgang
-				aktiviert wird.
+				Rücknahme zu. Die Angaben werden ergänzt, sobald der Ablauf feststeht.
 			</p>
 		</section>
 
@@ -170,7 +171,7 @@ const jsonLd = [
 			<h2>Erstattungen</h2>
 			<p>
 				Auf welchem Weg und in welchem Ablauf eine Erstattung erfolgt, wird
-				veröffentlicht, bevor der Bestellvorgang aktiviert wird. Eine Zusage
+				veröffentlicht, sobald der Ablauf feststeht. Eine Zusage
 				über Ablauf oder Dauer einer Bearbeitung machen wir vorher nicht.
 			</p>
 		</section>

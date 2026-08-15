@@ -228,8 +228,10 @@ const EXPECTED: Record<string, PageMeta> = {
  *
  * `/forschungszwecke/`, `/qualitaet-analyse/` and `/support/anfrage/` left this
  * list on 2026-08-03 by explicit decision and are indexed; their own test files
- * pin that. `/versand-zahlung/` and `/retouren-reklamation/` stayed, because
- * shipping, payment, return and refund details are still open.
+ * pin that. `/versand-zahlung/` and `/retouren-reklamation/` followed on
+ * 2026-08-15, once the shop began trading: the pages a customer reads before and
+ * after ordering have to be findable, and both name their open details as open
+ * rather than filling them in.
  *
  * **The four legal pages left on 2026-08-15**, also by explicit decision: they
  * are indexable while still carrying placeholders, so they get filled in in
@@ -244,8 +246,6 @@ const MUST_STAY_NOINDEX = [
 	"/bestellung/",
 	"/bestellung/suchen/",
 	"/kasse/",
-	"/retouren-reklamation/",
-	"/versand-zahlung/",
 	"/warenkorb/",
 ];
 

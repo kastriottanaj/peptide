@@ -15,11 +15,15 @@
  * plausible-sounding placeholder for any of them is a promise the business
  * would be held to. Each is named as outstanding instead.
  *
- * `noindex` is set directly rather than through `LegalLayout`'s `draft` prop:
- * this page carries no `[Platzhalter]` fields, so that layout's banner would
- * not describe it. The reason is the same though — the operational details are
- * not final — and it must stay until they are. The page is consequently absent
- * from `content-index.ts`, so no sitemap and no llms.txt lists it.
+ * **Indexable since 2026-08-15**, by the same owner decision that published the
+ * legal pages: the shop is trading, so the page a customer looks for before
+ * ordering has to be findable. It carries no `[Platzhalter]` fields and states
+ * every outstanding detail as outstanding, which is what makes publishing it
+ * honest rather than premature — the earlier `noindex` guarded against
+ * operational details not being final, not against anything the page claims.
+ *
+ * Unlike the legal pages it **is** listed in `content-index.ts`: nothing on it
+ * is a draft, so there is no reason to withhold it from the sitemap.
  */
 import BaseLayout from "../layouts/BaseLayout.astro";
 import OrdersClosedNotice from "../components/OrdersClosedNotice.astro";
@@ -86,7 +90,6 @@ const jsonLd = [
 	title={META_TITLE}
 	description={META_DESCRIPTION}
 	rawTitle
-	noindex
 	jsonLd={jsonLd}
 >
 	<div class="shipping">
@@ -101,8 +104,8 @@ const jsonLd = [
 		<aside class="draft" role="note">
 			<p class="draft__heading">Angaben noch nicht abschließend</p>
 			<p>
-				Die Angaben auf dieser Seite werden vervollständigt, bevor der
-				Bestellvorgang aktiviert wird. Punkte, die noch offen sind, sind unten
+				Die Angaben auf dieser Seite werden laufend vervollständigt. Punkte, die
+				noch offen sind, sind unten
 				ausdrücklich als offen gekennzeichnet und nicht durch vorläufige Werte
 				ersetzt.
 			</p>
@@ -117,8 +120,7 @@ const jsonLd = [
 			</ul>
 			<p class="section__note">
 				Weitere Einschränkungen einzelner Länder sind hier nicht hinterlegt.
-				Sollte sich vor Aktivierung des Bestellvorgangs etwas daran ändern, wird
-				es an dieser Stelle ergänzt.
+				Sollte sich daran etwas ändern, wird es an dieser Stelle ergänzt.
 			</p>
 		</section>
 
@@ -155,8 +157,7 @@ const jsonLd = [
 			<h2>Lieferzeit</h2>
 			<p>
 				Zur Lieferzeit liegt noch keine bestätigte Angabe vor. Informationen zu
-				Versand und Lieferzeit werden vor Aktivierung des Bestellvorgangs
-				veröffentlicht.
+				Versand und Lieferzeit werden veröffentlicht, sobald sie bestätigt sind.
 			</p>
 			<p class="section__note">
 				Eine vorläufige Schätzung nennen wir bewusst nicht: eine Zeitangabe, die
@@ -170,7 +171,7 @@ const jsonLd = [
 			<p>
 				Welcher Versanddienstleister eingesetzt wird und ob eine
 				Sendungsverfolgung zur Verfügung steht, ist noch nicht festgelegt. Beides
-				wird hier angegeben, bevor der Bestellvorgang aktiviert wird.
+				wird hier angegeben, sobald es feststeht.
 			</p>
 			<p class="section__note">
 				Bis dahin nennen wir weder einen Dienstleister noch eine Zusage zur
@@ -187,8 +188,8 @@ const jsonLd = [
 			</p>
 			<p>
 				Die für eine Überweisung erforderlichen Angaben und der Verwendungszweck
-				werden erst bereitgestellt, wenn der Bestellvorgang aktiviert ist. Auf
-				dieser Seite stehen keine Bankdaten.
+				werden nach dem Absenden der Bestellung angezeigt. Auf dieser Seite
+				stehen keine Bankdaten.
 			</p>
 		</section>
 
@@ -200,9 +201,9 @@ const jsonLd = [
 			    that ordering or payment is available. */}
 			{!ORDERS_ENABLED && <OrdersClosedNotice contact={false} />}
 			<p>
-				Solange der Bestellvorgang nicht verfügbar ist, sollte keine Zahlung
-				angewiesen werden. Sortiment, Packgrößen und Preise können weiterhin
-				eingesehen werden.
+				Bitte überweisen Sie erst, wenn Ihnen nach dem Absenden der Bestellung
+				Bankverbindung, Betrag und Verwendungszweck angezeigt wurden. Sortiment,
+				Packgrößen und Preise können jederzeit eingesehen werden.
 			</p>
 			<p>
 				<a href="/produkte/" class="btn btn--green">Sortiment ansehen</a>

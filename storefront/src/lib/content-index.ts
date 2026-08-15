@@ -149,6 +149,29 @@ const STATIC_ROUTES: Array<Omit<IndexedEntry, "lastModified">> = [
 		changeFrequency: "monthly",
 		priority: 0.55,
 	},
+	// Both joined this list on 2026-08-15, when they became indexable. The shop
+	// is trading, so the pages a customer reads before and after ordering have to
+	// be findable. Neither carries a `[Platzhalter]`; the details still open are
+	// named as open on the page, which is what separates them from the legal
+	// pages — those stay out until they are final.
+	{
+		path: "/versand-zahlung",
+		title: "Versand und Zahlung",
+		description:
+			"Versandgebiete, Versandkosten, Zahlungsweise und der aktuelle Bestellstatus.",
+		keywords: ["Versand", "Versandkosten", "Zahlung", "Vorkasse", "Banküberweisung"],
+		changeFrequency: "monthly",
+		priority: 0.5,
+	},
+	{
+		path: "/retouren-reklamation",
+		title: "Retouren, Reklamationen und Erstattungen",
+		description:
+			"Vorgehen bei Rücksendungen, beschädigten oder fehlerhaften Lieferungen und Erstattungen.",
+		keywords: ["Retoure", "Rücksendung", "Reklamation", "Erstattung", "Widerruf"],
+		changeFrequency: "monthly",
+		priority: 0.4,
+	},
 	{
 		path: "/support/anfrage",
 		title: "Support-Anfrage",
