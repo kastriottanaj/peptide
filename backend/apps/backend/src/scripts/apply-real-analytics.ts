@@ -123,17 +123,20 @@ export default async function applyRealAnalytics({
 
     const metadata = { ...((product.metadata ?? {}) as Record<string, unknown>) };
 
-    // Real values replace the placeholders. `demo` and `data_status` are
-    // dropped rather than set to "false": their absence is what other code
-    // reads as "this is real".
     metadata.purity = entry.purity;
     metadata.coa_analysis_date = ANALYSIS_DATE;
-    delete metadata.demo;
-    delete metadata.data_status;
+
+    // Explicit nulls, not `delete`. Medusa **merges** a metadata object into
+    // the stored one, so a key left out of the payload survives untouched —
+    // the first run of this script set real purity values while `demo: "true"`
+    // and `data_status: "placeholder"` stayed behind, claiming the very data
+    // beside them was fabricated. Null is what actually removes a key.
+    metadata.demo = null;
+    metadata.data_status = null;
     // `coa_status` is no longer read by the storefront — the presence of a
     // document is the only claim it makes — but a stale "verfügbar" sitting in
-    // the record invites a future reader to trust it. Remove it.
-    delete metadata.coa_status;
+    // the record invites a future reader to trust it.
+    metadata.coa_status = null;
 
     const variants = (product.variants ?? []) as Array<{
       id: string;
@@ -152,10 +155,12 @@ export default async function applyRealAnalytics({
         documents += 1;
       } else {
         // Any pack size the certificate does not cover must carry no document,
-        // including on a re-run after the mapping changes.
-        delete variantMeta.coa_document_url;
-        delete variantMeta.coa_document_type;
-        delete variantMeta.coa_analysis_date;
+        // including on a re-run after the mapping narrows. Null rather than
+        // `delete`, for the merge reason above: omitting the key would leave a
+        // stale document attached to a variant it no longer covers.
+        variantMeta.coa_document_url = null;
+        variantMeta.coa_document_type = null;
+        variantMeta.coa_analysis_date = null;
       }
 
       return { id: variant.id, metadata: variantMeta };
