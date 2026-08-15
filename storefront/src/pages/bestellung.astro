@@ -7,6 +7,7 @@ import {
 	payeeExplanation,
 } from "../lib/bank";
 import { COMPANY } from "../lib/company";
+import { ORDER_EMAIL_ENABLED } from "../lib/shop";
 
 const placeholderBank = bankDetailsArePlaceholder();
 const payeeNeedsExplaining = payeeDiffersFromCompany(COMPANY.name);
@@ -35,8 +36,12 @@ const payeeNeedsExplaining = payeeDiffersFromCompany(COMPANY.name);
 			<h1>Vielen Dank für Ihre Bestellung</h1>
 			<p class="lead">
 				Bestellnummer <strong data-order-number></strong>, hinterlegt
-				für <strong data-order-email></strong>. Bitte notieren Sie sich
-				die Angaben unten — Sie erhalten sie nicht per E-Mail.
+				für <strong data-order-email></strong>.{" "}
+				{
+					ORDER_EMAIL_ENABLED
+						? "Eine Bestätigung mit allen Angaben zur Überweisung geht an diese Adresse."
+						: "Bitte notieren Sie sich die Angaben unten — Sie erhalten sie nicht per E-Mail."
+				}
 			</p>
 
 			<section class="pay">

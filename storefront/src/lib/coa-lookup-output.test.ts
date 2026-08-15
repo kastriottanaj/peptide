@@ -8,6 +8,36 @@ const ROOT = fileURLToPath(new URL("../", import.meta.url));
 const DIST = fileURLToPath(new URL("../../dist/", import.meta.url));
 const built = existsSync(DIST);
 const skip = built ? false : "no dist/ — run `npm run build` first";
+
+/**
+ * Whether this build could contain a linked document at all.
+ *
+ * `coa-origins.ts` allowlists **https** origins only, deliberately: a document
+ * must never be linked over plaintext, and a dev build must not be able to
+ * produce output a production build would reject. So a build made with
+ * `PUBLIC_SITE_URL=http://localhost:4321` resolves every document to "absent"
+ * no matter what the catalog holds.
+ *
+ * The assertions about documents therefore skip on such a build rather than
+ * fail. Failing would report a defect that exists only in the developer's
+ * environment, and the usual response — relaxing the assertion — would remove
+ * the guard for production, which is the one place it matters.
+ */
+const httpsBuild =
+	built && /<link rel="canonical" href="https:/.test(builtFileOrEmpty("coa-pruefen/index.html"));
+const skipUnlessHttps =
+	skip ||
+	(httpsBuild
+		? false
+		: "dev build over http — coa-origins.ts rejects every document by design");
+
+function builtFileOrEmpty(relative: string): string {
+	try {
+		return readFileSync(join(DIST, relative), "utf8");
+	} catch {
+		return "";
+	}
+}
 const source = (relative: string) => readFileSync(join(ROOT, relative), "utf8");
 const builtFile = (relative: string) => readFileSync(join(DIST, relative), "utf8");
 
@@ -247,7 +277,7 @@ test("the built route has the exact canonical, one H1 and no forbidden schema", 
 	}
 });
 
-test("with real documents the page is indexable and lists them", { skip }, () => {
+test("with real documents the page is indexable and lists them", { skip: skipUnlessHttps }, () => {
 	// Inverted on 2026-08-15, when the fabricated analytical metadata was
 	// replaced with the real certificates. Both halves of the predicate flipped
 	// together and neither was touched by hand: linking a document is what makes
@@ -285,7 +315,7 @@ test("no Medusa identifier or storage path reaches the built page", { skip }, ()
 	assert.doesNotMatch(html, /\/srv\/peptides/);
 });
 
-test("an indexable checker is listed in the sitemap and llms.txt", { skip }, () => {
+test("an indexable checker is listed in the sitemap and llms.txt", { skip: skipUnlessHttps }, () => {
 	// Same predicate as the indexability above, which is the point: discovery
 	// and the robots directive cannot disagree about whether documents exist.
 	assert.ok(builtFile("sitemap-pages.xml").includes("/coa-pruefen/"));
@@ -302,7 +332,7 @@ test("an indexable checker is listed in the sitemap and llms.txt", { skip }, () 
 	assert.ok(builtFile("api/search.json").includes("/coa-pruefen/"));
 });
 
-test("the built product page states the honest per-pack-size status", { skip }, () => {
+test("the built product page states the honest per-pack-size status", { skip: skipUnlessHttps }, () => {
 	const html = builtFile("produkte/bpc-157/index.html");
 	assert.ok(!html.includes("COA-Zertifikat"));
 	assert.ok(!/COA[^<]{0,40}verfügbar/i.test(html));

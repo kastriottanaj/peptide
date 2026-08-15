@@ -232,12 +232,15 @@ lab-verified analytical data before anything is sold.
 - [ ] COA documents available
 - [ ] `demo` flags removed
 
-## 6. Order confirmation email — MUST be done before deploying live
+## 6. Order confirmation email — BUILT 2026-08-15
 
-**Deferred on 2026-07-27 by decision. Do not launch without it.**
+Deferred on 2026-07-27, and shipped once the shop began trading. Design:
+[specs/2026-08-15-order-confirmation-email.md](specs/2026-08-15-order-confirmation-email.md).
 
-No email is sent after an order. Today that is survivable only because nobody
-real is ordering.
+An `order.placed` subscriber sends the customer the order number, the itemised
+lines, the totals, the bank details and the payment reference. **One item below
+is still open — SPF/DKIM/DMARC — and until it is done the mail may land in
+spam, which for this email is close to not sending it.**
 
 Why it is a launch blocker rather than a nice-to-have: payment is bank transfer,
 and the payment reference exists **only on the confirmation page**. A customer
@@ -249,18 +252,30 @@ and possibly a refund.
 
 What it needs:
 
-- [ ] A sending domain and mailbox on `peptideeinkaufen.de` — **unblocked as of
-      2026-07-28**: DNS now points at the Hetzner box and records are managed in
-      Hostinger's hPanel, so SPF/DKIM/DMARC can be added.
-- [ ] SMTP or Resend credentials in the backend `.env`
-- [ ] A Medusa notification provider configured
-- [ ] An `order.placed` subscriber that sends the confirmation, containing at
-      minimum: order number, itemised lines, total, IBAN/BIC/holder, and the
-      payment reference
-- [ ] SPF, DKIM and DMARC records, or the mail lands in spam — which for this
-      email is the same as not sending it
-- [ ] Verified end to end: place a test order, receive the mail, confirm the
-      reference in it matches `metadata->>'bank_reference'` on the order
+- [x] ~~A sending domain and mailbox on `peptideeinkaufen.de`~~ —
+      `info@peptideeinkaufen.de`, already used by the support inbox.
+- [x] ~~SMTP credentials in the backend `.env`~~ — the existing `INBOX_SMTP_*`
+      values. One mailbox, reused.
+- [x] ~~A notification provider configured~~ — not a Medusa notification module
+      in the end. The subscriber reuses `lib/inbox/smtp.ts`, which is already
+      hardened (TLS verification non-negotiable, no attachments, no HTML, no
+      file or URL access, no SMTP conversation in the logs). A second transport
+      would have been a second thing to get wrong.
+- [x] ~~An `order.placed` subscriber~~ — `order-confirmation-email.ts`. Carries
+      order number, itemised lines, totals, holder/IBAN/BIC/bank and the
+      reference. Refuses to send when the bank details are unset or still
+      `PLATZHALTER`: an email instructing a transfer to a placeholder is worse
+      than no email.
+- [ ] **SPF, DKIM and DMARC records at Hostinger.** The one thing left. Without
+      them the mail may be filed as spam.
+- [ ] Verified end to end against production: place a test order, receive the
+      mail, confirm the reference in it matches `metadata->>'bank_reference'`
+      on the order.
+
+The switch is `ORDER_EMAIL_ENABLED`, deliberately **not** `INBOX_SMTP_ENABLED`.
+The credentials are one mailbox; the permission to email every customer who
+checks out is a separate decision, and that separation is the same one
+`INBOX_SMTP_ENABLED` was given its own variable for.
 
 Note this must come **after** the bank details in section 1, since the email
 carries them.

@@ -20,6 +20,24 @@ export const ORDERS_ENABLED =
 	(import.meta.env.PUBLIC_ORDERS_ENABLED ?? "").trim().toLowerCase() === "true";
 
 /**
+ * Whether the backend sends an order confirmation email.
+ *
+ * Same one-value-two-consumers arrangement as `ORDERS_ENABLED`: `deploy.sh`
+ * derives `PUBLIC_ORDER_EMAIL_ENABLED` from the server's `ORDER_EMAIL_ENABLED`,
+ * which the `order.placed` subscriber reads directly. The two cannot disagree,
+ * which is the point — the confirmation page tells the customer whether to
+ * expect a written copy, and being wrong in either direction is a real cost.
+ * Saying an email is coming when none is sent leaves them waiting for the
+ * payment reference; saying none is coming when one is sent is the harmless
+ * direction, and is what a forgotten variable produces.
+ *
+ * **Unset means no email**, matching the backend default.
+ */
+export const ORDER_EMAIL_ENABLED =
+	(import.meta.env.PUBLIC_ORDER_EMAIL_ENABLED ?? "").trim().toLowerCase() ===
+	"true";
+
+/**
  * The copy, here rather than in each component: it appears on the product page,
  * in the cart and on the checkout page, and three near-identical wordings would
  * drift.
